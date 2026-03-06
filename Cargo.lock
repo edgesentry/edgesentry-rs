@@ -934,7 +934,7 @@ dependencies = [
 
 [[package]]
 name = "edgesentry-rs"
-version = "0.1.7"
+version = "0.1.0"
 dependencies = [
  "aws-config",
  "aws-credential-types",
