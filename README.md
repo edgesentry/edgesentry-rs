@@ -19,7 +19,7 @@ Because those hardware-dependent setups are often difficult to evaluate quickly 
 - `ledger-core`: Audit record types, hashing, signature verification, and chain verification
 - `device-agent`: Device-side signed record generation
 - `ingest-api`: Ingestion-time verification, deduplication, sequence validation, and persistence workflow for raw data / audit ledger / operation logs
-- `audit-cli`: Command-line operations for signing and verifying audit records
+- `audit-cli`: Command-line operations for signing and verifying audit records (`immutable-trace` package, `imt` binary)
 
 ## Concepts
 
@@ -107,7 +107,7 @@ This repository includes an interactive end-to-end demo script that validates th
 Note: unlike the library-only example, this demo **requires** PostgreSQL and MinIO.
 
 1. Start backend services (PostgreSQL + MinIO)
-2. Generate and verify a signed chain with `audit-cli`
+2. Generate and verify a signed chain with `imt`
 3. Tamper with a generated chain and confirm verification fails
 4. Persist accepted records into PostgreSQL
 5. Display audit records and operation logs from the database
@@ -124,7 +124,7 @@ For full command details and manual inspection steps, see [AGENTS.md](AGENTS.md)
 
 ## Library Usage Example (Lift Inspection Scenario)
 
-If you want to integrate the libraries directly (without using `audit-cli`), run the example below.
+If you want to integrate the libraries directly (without using `imt`), run the example below.
 
 Prerequisites:
 

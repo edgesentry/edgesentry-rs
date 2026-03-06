@@ -1,5 +1,5 @@
 [package]
-name = "immutable-trace-audit-cli"
+name = "immutable-trace"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

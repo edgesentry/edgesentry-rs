@@ -8,7 +8,7 @@ use clap::{Parser, Subcommand};
 use ledger_core::AuditRecord;
 
 #[derive(Debug, Parser)]
-#[command(name = "audit-cli")]
+#[command(name = "imt")]
 #[command(about = "CLI tools for tamper-evident audit records")]
 struct Cli {
     #[command(subcommand)]
