@@ -100,6 +100,8 @@ This script runs:
 
 This repository includes an interactive end-to-end demo script that validates the tamper-evident workflow locally:
 
+Note: unlike the library-only example, this demo **requires** PostgreSQL and MinIO.
+
 1. Start backend services (PostgreSQL + MinIO)
 2. Generate and verify a signed chain with `audit-cli`
 3. Tamper with a generated chain and confirm verification fails
@@ -115,6 +117,27 @@ bash scripts/local_demo.sh
 
 The script pauses at each step and waits for Enter (or `OK`) so results can be inspected interactively.
 For full command details and manual inspection steps, see [AGENTS.md](AGENTS.md).
+
+## Library Usage Example (Lift Inspection Scenario)
+
+If you want to integrate the libraries directly (without using `audit-cli`), run the example below.
+
+Prerequisites:
+
+- Rust toolchain (`cargo`)
+- PostgreSQL / MinIO are **not required** for this example (it uses in-memory stores)
+
+Run:
+
+```bash
+cargo run -p ingest-api --example lift_inspection_flow
+```
+
+Source:
+
+- [crates/ingest-api/examples/lift_inspection_flow.rs](crates/ingest-api/examples/lift_inspection_flow.rs)
+
+For the full scenario steps and expected behavior, see [AGENTS.md](AGENTS.md).
 
 ## S3 / MinIO Switching
 
@@ -132,3 +155,12 @@ Use these types from `ingest-api`:
 - `S3CompatibleRawDataStore::new(config)`
 
 For build and test commands, see [AGENTS.md](AGENTS.md).
+
+## License
+
+This project is licensed under either of:
+
+- [Apache License, Version 2.0](LICENSE-APACHE)
+- [MIT license](LICENSE-MIT)
+
+at your option.
