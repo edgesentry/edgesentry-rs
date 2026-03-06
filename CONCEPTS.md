@@ -56,13 +56,14 @@ This detects insertion, deletion, and substitution inside the chain.
 
 `edgesentry_rs::ingest` is responsible for completing trust checks before persistence.
 
-Main checks:
+The `IntegrityPolicyGate` is the explicit P0 gate that enforces all integrity rules before a record is allowed through to storage. It runs in order:
 
-1. Is the device known?
-2. Is the signature valid?
-3. Is the sequence valid?
-4. Is `prev_record_hash` valid?
-5. Does raw payload match `payload_hash`?
+1. **Route identity** — `cert_identity` must match `record.device_id` when present
+2. **Signature** — payload hash must be signed by the registered device key
+3. **Sequence** — must be strictly monotonic and non-duplicate per device
+4. **Previous-record hash** — must chain from the last accepted record's hash
+
+`IngestService` additionally checks that the raw payload matches `payload_hash` before invoking the policy gate.
 
 ## 7. Storage model
 

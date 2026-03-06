@@ -1,6 +1,8 @@
+mod policy;
 mod storage;
 mod verify;
 
+pub use policy::IntegrityPolicyGate;
 pub use storage::{
     AuditLedger, InMemoryAuditLedger, InMemoryOperationLog, InMemoryRawDataStore, IngestDecision,
     IngestService, IngestServiceError, OperationLogEntry, OperationLogStore, RawDataStore,
