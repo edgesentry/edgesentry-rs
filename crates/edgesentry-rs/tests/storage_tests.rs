@@ -505,3 +505,83 @@ fn accepts_ingest_without_cert_identity() {
 
     assert_eq!(service.audit_ledger().records().len(), 1);
 }
+
+#[test]
+fn rejects_unknown_device_and_logs_rejection() {
+    let signing_key = SigningKey::from_bytes(&[99u8; 32]);
+
+    let mut service = IngestService::new(
+        IntegrityPolicyGate::default(),
+        InMemoryRawDataStore::default(),
+        InMemoryAuditLedger::default(),
+        InMemoryOperationLog::default(),
+    );
+    // intentionally do NOT register any device
+
+    let payload = b"door-open";
+    let record = build_signed_record(
+        "lift-99",
+        1,
+        1,
+        payload,
+        AuditRecord::zero_hash(),
+        "s3://bucket/lift-99/1.bin",
+        &signing_key,
+    );
+
+    let err = service
+        .ingest(record, payload, None)
+        .expect_err("unknown device must be rejected");
+    assert!(
+        matches!(err, IngestServiceError::Verify(IngestError::UnknownDevice(ref id)) if id == "lift-99"),
+        "expected UnknownDevice, got: {err}"
+    );
+
+    assert!(service.audit_ledger().records().is_empty());
+    let logs = service.operation_log().entries();
+    assert_eq!(logs.len(), 1);
+    assert_eq!(logs[0].decision, IngestDecision::Rejected);
+    assert_eq!(logs[0].device_id, "lift-99");
+}
+
+#[test]
+fn accepts_multi_record_sequential_ingest() {
+    let signing_key = SigningKey::from_bytes(&[101u8; 32]);
+    let verifying_key = VerifyingKey::from(&signing_key);
+
+    let mut service = IngestService::new(
+        IntegrityPolicyGate::default(),
+        InMemoryRawDataStore::default(),
+        InMemoryAuditLedger::default(),
+        InMemoryOperationLog::default(),
+    );
+    service.register_device("lift-01", verifying_key);
+
+    let payloads: &[&[u8]] = &[b"door-open", b"vibration-ok", b"brake-ok"];
+    let mut prev_hash = AuditRecord::zero_hash();
+
+    for (i, payload) in payloads.iter().enumerate() {
+        let seq = (i as u64) + 1;
+        let record = build_signed_record(
+            "lift-01",
+            seq,
+            seq,
+            payload,
+            prev_hash,
+            format!("s3://bucket/lift-01/{seq}.bin"),
+            &signing_key,
+        );
+        prev_hash = record.hash();
+        service.ingest(record, payload, None).expect("sequential ingest must succeed");
+    }
+
+    let records = service.audit_ledger().records();
+    assert_eq!(records.len(), 3);
+    assert_eq!(records[0].sequence, 1);
+    assert_eq!(records[1].sequence, 2);
+    assert_eq!(records[2].sequence, 3);
+
+    let logs = service.operation_log().entries();
+    assert_eq!(logs.len(), 3);
+    assert!(logs.iter().all(|e| e.decision == IngestDecision::Accepted));
+}
