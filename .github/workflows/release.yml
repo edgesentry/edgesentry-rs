@@ -82,10 +82,10 @@ jobs:
             cargo publish --locked -p "$crate"
           }
 
-          publish_if_missing immutable-trace
+          publish_if_missing edgesentry-rs
 
   build_cli_binaries:
-    name: Build imt (${{ matrix.target }})
+    name: Build eds (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
     needs: quality_gate
     strategy:
@@ -94,19 +94,19 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            binary_name: imt
+            binary_name: eds
             archive_ext: tar.gz
           - os: macos-13
             target: x86_64-apple-darwin
-            binary_name: imt
+            binary_name: eds
             archive_ext: tar.gz
           - os: macos-latest
             target: aarch64-apple-darwin
-            binary_name: imt
+            binary_name: eds
             archive_ext: tar.gz
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            binary_name: imt.exe
+            binary_name: eds.exe
             archive_ext: zip
 
     steps:
@@ -121,15 +121,15 @@ jobs:
       - name: Cache Rust artifacts
         uses: Swatinem/rust-cache@v2
 
-      - name: Build imt release binary
-        run: cargo build --release --locked -p immutable-trace --target ${{ matrix.target }}
+      - name: Build eds release binary
+        run: cargo build --release --locked -p edgesentry-rs --target ${{ matrix.target }}
 
       - name: Package binary (unix)
         if: runner.os != 'Windows'
         shell: bash
         run: |
           TAG_NAME="${GITHUB_REF_NAME}"
-          ASSET_NAME="imt-${TAG_NAME}-${{ matrix.target }}.tar.gz"
+          ASSET_NAME="eds-${TAG_NAME}-${{ matrix.target }}.tar.gz"
           mkdir -p dist
           cp "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" ./dist/
           tar -C dist -czf "$ASSET_NAME" "${{ matrix.binary_name }}"
@@ -140,7 +140,7 @@ jobs:
         shell: pwsh
         run: |
           $tag = "${env:GITHUB_REF_NAME}"
-          $asset = "imt-$tag-${{ matrix.target }}.zip"
+          $asset = "eds-$tag-${{ matrix.target }}.zip"
           New-Item -ItemType Directory -Path dist -Force | Out-Null
           Copy-Item "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "dist/${{ matrix.binary_name }}"
           Compress-Archive -Path "dist/${{ matrix.binary_name }}" -DestinationPath $asset -Force

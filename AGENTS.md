@@ -32,13 +32,13 @@ cargo test --workspace
 Run tests for a specific crate:
 
 ```bash
-cargo test -p immutable-trace
+cargo test -p edgesentry-rs
 ```
 
-Run immutable-trace with S3-compatible backend feature enabled:
+Run edgesentry-rs with S3-compatible backend feature enabled:
 
 ```bash
-cargo test -p immutable-trace --features s3
+cargo test -p edgesentry-rs --features s3
 ```
 
 Run unit tests + OSS license checks in one command:
@@ -104,7 +104,7 @@ cargo build --workspace --release
 Build a specific crate only:
 
 ```bash
-cargo build -p immutable-trace --release
+cargo build -p edgesentry-rs --release
 ```
 
 ### Publish to crates.io
@@ -125,13 +125,13 @@ cargo login <CRATES_IO_TOKEN>
 3) Dry-run publish:
 
 ```bash
-cargo publish --dry-run -p immutable-trace
+cargo publish --dry-run -p edgesentry-rs
 ```
 
 4) Publish:
 
 ```bash
-cargo publish -p immutable-trace
+cargo publish -p edgesentry-rs
 ```
 
 ### GitHub Actions release automation (macOS / Windows / Linux)
@@ -140,11 +140,11 @@ This repository includes `.github/workflows/release.yml`.
 
 - Trigger: push a tag like `v0.1.0`
 - Quality gate: build, unit tests, license check, clippy
-- Publish `immutable-trace` to crates.io
-- Build `imt` binaries for Linux, macOS (x64 + arm64), and Windows
+- Publish `edgesentry-rs` to crates.io
+- Build `eds` binaries for Linux, macOS (x64 + arm64), and Windows
 - Upload packaged binaries to GitHub Release assets
 
-Note: `.github/workflows/ci.yml` runs `cargo publish --dry-run` for `immutable-trace`.
+Note: `.github/workflows/ci.yml` runs `cargo publish --dry-run` for `edgesentry-rs`.
 
 Required GitHub secret:
 
@@ -169,13 +169,13 @@ Version bump rules (Conventional Commits):
 Build and show help:
 
 ```bash
-cargo run -p immutable-trace -- --help
+cargo run -p edgesentry-rs -- --help
 ```
 
 Create a signed record and save it to `record1.json`:
 
 ```bash
-cargo run -p immutable-trace -- sign-record \
+cargo run -p edgesentry-rs -- sign-record \
   --device-id lift-01 \
   --sequence 1 \
   --timestamp-ms 1700000000000 \
@@ -188,7 +188,7 @@ cargo run -p immutable-trace -- sign-record \
 Verify one record signature:
 
 ```bash
-cargo run -p immutable-trace -- verify-record \
+cargo run -p edgesentry-rs -- verify-record \
   --record-file record1.json \
   --public-key-hex 8a88e3dd7409f195fd52db2d3cba5d72ca670bf1d94121bf3748801b40f6f5c0
 ```
@@ -196,7 +196,7 @@ cargo run -p immutable-trace -- verify-record \
 Verify a whole chain from a JSON array file:
 
 ```bash
-cargo run -p immutable-trace -- verify-chain --records-file records.json
+cargo run -p edgesentry-rs -- verify-chain --records-file records.json
 ```
 
 ## Library Usage Example (without CLI)
@@ -209,7 +209,7 @@ Prerequisites:
 - PostgreSQL / MinIO are **not required** for this example (it uses in-memory stores)
 
 ```bash
-cargo run -p immutable-trace --example lift_inspection_flow
+cargo run -p edgesentry-rs --example lift_inspection_flow
 ```
 
 Scenario covered by the sample:
@@ -222,14 +222,14 @@ Scenario covered by the sample:
 
 What it demonstrates:
 
-- Record signing with `immutable_trace::build_signed_record`
-- Ingestion verification with `immutable_trace::ingest::IngestService`
+- Record signing with `edgesentry_rs::build_signed_record`
+- Ingestion verification with `edgesentry_rs::ingest::IngestService`
 - Tampering rejection (modified `payload_hash`)
 - Audit records and operation-log output
 
 Source:
 
-- `crates/audit-cli/examples/lift_inspection_flow.rs`
+- `crates/edgesentry-rs/examples/lift_inspection_flow.rs`
 
 ## Interactive Local Demo (PostgreSQL + MinIO + CLI)
 
@@ -238,7 +238,7 @@ This project includes an interactive local demo that:
 Note: unlike the library-only example, this demo **requires** PostgreSQL and MinIO.
 
 - Starts PostgreSQL + MinIO backend services
-- Generates and verifies a signed chain with `imt`
+- Generates and verifies a signed chain with `eds`
 - Performs tampering and confirms verification failure
 - Persists accepted records into PostgreSQL
 - Prints audit records and operation logs from the DB
@@ -261,7 +261,7 @@ At the end of the flow, it runs a shutdown step (`docker compose -f docker-compo
 Manual inspection example:
 
 ```bash
-docker exec -it immutable-trace-postgres psql -U trace -d trace_audit
+docker exec -it edgesentry-rs-postgres psql -U trace -d trace_audit
 ```
 
 Inside `psql`:
@@ -295,7 +295,7 @@ This scenario simulates a remote lift inspection with three checks:
 ### 1) Generate a full signed chain for one inspection session
 
 ```bash
-cargo run -p immutable-trace -- demo-lift-inspection \
+cargo run -p edgesentry-rs -- demo-lift-inspection \
   --device-id lift-01 \
   --out-file lift_inspection_records.json
 ```
@@ -310,7 +310,7 @@ CHAIN_VALID
 ### 2) Verify chain integrity from file
 
 ```bash
-cargo run -p immutable-trace -- verify-chain --records-file lift_inspection_records.json
+cargo run -p edgesentry-rs -- verify-chain --records-file lift_inspection_records.json
 ```
 
 Expected output:
@@ -342,7 +342,7 @@ PY
 Run chain verification again:
 
 ```bash
-cargo run -p immutable-trace -- verify-chain --records-file lift_inspection_records.json
+cargo run -p edgesentry-rs -- verify-chain --records-file lift_inspection_records.json
 ```
 
 Expected result: command exits with a non-zero code and prints an error such as `chain verification failed: invalid previous hash ...`.
@@ -352,7 +352,7 @@ Expected result: command exits with a non-zero code and prints an error such as 
 Generate one signed event:
 
 ```bash
-cargo run -p immutable-trace -- sign-record \
+cargo run -p edgesentry-rs -- sign-record \
   --device-id lift-01 \
   --sequence 1 \
   --timestamp-ms 1700000000000 \
@@ -365,7 +365,7 @@ cargo run -p immutable-trace -- sign-record \
 Verify signature:
 
 ```bash
-cargo run -p immutable-trace -- verify-record \
+cargo run -p edgesentry-rs -- verify-record \
   --record-file lift_single_record.json \
   --public-key-hex 8a88e3dd7409f195fd52db2d3cba5d72ca670bf1d94121bf3748801b40f6f5c0
 ```
@@ -399,7 +399,7 @@ PY
 Verify signature again:
 
 ```bash
-cargo run -p immutable-trace -- verify-record \
+cargo run -p edgesentry-rs -- verify-record \
   --record-file lift_single_record.json \
   --public-key-hex 8a88e3dd7409f195fd52db2d3cba5d72ca670bf1d94121bf3748801b40f6f5c0
 ```

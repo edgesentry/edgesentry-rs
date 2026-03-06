@@ -1,5 +1,5 @@
 [package]
-name = "immutable-trace"
+name = "edgesentry-rs"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -7,11 +7,11 @@ repository.workspace = true
 description = "Tamper-evident immutable audit trace: signing, verification, ingestion and CLI"
 
 [[bin]]
-name = "imt"
+name = "eds"
 path = "src/main.rs"
 
 [lib]
-name = "immutable_trace"
+name = "edgesentry_rs"
 path = "src/lib.rs"
 
 [features]

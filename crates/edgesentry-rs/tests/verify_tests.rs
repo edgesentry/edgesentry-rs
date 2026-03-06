@@ -1,5 +1,5 @@
 use ed25519_dalek::{SigningKey, VerifyingKey};
-use immutable_trace::{build_signed_record, AuditRecord, IngestError, IngestState};
+use edgesentry_rs::{build_signed_record, AuditRecord, IngestError, IngestState};
 
 #[test]
 fn accepts_valid_sequential_records() {

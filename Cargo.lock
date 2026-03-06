@@ -933,6 +933,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "edgesentry-rs"
+version = "0.1.7"
+dependencies = [
+ "aws-config",
+ "aws-credential-types",
+ "aws-sdk-s3",
+ "blake3",
+ "clap",
+ "ed25519-dalek",
+ "hex",
+ "postcard",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "either"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1484,24 +1502,6 @@ checksum = "3acae9609540aa318d1bc588455225fb2085b9ed0c4f6bd0d9d5bcd86f1a0344"
 dependencies = [
  "icu_normalizer",
  "icu_properties",
-]
-
-[[package]]
-name = "immutable-trace"
-version = "0.1.7"
-dependencies = [
- "aws-config",
- "aws-credential-types",
- "aws-sdk-s3",
- "blake3",
- "clap",
- "ed25519-dalek",
- "hex",
- "postcard",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
 ]
 
 [[package]]
