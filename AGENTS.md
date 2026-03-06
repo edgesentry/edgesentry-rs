@@ -2,6 +2,16 @@
 
 This file is the canonical runbook for executable procedures.
 
+## Mandatory: Run Tests After Every Code Change
+
+After **every** code change, run:
+
+```bash
+cargo test --workspace
+```
+
+Do not consider a change complete until all tests pass.
+
 ## Unit Tests
 
 ### Prerequisites (macOS)
@@ -214,7 +224,7 @@ cargo run -p edgesentry-rs --example lift_inspection_flow
 
 Scenario covered by the sample:
 
-1. Register one lift device public key in `IngestState`
+1. Register one lift device public key in `IntegrityPolicyGate`
 2. Generate three signed inspection records with `build_signed_record`
 3. Ingest all records via `IngestService` (accepted path)
 4. Tamper one record (`payload_hash`) and confirm rejection

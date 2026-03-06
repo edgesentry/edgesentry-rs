@@ -9,8 +9,8 @@ pub use chain::{verify_chain, ChainError};
 pub use crypto::{compute_payload_hash, sign_payload_hash, verify_payload_signature};
 pub use ingest::{
     AuditLedger, InMemoryAuditLedger, InMemoryOperationLog, InMemoryRawDataStore, IngestDecision,
-    IngestService, IngestServiceError, OperationLogEntry, OperationLogStore, RawDataStore,
-    IngestError, IngestState,
+    IngestError, IngestService, IngestServiceError, IngestState, IntegrityPolicyGate,
+    OperationLogEntry, OperationLogStore, RawDataStore,
 };
 #[cfg(feature = "s3")]
 pub use ingest::{S3Backend, S3CompatibleRawDataStore, S3ObjectStoreConfig, S3StoreError};

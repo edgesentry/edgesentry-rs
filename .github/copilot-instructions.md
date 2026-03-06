@@ -22,6 +22,10 @@ crates/
       crypto.rs                     # Ed25519 sign/verify helpers (BLAKE3 hash)
       agent.rs                      # Device-side signed-record builder
       ingest/                       # Cloud-side ingestion and trust enforcement
+        mod.rs                      # Module exports
+        policy.rs                   # IntegrityPolicyGate — P0 gate (route, sig, seq, hash)
+        verify.rs                   # IngestState — per-device sequence/hash state machine
+        storage.rs                  # IngestService + in-memory and S3 store impls
     examples/
       lift_inspection_flow.rs       # End-to-end library example (no external deps)
     tests/                          # Integration tests

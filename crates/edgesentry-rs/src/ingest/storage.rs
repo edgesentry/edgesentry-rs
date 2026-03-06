@@ -4,7 +4,8 @@ use thiserror::Error;
 
 use crate::crypto::compute_payload_hash;
 use crate::record::AuditRecord;
-use super::verify::{IngestError, IngestState};
+use super::policy::IntegrityPolicyGate;
+use super::verify::IngestError;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IngestDecision {
@@ -58,7 +59,7 @@ where
     L: AuditLedger,
     O: OperationLogStore,
 {
-    verifier: IngestState,
+    policy: IntegrityPolicyGate,
     raw_data_store: R,
     audit_ledger: L,
     operation_log: O,
@@ -70,9 +71,9 @@ where
     L: AuditLedger,
     O: OperationLogStore,
 {
-    pub fn new(verifier: IngestState, raw_data_store: R, audit_ledger: L, operation_log: O) -> Self {
+    pub fn new(policy: IntegrityPolicyGate, raw_data_store: R, audit_ledger: L, operation_log: O) -> Self {
         Self {
-            verifier,
+            policy,
             raw_data_store,
             audit_ledger,
             operation_log,
@@ -80,19 +81,13 @@ where
     }
 
     pub fn register_device(&mut self, device_id: impl Into<String>, key: ed25519_dalek::VerifyingKey) {
-        self.verifier.register_device(device_id, key);
+        self.policy.register_device(device_id, key);
     }
 
     pub fn ingest(&mut self, record: AuditRecord, raw_payload: &[u8], cert_identity: Option<&str>) -> Result<(), IngestServiceError> {
-        if let Some(identity) = cert_identity {
-            if identity != record.device_id {
-                let error = super::verify::IngestError::CertDeviceMismatch {
-                    cert_identity: identity.to_string(),
-                    device_id: record.device_id.clone(),
-                };
-                self.log_rejection(&record, &error.to_string());
-                return Err(IngestServiceError::Verify(error));
-            }
+        if let Err(error) = self.policy.enforce(&record, cert_identity) {
+            self.log_rejection(&record, &error.to_string());
+            return Err(IngestServiceError::Verify(error));
         }
 
         let payload_hash = compute_payload_hash(raw_payload);
@@ -102,11 +97,6 @@ where
                 device_id: record.device_id,
                 sequence: record.sequence,
             });
-        }
-
-        if let Err(error) = self.verifier.verify_and_accept(&record) {
-            self.log_rejection(&record, &error.to_string());
-            return Err(IngestServiceError::Verify(error));
         }
 
         self.raw_data_store

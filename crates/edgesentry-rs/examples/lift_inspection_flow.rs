@@ -1,7 +1,7 @@
 use ed25519_dalek::SigningKey;
 use edgesentry_rs::{
     build_signed_record, AuditRecord, InMemoryAuditLedger, InMemoryOperationLog,
-    InMemoryRawDataStore, IngestService, IngestState,
+    InMemoryRawDataStore, IngestService, IntegrityPolicyGate,
 };
 
 fn main() {
@@ -10,7 +10,7 @@ fn main() {
     let verifying_key = signing_key.verifying_key();
 
     let mut service = IngestService::new(
-        IngestState::default(),
+        IntegrityPolicyGate::default(),
         InMemoryRawDataStore::default(),
         InMemoryAuditLedger::default(),
         InMemoryOperationLog::default(),
