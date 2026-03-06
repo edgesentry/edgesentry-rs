@@ -107,6 +107,47 @@ fn rejects_invalid_prev_hash() {
 }
 
 #[test]
+fn rejects_out_of_order_sequence() {
+    let signing_key = SigningKey::from_bytes(&[43u8; 32]);
+    let verifying_key = VerifyingKey::from(&signing_key);
+
+    let mut state = IngestState::default();
+    state.register_device("lift-01", verifying_key);
+
+    let r1 = build_signed_record(
+        "lift-01",
+        1,
+        1,
+        b"payload-1",
+        AuditRecord::zero_hash(),
+        "s3://bucket/r1.bin",
+        &signing_key,
+    );
+    assert!(state.verify_and_accept(&r1).is_ok());
+
+    // Skip sequence 2 and jump to sequence 3
+    let r3 = build_signed_record(
+        "lift-01",
+        3,
+        3,
+        b"payload-3",
+        r1.hash(),
+        "s3://bucket/r3.bin",
+        &signing_key,
+    );
+
+    let err = state.verify_and_accept(&r3).unwrap_err();
+    assert_eq!(
+        err,
+        IngestError::InvalidSequence {
+            device_id: "lift-01".to_string(),
+            expected: 2,
+            actual: 3,
+        }
+    );
+}
+
+#[test]
 fn rejects_tampered_signature() {
     let signing_key = SigningKey::from_bytes(&[51u8; 32]);
     let verifying_key = VerifyingKey::from(&signing_key);
