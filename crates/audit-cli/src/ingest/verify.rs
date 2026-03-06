@@ -1,8 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
 use ed25519_dalek::VerifyingKey;
-use ledger_core::{verify_payload_signature, AuditRecord, Hash32};
 use thiserror::Error;
+
+use crate::crypto::verify_payload_signature;
+use crate::record::{AuditRecord, Hash32};
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum IngestError {

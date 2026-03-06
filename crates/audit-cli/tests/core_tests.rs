@@ -1,5 +1,5 @@
 use ed25519_dalek::{SigningKey, VerifyingKey};
-use ledger_core::{
+use immutable_trace::{
     compute_payload_hash, sign_payload_hash, verify_chain, verify_payload_signature, AuditRecord,
     ChainError,
 };

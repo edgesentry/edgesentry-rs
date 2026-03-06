@@ -39,8 +39,8 @@ jobs:
       - name: Unit tests (workspace)
         run: cargo test --workspace
 
-      - name: Unit tests (ingest with s3)
-        run: cargo test -p ingest --features s3
+      - name: Unit tests (immutable-trace with s3)
+        run: cargo test -p immutable-trace --features s3
 
   license_check:
     name: OSS License Check
@@ -77,12 +77,6 @@ jobs:
       - name: Cache Rust artifacts
         uses: Swatinem/rust-cache@v2
 
-      - name: Publish dry-run (ledger-core only)
-        # NOTE:
-        # Dependent crates (device-agent/ingest/immutable-trace) require ledger-core to
-        # already exist in crates.io for `cargo publish --dry-run` resolution.
-        # Running dry-run for all crates in pre-release CI causes false failures before
-        # the first publish. Full publish validation for all crates runs in
-        # `.github/workflows/release.yml` where crates are published in dependency order.
+      - name: Publish dry-run (immutable-trace)
         run: |
-          cargo publish --dry-run --locked -p ledger-core
+          cargo publish --dry-run --locked -p immutable-trace

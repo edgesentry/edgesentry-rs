@@ -24,8 +24,8 @@ fi
 echo "[1/3] Running unit tests (workspace)..."
 cargo test --workspace
 
-echo "[2/3] Running ingest tests with s3 feature..."
-cargo test -p ingest --features s3
+echo "[2/3] Running immutable-trace tests with s3 feature..."
+cargo test -p immutable-trace --features s3
 
 echo "[3/3] Checking OSS licenses for commercial-use policy (deny.toml)..."
 cargo deny check licenses

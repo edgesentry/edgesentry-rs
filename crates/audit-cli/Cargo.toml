@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "CLI for signing records and verifying immutable trace integrity"
+description = "Tamper-evident immutable audit trace: signing, verification, ingestion and CLI"
 
 [[bin]]
 name = "imt"
@@ -14,13 +14,27 @@ path = "src/main.rs"
 name = "immutable_trace"
 path = "src/lib.rs"
 
+[features]
+default = []
+s3 = [
+    "dep:aws-config",
+    "dep:aws-sdk-s3",
+    "dep:aws-credential-types",
+    "dep:tokio",
+]
+
 [dependencies]
+blake3.workspace = true
 clap.workspace = true
-device-agent.workspace = true
 ed25519-dalek.workspace = true
 hex.workspace = true
-ledger-core.workspace = true
+postcard.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+aws-config = { version = "1", optional = true }
+aws-sdk-s3 = { version = "1", optional = true }
+aws-credential-types = { version = "1", optional = true }
+tokio = { version = "1", features = ["rt-multi-thread"], optional = true }
 
 [dev-dependencies]

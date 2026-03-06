@@ -82,9 +82,6 @@ jobs:
             cargo publish --locked -p "$crate"
           }
 
-          publish_if_missing ledger-core
-          publish_if_missing device-agent
-          publish_if_missing ingest
           publish_if_missing immutable-trace
 
   build_cli_binaries:

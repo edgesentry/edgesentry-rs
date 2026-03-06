@@ -32,16 +32,13 @@ cargo test --workspace
 Run tests for a specific crate:
 
 ```bash
-cargo test -p ledger-core
-cargo test -p device-agent
-cargo test -p ingest
 cargo test -p immutable-trace
 ```
 
-Run ingest with S3-compatible backend feature enabled:
+Run immutable-trace with S3-compatible backend feature enabled:
 
 ```bash
-cargo test -p ingest --features s3
+cargo test -p immutable-trace --features s3
 ```
 
 Run unit tests + OSS license checks in one command:
@@ -107,7 +104,7 @@ cargo build --workspace --release
 Build a specific crate only:
 
 ```bash
-cargo build -p ledger-core --release
+cargo build -p immutable-trace --release
 ```
 
 ### Publish to crates.io
@@ -125,25 +122,17 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo login <CRATES_IO_TOKEN>
 ```
 
-3) Dry-run publish in dependency order:
+3) Dry-run publish:
 
 ```bash
-cargo publish --dry-run -p ledger-core
-cargo publish --dry-run -p device-agent
-cargo publish --dry-run -p ingest
 cargo publish --dry-run -p immutable-trace
 ```
 
-4) Publish in the same order:
+4) Publish:
 
 ```bash
-cargo publish -p ledger-core
-cargo publish -p device-agent
-cargo publish -p ingest
 cargo publish -p immutable-trace
 ```
-
-If crates.io index propagation causes a temporary dependency resolution error, wait a few minutes and retry the next crate.
 
 ### GitHub Actions release automation (macOS / Windows / Linux)
 
@@ -151,13 +140,11 @@ This repository includes `.github/workflows/release.yml`.
 
 - Trigger: push a tag like `v0.1.0`
 - Quality gate: build, unit tests, license check, clippy
-- Publish crates.io packages in dependency order
+- Publish `immutable-trace` to crates.io
 - Build `imt` binaries for Linux, macOS (x64 + arm64), and Windows
 - Upload packaged binaries to GitHub Release assets
 
-Note: `.github/workflows/ci.yml` runs `cargo publish --dry-run` for `ledger-core` only.
-Dependent crates require previously published upstream crates for dry-run resolution,
-so full end-to-end publish validation occurs in `release.yml` during dependency-ordered release.
+Note: `.github/workflows/ci.yml` runs `cargo publish --dry-run` for `immutable-trace`.
 
 Required GitHub secret:
 
@@ -222,27 +209,27 @@ Prerequisites:
 - PostgreSQL / MinIO are **not required** for this example (it uses in-memory stores)
 
 ```bash
-cargo run -p ingest --example lift_inspection_flow
+cargo run -p immutable-trace --example lift_inspection_flow
 ```
 
 Scenario covered by the sample:
 
 1. Register one lift device public key in `IngestState`
-2. Generate three signed inspection records with `device-agent`
+2. Generate three signed inspection records with `build_signed_record`
 3. Ingest all records via `IngestService` (accepted path)
 4. Tamper one record (`payload_hash`) and confirm rejection
 5. Print stored audit records and operation logs
 
 What it demonstrates:
 
-- Record signing with `device-agent::build_signed_record`
-- Ingestion verification with `ingest::IngestService`
+- Record signing with `immutable_trace::build_signed_record`
+- Ingestion verification with `immutable_trace::ingest::IngestService`
 - Tampering rejection (modified `payload_hash`)
 - Audit records and operation-log output
 
 Source:
 
-- `crates/ingest/examples/lift_inspection_flow.rs`
+- `crates/audit-cli/examples/lift_inspection_flow.rs`
 
 ## Interactive Local Demo (PostgreSQL + MinIO + CLI)
 

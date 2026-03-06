@@ -1,10 +1,8 @@
-use device_agent::build_signed_record;
 use ed25519_dalek::{SigningKey, VerifyingKey};
-use ingest::{
-    InMemoryAuditLedger, InMemoryOperationLog, InMemoryRawDataStore, IngestDecision, IngestService,
-    IngestServiceError, IngestState,
+use immutable_trace::{
+    build_signed_record, AuditRecord, InMemoryAuditLedger, InMemoryOperationLog,
+    InMemoryRawDataStore, IngestDecision, IngestService, IngestServiceError, IngestState,
 };
-use ledger_core::AuditRecord;
 
 #[test]
 fn persists_raw_data_audit_ledger_and_operation_log() {
