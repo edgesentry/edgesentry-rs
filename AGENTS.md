@@ -44,6 +44,12 @@ Run ingest-api with S3-compatible backend feature enabled:
 cargo test -p ingest-api --features s3
 ```
 
+Run unit tests + OSS license checks in one command:
+
+```bash
+./scripts/run_unit_and_license_check.sh
+```
+
 ## Static Analysis and OSS License Check
 
 Use the following checks before release.
@@ -89,6 +95,69 @@ cargo deny check advisories bans licenses sources
 ```
 
 If this check fails, inspect violating crates and update dependencies or the policy only after legal/security review.
+
+## Build and Release (Rust crates)
+
+### Build release artifacts
+
+```bash
+cargo build --workspace --release
+```
+
+Build a specific crate only:
+
+```bash
+cargo build -p ledger-core --release
+```
+
+### Publish to crates.io
+
+1) Validate quality gates first:
+
+```bash
+./scripts/run_unit_and_license_check.sh
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+```
+
+2) Login once:
+
+```bash
+cargo login <CRATES_IO_TOKEN>
+```
+
+3) Dry-run publish in dependency order:
+
+```bash
+cargo publish --dry-run -p ledger-core
+cargo publish --dry-run -p device-agent
+cargo publish --dry-run -p ingest-api
+cargo publish --dry-run -p audit-cli
+```
+
+4) Publish in the same order:
+
+```bash
+cargo publish -p ledger-core
+cargo publish -p device-agent
+cargo publish -p ingest-api
+cargo publish -p audit-cli
+```
+
+If crates.io index propagation causes a temporary dependency resolution error, wait a few minutes and retry the next crate.
+
+### GitHub Actions release automation (macOS / Windows / Linux)
+
+This repository includes `.github/workflows/release.yml`.
+
+- Trigger: push a tag like `v0.1.0`
+- Quality gate: unit tests, license check, clippy
+- Publish crates.io packages in dependency order
+- Build `audit-cli` binaries for Linux, macOS (x64 + arm64), and Windows
+- Upload packaged binaries to GitHub Release assets
+
+Required GitHub secret:
+
+- `CRATES_IO_TOKEN`: crates.io API token used by `cargo publish`
 
 ## CLI Usage
 

@@ -5,7 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-ledger-core = { path = "../ledger-core" }
+ledger-core = { version = "0.1.0", path = "../ledger-core" }
 ed25519-dalek.workspace = true
 
 [dev-dependencies]

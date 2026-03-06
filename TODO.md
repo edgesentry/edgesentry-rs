@@ -15,6 +15,8 @@ This file tracks the current implementation status of `immutable-trace-sample`.
 - [x] Tampering detection demo (tampered chain is rejected)
 - [x] Audit/operation log inspection in local demo output
 - [x] Unit/integration test suites across crates (workspace test commands documented in `AGENTS.md`)
+- [x] One-shot verification script for unit tests + commercial-use OSS license check (`scripts/run_unit_and_license_check.sh`)
+- [x] OSS license policy file for `cargo-deny` (`deny.toml`)
 
 ## Not Implemented Yet / Needs Hardening for Industrial Production
 
