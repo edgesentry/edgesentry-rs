@@ -1,0 +1,12 @@
+[package]
+name = "ledger-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+blake3.workspace = true
+postcard.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+ed25519-dalek.workspace = true

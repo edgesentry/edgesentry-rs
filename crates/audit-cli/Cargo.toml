@@ -1,0 +1,16 @@
+[package]
+name = "audit-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+clap.workspace = true
+device-agent = { path = "../device-agent" }
+ed25519-dalek.workspace = true
+hex.workspace = true
+ledger-core = { path = "../ledger-core" }
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]

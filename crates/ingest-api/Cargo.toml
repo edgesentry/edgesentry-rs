@@ -1,0 +1,26 @@
+[package]
+name = "ingest-api"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+default = []
+s3 = [
+	"dep:aws-config",
+	"dep:aws-sdk-s3",
+	"dep:aws-credential-types",
+	"dep:tokio",
+]
+
+[dependencies]
+ledger-core = { path = "../ledger-core" }
+ed25519-dalek.workspace = true
+thiserror.workspace = true
+aws-config = { version = "1", optional = true }
+aws-sdk-s3 = { version = "1", optional = true }
+aws-credential-types = { version = "1", optional = true }
+tokio = { version = "1", features = ["rt-multi-thread"], optional = true }
+
+[dev-dependencies]
+device-agent = { path = "../device-agent" }

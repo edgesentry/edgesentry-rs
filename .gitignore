@@ -1,0 +1,29 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# Toolchain / local env
+.cargo/
+.rustup/
+
+# OS / Editor
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Temporary files
+tmp/
+*.tmp
+*.log
+
+# Local output artifacts (examples / manual runs)
+record*.json
+lift_*_record*.json
+lift_inspection_records.json
