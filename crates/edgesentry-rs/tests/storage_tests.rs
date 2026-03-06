@@ -154,6 +154,193 @@ fn rejects_cert_device_mismatch_and_logs_rejection() {
 }
 
 #[test]
+fn rejects_tampered_signature_and_logs_rejection() {
+    let signing_key = SigningKey::from_bytes(&[93u8; 32]);
+    let verifying_key = VerifyingKey::from(&signing_key);
+
+    let mut service = IngestService::new(
+        IngestState::default(),
+        InMemoryRawDataStore::default(),
+        InMemoryAuditLedger::default(),
+        InMemoryOperationLog::default(),
+    );
+    service.register_device("lift-01", verifying_key);
+
+    let payload = b"door-open";
+    let mut record = build_signed_record(
+        "lift-01",
+        1,
+        1,
+        payload,
+        AuditRecord::zero_hash(),
+        "s3://bucket/lift-01/1.bin",
+        &signing_key,
+    );
+    record.signature[0] ^= 0x01;
+
+    let err = service
+        .ingest(record, payload, Some("lift-01"))
+        .expect_err("ingest should fail on tampered signature");
+
+    assert!(
+        matches!(
+            err,
+            IngestServiceError::Verify(IngestError::InvalidSignature(ref id)) if id == "lift-01"
+        ),
+        "expected InvalidSignature, got: {err}"
+    );
+
+    assert!(
+        service
+            .raw_data_store()
+            .get("s3://bucket/lift-01/1.bin")
+            .is_none()
+    );
+    assert!(service.audit_ledger().records().is_empty());
+
+    let logs = service.operation_log().entries();
+    assert_eq!(logs.len(), 1);
+    assert_eq!(logs[0].decision, IngestDecision::Rejected);
+    assert_eq!(logs[0].device_id, "lift-01");
+    assert_eq!(logs[0].sequence, 1);
+}
+
+#[test]
+fn rejects_replay_and_logs_rejection() {
+    let signing_key = SigningKey::from_bytes(&[95u8; 32]);
+    let verifying_key = VerifyingKey::from(&signing_key);
+
+    let mut service = IngestService::new(
+        IngestState::default(),
+        InMemoryRawDataStore::default(),
+        InMemoryAuditLedger::default(),
+        InMemoryOperationLog::default(),
+    );
+    service.register_device("lift-01", verifying_key);
+
+    let payload = b"door-open";
+    let record = build_signed_record(
+        "lift-01",
+        1,
+        1,
+        payload,
+        AuditRecord::zero_hash(),
+        "s3://bucket/lift-01/1.bin",
+        &signing_key,
+    );
+
+    service
+        .ingest(record.clone(), payload, Some("lift-01"))
+        .expect("first ingest should succeed");
+
+    // Replay with a distinct object_ref so we can assert the store was not written on rejection
+    let mut replay = record;
+    replay.object_ref = "s3://bucket/lift-01/1-replay.bin".to_string();
+
+    let err = service
+        .ingest(replay, payload, Some("lift-01"))
+        .expect_err("replay ingest should fail");
+
+    assert!(
+        matches!(
+            err,
+            IngestServiceError::Verify(IngestError::Duplicate {
+                ref device_id,
+                sequence: 1,
+            }) if device_id == "lift-01"
+        ),
+        "expected Duplicate, got: {err}"
+    );
+
+    assert_eq!(service.audit_ledger().records().len(), 1);
+    assert!(
+        service
+            .raw_data_store()
+            .get("s3://bucket/lift-01/1-replay.bin")
+            .is_none(),
+        "replayed record must not be written to the raw data store"
+    );
+
+    let logs = service.operation_log().entries();
+    assert_eq!(logs.len(), 2);
+    assert_eq!(logs[0].decision, IngestDecision::Accepted);
+    assert_eq!(logs[1].decision, IngestDecision::Rejected);
+    assert_eq!(logs[1].device_id, "lift-01");
+    assert_eq!(logs[1].sequence, 1);
+}
+
+#[test]
+fn rejects_out_of_order_sequence_and_logs_rejection() {
+    let signing_key = SigningKey::from_bytes(&[97u8; 32]);
+    let verifying_key = VerifyingKey::from(&signing_key);
+
+    let mut service = IngestService::new(
+        IngestState::default(),
+        InMemoryRawDataStore::default(),
+        InMemoryAuditLedger::default(),
+        InMemoryOperationLog::default(),
+    );
+    service.register_device("lift-01", verifying_key);
+
+    let payload1 = b"door-open";
+    let r1 = build_signed_record(
+        "lift-01",
+        1,
+        1,
+        payload1,
+        AuditRecord::zero_hash(),
+        "s3://bucket/lift-01/1.bin",
+        &signing_key,
+    );
+    service
+        .ingest(r1.clone(), payload1, Some("lift-01"))
+        .expect("first ingest should succeed");
+
+    // Skip sequence 2, jump straight to 3
+    let payload3 = b"vibration-ok";
+    let r3 = build_signed_record(
+        "lift-01",
+        3,
+        3,
+        payload3,
+        r1.hash(),
+        "s3://bucket/lift-01/3.bin",
+        &signing_key,
+    );
+    let err = service
+        .ingest(r3, payload3, Some("lift-01"))
+        .expect_err("out-of-order ingest should fail");
+
+    assert!(
+        matches!(
+            err,
+            IngestServiceError::Verify(IngestError::InvalidSequence {
+                ref device_id,
+                expected: 2,
+                actual: 3,
+            }) if device_id == "lift-01"
+        ),
+        "expected InvalidSequence, got: {err}"
+    );
+
+    assert_eq!(service.audit_ledger().records().len(), 1);
+    assert!(
+        service
+            .raw_data_store()
+            .get("s3://bucket/lift-01/3.bin")
+            .is_none(),
+        "out-of-order record must not be written to the raw data store"
+    );
+
+    let logs = service.operation_log().entries();
+    assert_eq!(logs.len(), 2);
+    assert_eq!(logs[0].decision, IngestDecision::Accepted);
+    assert_eq!(logs[1].decision, IngestDecision::Rejected);
+    assert_eq!(logs[1].device_id, "lift-01");
+    assert_eq!(logs[1].sequence, 3);
+}
+
+#[test]
 fn accepts_ingest_without_cert_identity() {
     let signing_key = SigningKey::from_bytes(&[91u8; 32]);
     let verifying_key = VerifyingKey::from(&signing_key);
