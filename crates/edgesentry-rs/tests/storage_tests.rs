@@ -491,6 +491,48 @@ fn rejects_out_of_order_sequence_and_logs_rejection() {
 }
 
 #[test]
+fn cert_identity_check_precedes_payload_hash_check() {
+    // A request with a spoofed cert_identity AND a mismatched payload hash must
+    // yield CertDeviceMismatch (not PayloadHashMismatch), confirming that the
+    // identity gate runs before the payload integrity check.
+    let signing_key = SigningKey::from_bytes(&[42u8; 32]);
+    let verifying_key = VerifyingKey::from(&signing_key);
+
+    let mut service = IngestService::new(
+        IntegrityPolicyGate::default(),
+        InMemoryRawDataStore::default(),
+        InMemoryAuditLedger::default(),
+        InMemoryOperationLog::default(),
+    );
+    service.register_device("lift-01", verifying_key);
+
+    let record = build_signed_record(
+        "lift-01",
+        1,
+        1,
+        b"door-open",
+        AuditRecord::zero_hash(),
+        "s3://bucket/lift-01/1.bin",
+        &signing_key,
+    );
+
+    let err = service
+        .ingest(record, b"tampered-payload", Some("spoofed-device"))
+        .expect_err("ingest should fail");
+
+    assert!(
+        matches!(
+            err,
+            IngestServiceError::Verify(IngestError::CertDeviceMismatch {
+                ref cert_identity,
+                ref device_id,
+            }) if cert_identity == "spoofed-device" && device_id == "lift-01"
+        ),
+        "expected CertDeviceMismatch (not PayloadHashMismatch), got: {err}"
+    );
+}
+
+#[test]
 fn accepts_ingest_without_cert_identity() {
     let signing_key = SigningKey::from_bytes(&[91u8; 32]);
     let verifying_key = VerifyingKey::from(&signing_key);
