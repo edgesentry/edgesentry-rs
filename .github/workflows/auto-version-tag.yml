@@ -106,7 +106,8 @@ jobs:
         if: ${{ steps.guard.outputs.is_release_commit != 'true' }}
         run: |
           NEXT_TAG="v${{ steps.semver.outputs.next_version }}"
-          if git rev-parse "$NEXT_TAG" >/dev/null 2>&1; then
+          if git show-ref --verify --quiet "refs/tags/$NEXT_TAG" || \
+             git ls-remote --exit-code --tags origin "refs/tags/$NEXT_TAG" >/dev/null 2>&1; then
             echo "tag_exists=true" >> "$GITHUB_OUTPUT"
             echo "Tag $NEXT_TAG already exists. Nothing to do."
           else
