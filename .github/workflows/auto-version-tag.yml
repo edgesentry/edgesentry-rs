@@ -28,6 +28,9 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Prepare git metadata
         run: |
           git config user.name "github-actions[bot]"
@@ -147,12 +150,18 @@ jobs:
           path.write_text('\n'.join(updated) + '\n', encoding='utf-8')
           PY
 
+      - name: Sync Cargo.lock
+        if: ${{ steps.guard.outputs.is_release_commit != 'true' && steps.tag_check.outputs.tag_exists != 'true' && steps.semver.outputs.next_version != steps.semver.outputs.current_version }}
+        run: |
+          # Keep lockfile in sync after manifest version bump so downstream --locked jobs succeed.
+          cargo metadata --format-version 1 > /dev/null
+
       - name: Commit version bump
         if: ${{ steps.guard.outputs.is_release_commit != 'true' && steps.tag_check.outputs.tag_exists != 'true' && steps.semver.outputs.next_version != steps.semver.outputs.current_version }}
         env:
           NEXT_VERSION: ${{ steps.semver.outputs.next_version }}
         run: |
-          git add Cargo.toml
+          git add Cargo.toml Cargo.lock
           git commit -m "chore(release): v${NEXT_VERSION} [skip ci]"
 
       - name: Push release commit to main
