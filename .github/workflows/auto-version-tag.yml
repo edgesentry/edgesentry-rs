@@ -26,7 +26,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        run: rustup update stable && rustup default stable
 
       - name: Prepare git metadata
         run: |
