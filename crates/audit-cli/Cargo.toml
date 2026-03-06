@@ -6,10 +6,10 @@ license.workspace = true
 
 [dependencies]
 clap.workspace = true
-device-agent = { path = "../device-agent" }
+device-agent = { version = "0.1.0", path = "../device-agent" }
 ed25519-dalek.workspace = true
 hex.workspace = true
-ledger-core = { path = "../ledger-core" }
+ledger-core = { version = "0.1.0", path = "../ledger-core" }
 serde_json.workspace = true
 thiserror.workspace = true
 

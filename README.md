@@ -1,4 +1,4 @@
-# immutable-trace-sample
+# immutable-trace
 
 This repository contains a tamper-evident audit log PoC built in Rust from IoT devices to cloud services.
 
@@ -81,6 +81,20 @@ All execution procedures are centralized in [AGENTS.md](AGENTS.md):
 - CLI usage
 - Lift inspection end-to-end scenario
 - Tampering and detection walkthrough
+
+## Quality and License Check
+
+Run workspace unit tests and commercial-use OSS license checks in one command:
+
+```bash
+./scripts/run_unit_and_license_check.sh
+```
+
+This script runs:
+
+1. `cargo test --workspace`
+2. `cargo test -p ingest-api --features s3`
+3. `cargo deny check licenses` (policy from `deny.toml`)
 
 ## Interactive Local Demo
 
