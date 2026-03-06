@@ -85,6 +85,11 @@ where
     }
 
     pub fn ingest(&mut self, record: AuditRecord, raw_payload: &[u8], cert_identity: Option<&str>) -> Result<(), IngestServiceError> {
+        if let Err(error) = self.policy.enforce(&record, cert_identity) {
+            self.log_rejection(&record, &error.to_string());
+            return Err(IngestServiceError::Verify(error));
+        }
+
         let payload_hash = compute_payload_hash(raw_payload);
         if payload_hash != record.payload_hash {
             self.log_rejection(&record, "payload hash mismatch");
@@ -92,11 +97,6 @@ where
                 device_id: record.device_id,
                 sequence: record.sequence,
             });
-        }
-
-        if let Err(error) = self.policy.enforce(&record, cert_identity) {
-            self.log_rejection(&record, &error.to_string());
-            return Err(IngestServiceError::Verify(error));
         }
 
         self.raw_data_store
