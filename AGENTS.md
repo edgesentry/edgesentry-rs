@@ -150,7 +150,7 @@ If crates.io index propagation causes a temporary dependency resolution error, w
 This repository includes `.github/workflows/release.yml`.
 
 - Trigger: push a tag like `v0.1.0`
-- Quality gate: unit tests, license check, clippy
+- Quality gate: build, unit tests, license check, clippy
 - Publish crates.io packages in dependency order
 - Build `audit-cli` binaries for Linux, macOS (x64 + arm64), and Windows
 - Upload packaged binaries to GitHub Release assets
