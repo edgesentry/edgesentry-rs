@@ -3,6 +3,8 @@ name = "ledger-core"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+description = "Core data model, hashing, and signature verification primitives for immutable trace records"
 
 [dependencies]
 blake3.workspace = true

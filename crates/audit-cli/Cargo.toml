@@ -3,6 +3,8 @@ name = "audit-cli"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+description = "CLI for signing records and verifying immutable trace integrity"
 
 [dependencies]
 clap.workspace = true
