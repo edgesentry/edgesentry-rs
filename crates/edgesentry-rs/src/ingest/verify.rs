@@ -22,6 +22,11 @@ pub enum IngestError {
     InvalidPrevHash(String),
     #[error("invalid signature for device={0}")]
     InvalidSignature(String),
+    #[error("auth/device mismatch: cert_identity={cert_identity} device_id={device_id}")]
+    CertDeviceMismatch {
+        cert_identity: String,
+        device_id: String,
+    },
 }
 
 #[derive(Default)]
