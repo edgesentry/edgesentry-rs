@@ -132,3 +132,12 @@ Use these types from `ingest-api`:
 - `S3CompatibleRawDataStore::new(config)`
 
 For build and test commands, see [AGENTS.md](AGENTS.md).
+
+## License
+
+This project is licensed under either of:
+
+- [Apache License, Version 2.0](LICENSE-APACHE)
+- [MIT license](LICENSE-MIT)
+
+at your option.
