@@ -190,6 +190,12 @@ fn rejects_tampered_signature_and_logs_rejection() {
         "expected InvalidSignature, got: {err}"
     );
 
+    assert!(
+        service
+            .raw_data_store()
+            .get("s3://bucket/lift-01/1.bin")
+            .is_none()
+    );
     assert!(service.audit_ledger().records().is_empty());
 
     let logs = service.operation_log().entries();
@@ -227,8 +233,12 @@ fn rejects_replay_and_logs_rejection() {
         .ingest(record.clone(), payload, Some("lift-01"))
         .expect("first ingest should succeed");
 
+    // Replay with a distinct object_ref so we can assert the store was not written on rejection
+    let mut replay = record;
+    replay.object_ref = "s3://bucket/lift-01/1-replay.bin".to_string();
+
     let err = service
-        .ingest(record, payload, Some("lift-01"))
+        .ingest(replay, payload, Some("lift-01"))
         .expect_err("replay ingest should fail");
 
     assert!(
@@ -243,6 +253,13 @@ fn rejects_replay_and_logs_rejection() {
     );
 
     assert_eq!(service.audit_ledger().records().len(), 1);
+    assert!(
+        service
+            .raw_data_store()
+            .get("s3://bucket/lift-01/1-replay.bin")
+            .is_none(),
+        "replayed record must not be written to the raw data store"
+    );
 
     let logs = service.operation_log().entries();
     assert_eq!(logs.len(), 2);
@@ -307,6 +324,13 @@ fn rejects_out_of_order_sequence_and_logs_rejection() {
     );
 
     assert_eq!(service.audit_ledger().records().len(), 1);
+    assert!(
+        service
+            .raw_data_store()
+            .get("s3://bucket/lift-01/3.bin")
+            .is_none(),
+        "out-of-order record must not be written to the raw data store"
+    );
 
     let logs = service.operation_log().entries();
     assert_eq!(logs.len(), 2);
