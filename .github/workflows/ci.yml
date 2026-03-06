@@ -79,7 +79,7 @@ jobs:
 
       - name: Publish dry-run (ledger-core only)
         # NOTE:
-        # Dependent crates (device-agent/ingest-api/audit-cli) require ledger-core to
+        # Dependent crates (device-agent/ingest-api/immutable-trace-audit-cli) require ledger-core to
         # already exist in crates.io for `cargo publish --dry-run` resolution.
         # Running dry-run for all crates in pre-release CI causes false failures before
         # the first publish. Full publish validation for all crates runs in

@@ -1,10 +1,18 @@
 [package]
-name = "audit-cli"
+name = "immutable-trace-audit-cli"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "CLI for signing records and verifying immutable trace integrity"
+
+[[bin]]
+name = "imt"
+path = "src/main.rs"
+
+[lib]
+name = "audit_cli"
+path = "src/lib.rs"
 
 [dependencies]
 clap.workspace = true

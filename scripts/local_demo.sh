@@ -70,10 +70,10 @@ wait_for_ok "3/8"
 echo "[4/8] Generating demo lift inspection records..."
 (
   cd "$ROOT_DIR"
-  cargo run -p audit-cli -- demo-lift-inspection --device-id lift-01 --out-file "$RECORDS_FILE" >/dev/null
+  cargo run -p immutable-trace-audit-cli -- demo-lift-inspection --device-id lift-01 --out-file "$RECORDS_FILE" >/dev/null
 )
 echo "CLI check: chain generated -> $RECORDS_FILE"
-cargo run -p audit-cli -- verify-chain --records-file "$RECORDS_FILE"
+cargo run -p immutable-trace-audit-cli -- verify-chain --records-file "$RECORDS_FILE"
 wait_for_ok "4/8"
 
 echo "[4.5/8] Tampering the chain and verifying detection..."
@@ -90,7 +90,7 @@ print(dst)
 PY
 
 set +e
-cargo run -p audit-cli -- verify-chain --records-file "$TAMPERED_RECORDS_FILE"
+cargo run -p immutable-trace-audit-cli -- verify-chain --records-file "$TAMPERED_RECORDS_FILE"
 TAMPER_EXIT_CODE=$?
 set -e
 

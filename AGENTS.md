@@ -35,7 +35,7 @@ Run tests for a specific crate:
 cargo test -p ledger-core
 cargo test -p device-agent
 cargo test -p ingest-api
-cargo test -p audit-cli
+cargo test -p immutable-trace-audit-cli
 ```
 
 Run ingest-api with S3-compatible backend feature enabled:
@@ -131,7 +131,7 @@ cargo login <CRATES_IO_TOKEN>
 cargo publish --dry-run -p ledger-core
 cargo publish --dry-run -p device-agent
 cargo publish --dry-run -p ingest-api
-cargo publish --dry-run -p audit-cli
+cargo publish --dry-run -p immutable-trace-audit-cli
 ```
 
 4) Publish in the same order:
@@ -140,7 +140,7 @@ cargo publish --dry-run -p audit-cli
 cargo publish -p ledger-core
 cargo publish -p device-agent
 cargo publish -p ingest-api
-cargo publish -p audit-cli
+cargo publish -p immutable-trace-audit-cli
 ```
 
 If crates.io index propagation causes a temporary dependency resolution error, wait a few minutes and retry the next crate.
@@ -152,7 +152,7 @@ This repository includes `.github/workflows/release.yml`.
 - Trigger: push a tag like `v0.1.0`
 - Quality gate: build, unit tests, license check, clippy
 - Publish crates.io packages in dependency order
-- Build `audit-cli` binaries for Linux, macOS (x64 + arm64), and Windows
+- Build `imt` binaries for Linux, macOS (x64 + arm64), and Windows
 - Upload packaged binaries to GitHub Release assets
 
 Note: `.github/workflows/ci.yml` runs `cargo publish --dry-run` for `ledger-core` only.
@@ -182,13 +182,13 @@ Version bump rules (Conventional Commits):
 Build and show help:
 
 ```bash
-cargo run -p audit-cli -- --help
+cargo run -p immutable-trace-audit-cli -- --help
 ```
 
 Create a signed record and save it to `record1.json`:
 
 ```bash
-cargo run -p audit-cli -- sign-record \
+cargo run -p immutable-trace-audit-cli -- sign-record \
   --device-id lift-01 \
   --sequence 1 \
   --timestamp-ms 1700000000000 \
@@ -201,7 +201,7 @@ cargo run -p audit-cli -- sign-record \
 Verify one record signature:
 
 ```bash
-cargo run -p audit-cli -- verify-record \
+cargo run -p immutable-trace-audit-cli -- verify-record \
   --record-file record1.json \
   --public-key-hex 8a88e3dd7409f195fd52db2d3cba5d72ca670bf1d94121bf3748801b40f6f5c0
 ```
@@ -209,7 +209,7 @@ cargo run -p audit-cli -- verify-record \
 Verify a whole chain from a JSON array file:
 
 ```bash
-cargo run -p audit-cli -- verify-chain --records-file records.json
+cargo run -p immutable-trace-audit-cli -- verify-chain --records-file records.json
 ```
 
 ## Library Usage Example (without CLI)
@@ -251,7 +251,7 @@ This project includes an interactive local demo that:
 Note: unlike the library-only example, this demo **requires** PostgreSQL and MinIO.
 
 - Starts PostgreSQL + MinIO backend services
-- Generates and verifies a signed chain with `audit-cli`
+- Generates and verifies a signed chain with `imt`
 - Performs tampering and confirms verification failure
 - Persists accepted records into PostgreSQL
 - Prints audit records and operation logs from the DB
@@ -308,7 +308,7 @@ This scenario simulates a remote lift inspection with three checks:
 ### 1) Generate a full signed chain for one inspection session
 
 ```bash
-cargo run -p audit-cli -- demo-lift-inspection \
+cargo run -p immutable-trace-audit-cli -- demo-lift-inspection \
   --device-id lift-01 \
   --out-file lift_inspection_records.json
 ```
@@ -323,7 +323,7 @@ CHAIN_VALID
 ### 2) Verify chain integrity from file
 
 ```bash
-cargo run -p audit-cli -- verify-chain --records-file lift_inspection_records.json
+cargo run -p immutable-trace-audit-cli -- verify-chain --records-file lift_inspection_records.json
 ```
 
 Expected output:
@@ -355,7 +355,7 @@ PY
 Run chain verification again:
 
 ```bash
-cargo run -p audit-cli -- verify-chain --records-file lift_inspection_records.json
+cargo run -p immutable-trace-audit-cli -- verify-chain --records-file lift_inspection_records.json
 ```
 
 Expected result: command exits with a non-zero code and prints an error such as `chain verification failed: invalid previous hash ...`.
@@ -365,7 +365,7 @@ Expected result: command exits with a non-zero code and prints an error such as 
 Generate one signed event:
 
 ```bash
-cargo run -p audit-cli -- sign-record \
+cargo run -p immutable-trace-audit-cli -- sign-record \
   --device-id lift-01 \
   --sequence 1 \
   --timestamp-ms 1700000000000 \
@@ -378,7 +378,7 @@ cargo run -p audit-cli -- sign-record \
 Verify signature:
 
 ```bash
-cargo run -p audit-cli -- verify-record \
+cargo run -p immutable-trace-audit-cli -- verify-record \
   --record-file lift_single_record.json \
   --public-key-hex 8a88e3dd7409f195fd52db2d3cba5d72ca670bf1d94121bf3748801b40f6f5c0
 ```
@@ -412,7 +412,7 @@ PY
 Verify signature again:
 
 ```bash
-cargo run -p audit-cli -- verify-record \
+cargo run -p immutable-trace-audit-cli -- verify-record \
   --record-file lift_single_record.json \
   --public-key-hex 8a88e3dd7409f195fd52db2d3cba5d72ca670bf1d94121bf3748801b40f6f5c0
 ```
