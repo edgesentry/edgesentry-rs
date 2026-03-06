@@ -198,9 +198,43 @@ Verify a whole chain from a JSON array file:
 cargo run -p audit-cli -- verify-chain --records-file records.json
 ```
 
+## Library Usage Example (without CLI)
+
+Run the end-to-end lift inspection example implemented directly with library APIs:
+
+Prerequisites:
+
+- Rust toolchain (`cargo`)
+- PostgreSQL / MinIO are **not required** for this example (it uses in-memory stores)
+
+```bash
+cargo run -p ingest-api --example lift_inspection_flow
+```
+
+Scenario covered by the sample:
+
+1. Register one lift device public key in `IngestState`
+2. Generate three signed inspection records with `device-agent`
+3. Ingest all records via `IngestService` (accepted path)
+4. Tamper one record (`payload_hash`) and confirm rejection
+5. Print stored audit records and operation logs
+
+What it demonstrates:
+
+- Record signing with `device-agent::build_signed_record`
+- Ingestion verification with `ingest-api::IngestService`
+- Tampering rejection (modified `payload_hash`)
+- Audit records and operation-log output
+
+Source:
+
+- `crates/ingest-api/examples/lift_inspection_flow.rs`
+
 ## Interactive Local Demo (PostgreSQL + MinIO + CLI)
 
 This project includes an interactive local demo that:
+
+Note: unlike the library-only example, this demo **requires** PostgreSQL and MinIO.
 
 - Starts PostgreSQL + MinIO backend services
 - Generates and verifies a signed chain with `audit-cli`
