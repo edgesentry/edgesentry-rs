@@ -82,6 +82,26 @@ All execution procedures are centralized in [AGENTS.md](AGENTS.md):
 - Lift inspection end-to-end scenario
 - Tampering and detection walkthrough
 
+## Interactive Local Demo
+
+This repository includes an interactive end-to-end demo script that validates the tamper-evident workflow locally:
+
+1. Start backend services (PostgreSQL + MinIO)
+2. Generate and verify a signed chain with `audit-cli`
+3. Tamper with a generated chain and confirm verification fails
+4. Persist accepted records into PostgreSQL
+5. Display audit records and operation logs from the database
+6. Stop PostgreSQL + MinIO at the end of the flow
+
+Run:
+
+```bash
+bash scripts/local_demo.sh
+```
+
+The script pauses at each step and waits for Enter (or `OK`) so results can be inspected interactively.
+For full command details and manual inspection steps, see [AGENTS.md](AGENTS.md).
+
 ## S3 / MinIO Switching
 
 `ingest-api` supports a switchable S3-compatible raw-data backend behind the `s3` feature.
