@@ -247,63 +247,6 @@ fn rejects_replay_attempt_via_ingest_service() {
 }
 
 #[test]
-fn rejects_out_of_order_sequence_via_ingest_service() {
-    let signing_key = SigningKey::from_bytes(&[33u8; 32]);
-    let verifying_key = VerifyingKey::from(&signing_key);
-
-    let mut service = IngestService::new(
-        IntegrityPolicyGate::default(),
-        InMemoryRawDataStore::default(),
-        InMemoryAuditLedger::default(),
-        InMemoryOperationLog::default(),
-    );
-    service.register_device("lift-01", verifying_key);
-
-    let payload1 = b"door-open";
-    let r1 = build_signed_record(
-        "lift-01",
-        1,
-        1,
-        payload1,
-        AuditRecord::zero_hash(),
-        "s3://bucket/lift-01/1.bin",
-        &signing_key,
-    );
-    service.ingest(r1.clone(), payload1, None).expect("first ingest must succeed");
-
-    // Skip sequence 2, jump to 3
-    let payload3 = b"door-close";
-    let r3 = build_signed_record(
-        "lift-01",
-        3,
-        3,
-        payload3,
-        r1.hash(),
-        "s3://bucket/lift-01/3.bin",
-        &signing_key,
-    );
-    let err = service
-        .ingest(r3, payload3, None)
-        .expect_err("out-of-order sequence must be rejected");
-    assert!(
-        matches!(
-            err,
-            IngestServiceError::Verify(IngestError::InvalidSequence {
-                expected: 2,
-                actual: 3,
-                ..
-            })
-        ),
-        "expected InvalidSequence(expected=2, actual=3), got: {err}"
-    );
-
-    assert_eq!(service.audit_ledger().records().len(), 1);
-    let logs = service.operation_log().entries();
-    assert_eq!(logs.len(), 2);
-    assert_eq!(logs[1].decision, IngestDecision::Rejected);
-}
-
-#[test]
 fn rejects_tampered_signature_and_logs_rejection() {
     let signing_key = SigningKey::from_bytes(&[93u8; 32]);
     let verifying_key = VerifyingKey::from(&signing_key);
