@@ -7,7 +7,7 @@ repository.workspace = true
 description = "CLI for signing records and verifying immutable trace integrity"
 
 [[bin]]
-name = "it-audit"
+name = "imt"
 path = "src/main.rs"
 
 [lib]

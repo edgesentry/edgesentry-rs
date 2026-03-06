@@ -152,7 +152,7 @@ This repository includes `.github/workflows/release.yml`.
 - Trigger: push a tag like `v0.1.0`
 - Quality gate: build, unit tests, license check, clippy
 - Publish crates.io packages in dependency order
-- Build `it-audit` binaries for Linux, macOS (x64 + arm64), and Windows
+- Build `imt` binaries for Linux, macOS (x64 + arm64), and Windows
 - Upload packaged binaries to GitHub Release assets
 
 Note: `.github/workflows/ci.yml` runs `cargo publish --dry-run` for `ledger-core` only.
@@ -251,7 +251,7 @@ This project includes an interactive local demo that:
 Note: unlike the library-only example, this demo **requires** PostgreSQL and MinIO.
 
 - Starts PostgreSQL + MinIO backend services
-- Generates and verifies a signed chain with `it-audit`
+- Generates and verifies a signed chain with `imt`
 - Performs tampering and confirms verification failure
 - Persists accepted records into PostgreSQL
 - Prints audit records and operation logs from the DB
