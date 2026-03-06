@@ -15,6 +15,14 @@ source "$HOME/.cargo/env"
 rustup default stable
 ```
 
+Install `cargo-deny` (required for OSS license checks):
+
+```bash
+cargo install cargo-deny
+source "$HOME/.cargo/env"
+cargo deny --version
+```
+
 Run all unit tests:
 
 ```bash
@@ -35,6 +43,52 @@ Run ingest-api with S3-compatible backend feature enabled:
 ```bash
 cargo test -p ingest-api --features s3
 ```
+
+## Static Analysis and OSS License Check
+
+Use the following checks before release.
+
+### 1) Static analysis (`clippy`)
+
+```bash
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+```
+
+### 2) Dependency security advisory check (`cargo-audit`)
+
+Install once:
+
+```bash
+cargo install cargo-audit
+```
+
+Run:
+
+```bash
+cargo audit
+```
+
+### 3) Commercial-use OSS license check (`cargo-deny`)
+
+Install once:
+
+```bash
+cargo install cargo-deny
+```
+
+Run license check (policy in `deny.toml`):
+
+```bash
+cargo deny check licenses
+```
+
+Optional full dependency policy check:
+
+```bash
+cargo deny check advisories bans licenses sources
+```
+
+If this check fails, inspect violating crates and update dependencies or the policy only after legal/security review.
 
 ## CLI Usage
 
