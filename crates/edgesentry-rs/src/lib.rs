@@ -206,6 +206,38 @@ mod tests {
     }
 
     #[test]
+    fn parse_fixed_hex_rejects_invalid_hex_chars() {
+        let invalid = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"; // 64 chars but not valid hex
+        let err = parse_fixed_hex::<32>(invalid).unwrap_err();
+        assert!(matches!(err, CliError::InvalidHex(_)), "expected InvalidHex, got: {err:?}");
+    }
+
+    #[test]
+    fn verify_record_returns_false_for_wrong_public_key() {
+        let private_key_hex = "0202020202020202020202020202020202020202020202020202020202020202";
+        let wrong_key_hex   = "0303030303030303030303030303030303030303030303030303030303030303";
+
+        let wrong_signing_key = SigningKey::from_bytes(
+            &parse_fixed_hex::<32>(wrong_key_hex).unwrap()
+        );
+        let wrong_public_key_hex = hex::encode(wrong_signing_key.verifying_key().to_bytes());
+
+        let record = sign_record(
+            "lift-01".to_string(),
+            1,
+            1_700_000_000_000,
+            b"temperature=40".to_vec(),
+            AuditRecord::zero_hash(),
+            "s3://bucket/lift-01/1.bin".to_string(),
+            private_key_hex,
+        )
+        .expect("record should be signed");
+
+        let valid = verify_record(&record, &wrong_public_key_hex).expect("verify should run");
+        assert!(!valid, "wrong public key must not verify the signature");
+    }
+
+    #[test]
     fn tampered_lift_demo_chain_is_detected() {
         let private_key_hex = "0101010101010101010101010101010101010101010101010101010101010101";
         let mut records = build_lift_inspection_demo_records(

@@ -73,3 +73,32 @@ fn chain_verification_detects_invalid_sequence() {
         })
     );
 }
+
+#[test]
+fn chain_verification_accepts_empty_slice() {
+    assert!(verify_chain(&[]).is_ok());
+}
+
+#[test]
+fn chain_verification_accepts_single_valid_record() {
+    let record = dummy_record(1, AuditRecord::zero_hash());
+    assert!(verify_chain(&[record]).is_ok());
+}
+
+#[test]
+fn chain_verification_rejects_first_record_with_nonzero_prev_hash() {
+    let bad_first = dummy_record(1, [1u8; 32]);
+    let result = verify_chain(&[bad_first]);
+    assert_eq!(result, Err(ChainError::InvalidPrevHash { index: 0 }));
+}
+
+#[test]
+fn verify_payload_signature_rejects_wrong_key() {
+    let signing_key = SigningKey::from_bytes(&[8u8; 32]);
+    let wrong_key = VerifyingKey::from(&SigningKey::from_bytes(&[9u8; 32]));
+
+    let payload_hash = compute_payload_hash(b"lift-data");
+    let sig = sign_payload_hash(&signing_key, &payload_hash);
+
+    assert!(!verify_payload_signature(&wrong_key, &payload_hash, &sig));
+}
