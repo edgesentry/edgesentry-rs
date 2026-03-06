@@ -3,6 +3,8 @@ name = "device-agent"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+description = "Device-side helpers to build and sign immutable trace records"
 
 [dependencies]
 ledger-core.workspace = true
