@@ -155,6 +155,10 @@ This repository includes `.github/workflows/release.yml`.
 - Build `audit-cli` binaries for Linux, macOS (x64 + arm64), and Windows
 - Upload packaged binaries to GitHub Release assets
 
+Note: `.github/workflows/ci.yml` runs `cargo publish --dry-run` for `ledger-core` only.
+Dependent crates require previously published upstream crates for dry-run resolution,
+so full end-to-end publish validation occurs in `release.yml` during dependency-ordered release.
+
 Required GitHub secret:
 
 - `CRATES_IO_TOKEN`: crates.io API token used by `cargo publish`
