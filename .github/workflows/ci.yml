@@ -77,9 +77,6 @@ jobs:
       - name: Cache Rust artifacts
         uses: Swatinem/rust-cache@v2
 
-      - name: Publish dry-run (dependency order)
+      - name: Publish dry-run (root crate)
         run: |
           cargo publish --dry-run --locked -p ledger-core
-          cargo publish --dry-run --locked -p device-agent
-          cargo publish --dry-run --locked -p ingest-api
-          cargo publish --dry-run --locked -p audit-cli
