@@ -83,7 +83,18 @@ where
         self.verifier.register_device(device_id, key);
     }
 
-    pub fn ingest(&mut self, record: AuditRecord, raw_payload: &[u8]) -> Result<(), IngestServiceError> {
+    pub fn ingest(&mut self, record: AuditRecord, raw_payload: &[u8], cert_identity: Option<&str>) -> Result<(), IngestServiceError> {
+        if let Some(identity) = cert_identity {
+            if identity != record.device_id {
+                let error = super::verify::IngestError::CertDeviceMismatch {
+                    cert_identity: identity.to_string(),
+                    device_id: record.device_id.clone(),
+                };
+                self.log_rejection(&record, &error.to_string());
+                return Err(IngestServiceError::Verify(error));
+            }
+        }
+
         let payload_hash = compute_payload_hash(raw_payload);
         if payload_hash != record.payload_hash {
             self.log_rejection(&record, "payload hash mismatch");

@@ -43,7 +43,7 @@ fn main() {
 
     for record in &records {
         service
-            .ingest(record.clone(), payloads[record.sequence as usize - 1])
+            .ingest(record.clone(), payloads[record.sequence as usize - 1], Some(device_id))
             .expect("ingest should succeed");
     }
 
@@ -62,7 +62,7 @@ fn main() {
     let mut tampered = tampered_record;
     tampered.payload_hash[0] ^= 0x01;
 
-    let result = service.ingest(tampered, tampered_payload);
+    let result = service.ingest(tampered, tampered_payload, Some(device_id));
     assert!(result.is_err(), "tampered record should be rejected");
     println!("Tampered record rejected: {:?}", result.unwrap_err());
 
