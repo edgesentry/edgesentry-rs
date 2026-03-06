@@ -7,11 +7,11 @@ repository.workspace = true
 description = "CLI for signing records and verifying immutable trace integrity"
 
 [[bin]]
-name = "imt"
+name = "it-audit"
 path = "src/main.rs"
 
 [lib]
-name = "audit_cli"
+name = "immutable_trace"
 path = "src/lib.rs"
 
 [dependencies]

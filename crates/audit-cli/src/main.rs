@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use audit_cli::{
+use immutable_trace::{
     build_lift_inspection_demo_records, parse_fixed_hex, sign_record, verify_chain_file,
     verify_chain_records, verify_record, write_record_json, write_records_json,
 };
