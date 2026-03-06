@@ -34,14 +34,14 @@ Run tests for a specific crate:
 ```bash
 cargo test -p ledger-core
 cargo test -p device-agent
-cargo test -p ingest-api
+cargo test -p ingest
 cargo test -p immutable-trace
 ```
 
-Run ingest-api with S3-compatible backend feature enabled:
+Run ingest with S3-compatible backend feature enabled:
 
 ```bash
-cargo test -p ingest-api --features s3
+cargo test -p ingest --features s3
 ```
 
 Run unit tests + OSS license checks in one command:
@@ -130,7 +130,7 @@ cargo login <CRATES_IO_TOKEN>
 ```bash
 cargo publish --dry-run -p ledger-core
 cargo publish --dry-run -p device-agent
-cargo publish --dry-run -p ingest-api
+cargo publish --dry-run -p ingest
 cargo publish --dry-run -p immutable-trace
 ```
 
@@ -139,7 +139,7 @@ cargo publish --dry-run -p immutable-trace
 ```bash
 cargo publish -p ledger-core
 cargo publish -p device-agent
-cargo publish -p ingest-api
+cargo publish -p ingest
 cargo publish -p immutable-trace
 ```
 
@@ -222,7 +222,7 @@ Prerequisites:
 - PostgreSQL / MinIO are **not required** for this example (it uses in-memory stores)
 
 ```bash
-cargo run -p ingest-api --example lift_inspection_flow
+cargo run -p ingest --example lift_inspection_flow
 ```
 
 Scenario covered by the sample:
@@ -236,13 +236,13 @@ Scenario covered by the sample:
 What it demonstrates:
 
 - Record signing with `device-agent::build_signed_record`
-- Ingestion verification with `ingest-api::IngestService`
+- Ingestion verification with `ingest::IngestService`
 - Tampering rejection (modified `payload_hash`)
 - Audit records and operation-log output
 
 Source:
 
-- `crates/ingest-api/examples/lift_inspection_flow.rs`
+- `crates/ingest/examples/lift_inspection_flow.rs`
 
 ## Interactive Local Demo (PostgreSQL + MinIO + CLI)
 

@@ -1519,7 +1519,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ingest-api"
+name = "ingest"
 version = "0.1.6"
 dependencies = [
  "aws-config",

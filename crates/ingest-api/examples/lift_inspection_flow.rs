@@ -1,6 +1,6 @@
 use device_agent::build_signed_record;
 use ed25519_dalek::SigningKey;
-use ingest_api::{InMemoryAuditLedger, InMemoryOperationLog, InMemoryRawDataStore, IngestState, IngestService};
+use ingest::{InMemoryAuditLedger, InMemoryOperationLog, InMemoryRawDataStore, IngestState, IngestService};
 use ledger_core::AuditRecord;
 
 fn main() {

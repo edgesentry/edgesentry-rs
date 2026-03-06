@@ -1,6 +1,6 @@
 use device_agent::build_signed_record;
 use ed25519_dalek::{SigningKey, VerifyingKey};
-use ingest_api::{
+use ingest::{
     InMemoryAuditLedger, InMemoryOperationLog, InMemoryRawDataStore, IngestDecision, IngestService,
     IngestServiceError, IngestState,
 };

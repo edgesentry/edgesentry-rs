@@ -8,7 +8,7 @@ This file tracks the current implementation status of `immutable-trace-sample`.
 - [x] Device-side signed record generation (`device-agent`)
 - [x] CLI commands for signing/verifying records and chain verification (`audit-cli`)
 - [x] Lift inspection demo chain generation via CLI (`demo-lift-inspection`)
-- [x] Ingest-side verification flow with deduplication/sequence checks (`ingest-api`)
+- [x] Ingest-side verification flow with deduplication/sequence checks (`ingest`)
 - [x] PostgreSQL persistence schema for audit records and operation logs (`db/init/001_schema.sql`)
 - [x] Local backend stack with PostgreSQL + MinIO (`docker-compose.local.yml`)
 - [x] Interactive end-to-end local demo script with step-by-step pause (`scripts/local_demo.sh`)

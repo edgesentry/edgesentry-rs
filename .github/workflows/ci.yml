@@ -39,8 +39,8 @@ jobs:
       - name: Unit tests (workspace)
         run: cargo test --workspace
 
-      - name: Unit tests (ingest-api with s3)
-        run: cargo test -p ingest-api --features s3
+      - name: Unit tests (ingest with s3)
+        run: cargo test -p ingest --features s3
 
   license_check:
     name: OSS License Check
@@ -79,7 +79,7 @@ jobs:
 
       - name: Publish dry-run (ledger-core only)
         # NOTE:
-        # Dependent crates (device-agent/ingest-api/immutable-trace) require ledger-core to
+        # Dependent crates (device-agent/ingest/immutable-trace) require ledger-core to
         # already exist in crates.io for `cargo publish --dry-run` resolution.
         # Running dry-run for all crates in pre-release CI causes false failures before
         # the first publish. Full publish validation for all crates runs in

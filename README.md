@@ -18,7 +18,7 @@ Because those hardware-dependent setups are often difficult to evaluate quickly 
 
 - `ledger-core`: Audit record types, hashing, signature verification, and chain verification
 - `device-agent`: Device-side signed record generation
-- `ingest-api`: Ingestion-time verification, deduplication, sequence validation, and persistence workflow for raw data / audit ledger / operation logs
+- `ingest`: Ingestion-time verification, deduplication, sequence validation, and persistence workflow for raw data / audit ledger / operation logs
 - `audit-cli`: Command-line operations for signing and verifying audit records (`immutable-trace` package, `imt` binary)
 
 ## Concepts
@@ -41,7 +41,7 @@ The device-side responsibility is implemented by `device-agent` + `ledger-core`.
 
 ### Cloud side (verification and trust enforcement)
 
-The cloud-side responsibility is implemented by `ingest-api` + `ledger-core`.
+The cloud-side responsibility is implemented by `ingest` + `ledger-core`.
 
 - Verify that the device is known (`device_id` -> public key)
 - Verify signature validity for each incoming record
@@ -97,7 +97,7 @@ Run workspace unit tests and commercial-use OSS license checks in one command:
 This script runs:
 
 1. `cargo test --workspace`
-2. `cargo test -p ingest-api --features s3`
+2. `cargo test -p ingest --features s3`
 3. `cargo deny check licenses` (policy from `deny.toml`)
 
 ## Interactive Local Demo
@@ -134,25 +134,25 @@ Prerequisites:
 Run:
 
 ```bash
-cargo run -p ingest-api --example lift_inspection_flow
+cargo run -p ingest --example lift_inspection_flow
 ```
 
 Source:
 
-- [crates/ingest-api/examples/lift_inspection_flow.rs](crates/ingest-api/examples/lift_inspection_flow.rs)
+- [crates/ingest/examples/lift_inspection_flow.rs](crates/ingest/examples/lift_inspection_flow.rs)
 
 For the full scenario steps and expected behavior, see [AGENTS.md](AGENTS.md).
 
 ## S3 / MinIO Switching
 
-`ingest-api` supports a switchable S3-compatible raw-data backend behind the `s3` feature.
+`ingest` supports a switchable S3-compatible raw-data backend behind the `s3` feature.
 
 - `S3Backend::AwsS3`: use AWS S3 (default AWS credential chain, or optional static key)
 - `S3Backend::Minio`: use MinIO (custom endpoint + static access key/secret)
 
 This is an S3-compatible object-storage design. The ingest layer is coded against a common raw-data storage abstraction, while concrete configuration selects AWS S3 or MinIO without changing ingest business logic.
 
-Use these types from `ingest-api`:
+Use these types from `ingest`:
 
 - `S3ObjectStoreConfig::for_aws_s3(...)`
 - `S3ObjectStoreConfig::for_minio(...)`
