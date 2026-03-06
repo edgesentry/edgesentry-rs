@@ -21,6 +21,10 @@ Because those hardware-dependent setups are often difficult to evaluate quickly 
 - `ingest-api`: Ingestion-time verification, deduplication, sequence validation, and persistence workflow for raw data / audit ledger / operation logs
 - `audit-cli`: Command-line operations for signing and verifying audit records
 
+## Concepts
+
+For a glossary-style explanation of the core concepts in this repository, see [CONCEPTS.md](CONCEPTS.md).
+
 ## Device Side vs Cloud Side
 
 This PoC assumes a public-infrastructure IoT deployment where field devices (for example, lift inspection devices) send inspection evidence to cloud services.

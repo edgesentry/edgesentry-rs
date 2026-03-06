@@ -163,6 +163,20 @@ Required GitHub secret:
 
 - `CRATES_IO_TOKEN`: crates.io API token used by `cargo publish`
 
+### Automatic version increment after merge
+
+This repository also includes `.github/workflows/auto-version-tag.yml`.
+
+- Trigger: when `CI` succeeds on `main`
+- Action: update `workspace.package.version` in `Cargo.toml` and create/push a `vX.Y.Z` tag
+- Then: `release.yml` is triggered by that tag and performs the full release pipeline
+
+Version bump rules (Conventional Commits):
+
+- `fix:` -> patch bump (`x.y.z` -> `x.y.(z+1)`)
+- `feat:` -> minor bump (`x.y.z` -> `x.(y+1).0`)
+- `!` or `BREAKING CHANGE` -> major bump (`x.y.z` -> `(x+1).0.0`)
+
 ## CLI Usage
 
 Build and show help:

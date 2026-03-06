@@ -1,0 +1,165 @@
+name: Auto Version Tag
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+concurrency:
+  group: auto-version-tag-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  bump_and_tag:
+    name: Bump version and create tag
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout target SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Prepare git metadata
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch --tags --force
+
+      - name: Detect release commit
+        id: guard
+        run: |
+          HEAD_SUBJECT=$(git log -1 --pretty=%s)
+          if [[ "$HEAD_SUBJECT" == chore\(release\):* ]]; then
+            echo "is_release_commit=true" >> "$GITHUB_OUTPUT"
+            echo "Release commit detected, skipping bump and tag steps."
+          else
+            echo "is_release_commit=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Compute next version
+        id: semver
+        shell: bash
+        if: ${{ steps.guard.outputs.is_release_commit != 'true' }}
+        run: |
+          LAST_TAG=$(git tag --list 'v*' --sort=-v:refname | head -n1 || true)
+          CURRENT_VERSION=$(python3 - <<'PY'
+          import re
+          from pathlib import Path
+          text = Path('Cargo.toml').read_text(encoding='utf-8')
+          section = None
+          for line in text.splitlines():
+            s = line.strip()
+            if s.startswith('[') and s.endswith(']'):
+              section = s
+              continue
+            if section == '[workspace.package]' and s.startswith('version = '):
+              m = re.search(r'"([0-9]+\.[0-9]+\.[0-9]+)"', s)
+              if m:
+                print(m.group(1))
+                break
+          PY
+          )
+
+          if [[ -z "$LAST_TAG" ]]; then
+            echo "No previous tag found. Using current workspace version: $CURRENT_VERSION"
+            NEXT_VERSION="$CURRENT_VERSION"
+            BUMP_KIND="initial"
+          else
+            RANGE="${LAST_TAG}..HEAD"
+            COMMITS=$(git log --format='%s%n%b' "$RANGE")
+
+            BUMP_KIND="patch"
+            if echo "$COMMITS" | grep -Eiq 'BREAKING CHANGE|^[a-zA-Z0-9_-]+(\(.+\))?!:'; then
+              BUMP_KIND="major"
+            elif echo "$COMMITS" | grep -Eiq '^feat(\(.+\))?:'; then
+              BUMP_KIND="minor"
+            fi
+
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+            case "$BUMP_KIND" in
+              major)
+                MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+              minor)
+                MINOR=$((MINOR + 1)); PATCH=0 ;;
+              patch)
+                PATCH=$((PATCH + 1)) ;;
+            esac
+            NEXT_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          fi
+
+          echo "last_tag=$LAST_TAG" >> "$GITHUB_OUTPUT"
+          echo "current_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "next_version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "bump_kind=$BUMP_KIND" >> "$GITHUB_OUTPUT"
+
+      - name: Skip when tag already exists
+        if: ${{ steps.guard.outputs.is_release_commit != 'true' }}
+        run: |
+          NEXT_TAG="v${{ steps.semver.outputs.next_version }}"
+          if git rev-parse "$NEXT_TAG" >/dev/null 2>&1; then
+            echo "Tag $NEXT_TAG already exists. Nothing to do."
+            exit 0
+          fi
+
+      - name: Update workspace version in Cargo.toml
+        if: ${{ steps.guard.outputs.is_release_commit != 'true' && steps.semver.outputs.next_version != steps.semver.outputs.current_version }}
+        env:
+          NEXT_VERSION: ${{ steps.semver.outputs.next_version }}
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          next_version = __import__('os').environ['NEXT_VERSION']
+          path = Path('Cargo.toml')
+          lines = path.read_text(encoding='utf-8').splitlines()
+          section = None
+          updated = []
+          for line in lines:
+            stripped = line.strip()
+            if stripped.startswith('[') and stripped.endswith(']'):
+              section = stripped
+              updated.append(line)
+              continue
+
+            if section == '[workspace.package]' and stripped.startswith('version = '):
+              line = re.sub(r'"[0-9]+\.[0-9]+\.[0-9]+"', f'"{next_version}"', line)
+            elif section == '[workspace.dependencies]' and stripped.startswith('ledger-core = '):
+              line = re.sub(r'version = "[0-9]+\.[0-9]+\.[0-9]+"', f'version = "{next_version}"', line)
+            elif section == '[workspace.dependencies]' and stripped.startswith('device-agent = '):
+              line = re.sub(r'version = "[0-9]+\.[0-9]+\.[0-9]+"', f'version = "{next_version}"', line)
+
+            updated.append(line)
+
+          path.write_text('\n'.join(updated) + '\n', encoding='utf-8')
+          PY
+
+      - name: Commit version bump
+        if: ${{ steps.guard.outputs.is_release_commit != 'true' && steps.semver.outputs.next_version != steps.semver.outputs.current_version }}
+        env:
+          NEXT_VERSION: ${{ steps.semver.outputs.next_version }}
+        run: |
+          git add Cargo.toml
+          git commit -m "chore(release): v${NEXT_VERSION} [skip ci]"
+
+      - name: Push release commit to main
+        if: ${{ steps.guard.outputs.is_release_commit != 'true' && steps.semver.outputs.next_version != steps.semver.outputs.current_version }}
+        run: |
+          git push origin HEAD:main
+
+      - name: Create and push tag
+        if: ${{ steps.guard.outputs.is_release_commit != 'true' }}
+        env:
+          NEXT_VERSION: ${{ steps.semver.outputs.next_version }}
+        run: |
+          git tag "v${NEXT_VERSION}"
+          git push origin "v${NEXT_VERSION}"

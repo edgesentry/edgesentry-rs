@@ -31,6 +31,9 @@ jobs:
       - name: Build (release)
         run: cargo build --workspace --release --locked
 
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --locked
+
       - name: Unit tests + license check
         run: ./scripts/run_unit_and_license_check.sh
 
