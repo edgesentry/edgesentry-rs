@@ -7,15 +7,14 @@ use super::verify::{IngestError, IngestState};
 ///
 /// This is the P0 policy gate: every record must pass all checks here
 /// before it is allowed through to storage.
+#[derive(Default)]
 pub struct IntegrityPolicyGate {
     state: IngestState,
 }
 
 impl IntegrityPolicyGate {
     pub fn new() -> Self {
-        Self {
-            state: IngestState::default(),
-        }
+        Self::default()
     }
 
     pub fn register_device(&mut self, device_id: impl Into<String>, key: VerifyingKey) {
@@ -47,8 +46,3 @@ impl IntegrityPolicyGate {
     }
 }
 
-impl Default for IntegrityPolicyGate {
-    fn default() -> Self {
-        Self::new()
-    }
-}
