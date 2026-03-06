@@ -1,30 +1,27 @@
-## Default Deployment Profile for Near-Shore Vessels Using VDES
+# Elevator Tamper-Evident Plan
 
-This document extends the existing deployment plan with a second default profile for near-shore vessels. The focus is strictly on tamper prevention and detection for data, device identity, and network-handling/path evidence. It is explicitly noted that analytics, alerting, and regulatory processes are out of scope for this profile.
+This plan details the tamper prevention and detection mechanisms for ensuring integrity in the evidence collected from elevators.
 
-### Scope
-- **Tamper Prevention/Detection**: Ensuring that the data integrity is maintained and tampering is detected effectively.
-- **Device Identity**: Establishing a secure identity for the onboard devices to ensure authenticity.
-- **Network Handling/Path Evidence**: Providing evidence of the network path taken, ensuring accountability and traceability.
+## Objectives
+- Ensure physical security of data devices.
+- Maintain continuity of operations through tamper-free data.
+- Detect any unauthorized access or tampering.
 
-### Components
-1. **Onboard Device Agent**: A dedicated agent residing on the vessel to gather data and manage communication.
-2. **Onboard Comms Gateway with VDES Adapter**: This includes a communication gateway that connects the onboard device to the VDES (Vessel Data Exchange System) for data transmission.
-3. **Store-and-Forward Capability**: In scenarios of weak connectivity, data is stored on the onboard system and forwarded when a connection is re-established.
-4. **Shore Office Receiver/Gateway**: A station on land that receives the data sent over VDES, ensuring it is securely processed.
+## Tamper Prevention Mechanisms
+- Secured housing for data devices.
+- Use of tamper-evident seals.
+- Restricted access to critical systems and monitoring.
 
-### VDES-Specific Witness Evidence Fields
-- Timestamps tracking the exact moment data is sent.
-- GPS location data to provide context to the data being sent.
-- Unique identifiers for each data transaction to prevent spoofing.
+## Tamper Detection Protocols
+- Regular integrity checks of data devices.
+- Alarm systems activated upon any unauthorized access attempts.
 
-### Handling of Low Bandwidth/High Latency/Retry
-Strategies are implemented to manage data transmission challenges effectively:
-- **Data Compression**: Reducing the data footprint for transmission.
-- **Batch Transmission**: Sending data in batches to optimize network usage.
-- **Reliable Delivery Mechanism**: Using acknowledgments to ensure successful data delivery or to trigger retries where necessary.
+# Future Profile: Near-shore Vessels (VDES Ship → Shore Office)
 
-### Adapter-Based Flexibility
-The architecture facilitates adaptability through:
-- Use of interchangeable adapters to incorporate future advancements in communication technology without altering existing infrastructure.
-- Configurable settings to optimize for various operational conditions based on vessel deployment specifics.
+This section aims to address the scope limited strictly to tamper prevention and detection for data, device, and network evidence under the context of VDES ship-to-shore communications. Precision in data handling and integrity checks must be maintained to prevent unauthorized alterations when data is transmitted from vessels to shore offices. 
+
+- Implement encryption protocols for data transmission.
+- Use of secure channels to prevent interception.
+- Establish protocols for verifying data integrity upon receipt at shore offices.
+
+Commitment to these practices will ensure that the data remain trustworthy and actionable in the face of potential tampering.
