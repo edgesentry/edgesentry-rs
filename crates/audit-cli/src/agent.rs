@@ -1,5 +1,7 @@
 use ed25519_dalek::SigningKey;
-use ledger_core::{compute_payload_hash, sign_payload_hash, AuditRecord, Hash32};
+
+use crate::crypto::{compute_payload_hash, sign_payload_hash};
+use crate::record::{AuditRecord, Hash32};
 
 pub fn build_signed_record(
     device_id: impl Into<String>,

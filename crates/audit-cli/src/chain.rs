@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::AuditRecord;
+use crate::record::AuditRecord;
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum ChainError {

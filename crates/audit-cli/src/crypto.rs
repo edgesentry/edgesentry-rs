@@ -1,6 +1,6 @@
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 
-use crate::{Hash32, Signature64};
+use crate::record::{Hash32, Signature64};
 
 pub fn compute_payload_hash(payload: &[u8]) -> Hash32 {
     *blake3::hash(payload).as_bytes()

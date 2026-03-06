@@ -1,7 +1,5 @@
-use device_agent::build_signed_record;
 use ed25519_dalek::{SigningKey, VerifyingKey};
-use ingest_api::{IngestError, IngestState};
-use ledger_core::AuditRecord;
+use immutable_trace::{build_signed_record, AuditRecord, IngestError, IngestState};
 
 #[test]
 fn accepts_valid_sequential_records() {

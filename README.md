@@ -14,12 +14,9 @@ https://www.csa.gov.sg/our-programmes/certification-and-labelling-schemes/cybers
 
 Because those hardware-dependent setups are often difficult to evaluate quickly in an early PoC phase, this repository focuses on sample code for tamper prevention and tamper-evident audit records.
 
-## Crates
+## Package
 
-- `ledger-core`: Audit record types, hashing, signature verification, and chain verification
-- `device-agent`: Device-side signed record generation
-- `ingest-api`: Ingestion-time verification, deduplication, sequence validation, and persistence workflow for raw data / audit ledger / operation logs
-- `audit-cli`: Command-line operations for signing and verifying audit records
+`immutable-trace` (`imt` binary, `immutable_trace` lib): A single Rust crate that includes all audit record types, hashing, signature verification, chain verification, device-side signed record generation, ingestion-time verification, deduplication, sequence validation, persistence workflow, and the CLI.
 
 ## Concepts
 
@@ -31,7 +28,7 @@ This PoC assumes a public-infrastructure IoT deployment where field devices (for
 
 ### Device side (resource-constrained edge)
 
-The device-side responsibility is implemented by `device-agent` + `ledger-core`.
+The device-side responsibility is implemented by `immutable_trace::agent` and related modules.
 
 - Generate inspection event payloads (door check, vibration check, emergency brake check)
 - Compute `payload_hash` (BLAKE3)
@@ -41,7 +38,7 @@ The device-side responsibility is implemented by `device-agent` + `ledger-core`.
 
 ### Cloud side (verification and trust enforcement)
 
-The cloud-side responsibility is implemented by `ingest-api` + `ledger-core`.
+The cloud-side responsibility is implemented by `immutable_trace::ingest` and related modules.
 
 - Verify that the device is known (`device_id` -> public key)
 - Verify signature validity for each incoming record
@@ -51,9 +48,7 @@ The cloud-side responsibility is implemented by `ingest-api` + `ledger-core`.
 
 ### Shared trust logic
 
-`ledger-core` is shared by both sides to keep hashing and verification rules identical across edge and cloud boundaries.
-
-Using Rust on both the device and cloud sides also enables a more unified implementation model. Core types, validation logic, and test cases can be reused across environments with minimal translation overhead. This reduces drift between edge and cloud behavior, lowers maintenance cost, and makes security-critical logic easier to review and verify end-to-end.
+All hashing and verification rules live in the same `immutable-trace` crate, keeping logic identical across edge and cloud usage.
 
 ## Resource-Constrained Device Design
 
@@ -97,7 +92,7 @@ Run workspace unit tests and commercial-use OSS license checks in one command:
 This script runs:
 
 1. `cargo test --workspace`
-2. `cargo test -p ingest-api --features s3`
+2. `cargo test -p immutable-trace --features s3`
 3. `cargo deny check licenses` (policy from `deny.toml`)
 
 ## Interactive Local Demo
@@ -107,7 +102,7 @@ This repository includes an interactive end-to-end demo script that validates th
 Note: unlike the library-only example, this demo **requires** PostgreSQL and MinIO.
 
 1. Start backend services (PostgreSQL + MinIO)
-2. Generate and verify a signed chain with `audit-cli`
+2. Generate and verify a signed chain with `imt`
 3. Tamper with a generated chain and confirm verification fails
 4. Persist accepted records into PostgreSQL
 5. Display audit records and operation logs from the database
@@ -124,7 +119,7 @@ For full command details and manual inspection steps, see [AGENTS.md](AGENTS.md)
 
 ## Library Usage Example (Lift Inspection Scenario)
 
-If you want to integrate the libraries directly (without using `audit-cli`), run the example below.
+If you want to integrate the libraries directly (without using `imt`), run the example below.
 
 Prerequisites:
 
@@ -134,25 +129,25 @@ Prerequisites:
 Run:
 
 ```bash
-cargo run -p ingest-api --example lift_inspection_flow
+cargo run -p immutable-trace --example lift_inspection_flow
 ```
 
 Source:
 
-- [crates/ingest-api/examples/lift_inspection_flow.rs](crates/ingest-api/examples/lift_inspection_flow.rs)
+- [crates/audit-cli/examples/lift_inspection_flow.rs](crates/audit-cli/examples/lift_inspection_flow.rs)
 
 For the full scenario steps and expected behavior, see [AGENTS.md](AGENTS.md).
 
 ## S3 / MinIO Switching
 
-`ingest-api` supports a switchable S3-compatible raw-data backend behind the `s3` feature.
+`immutable-trace` supports a switchable S3-compatible raw-data backend behind the `s3` feature.
 
 - `S3Backend::AwsS3`: use AWS S3 (default AWS credential chain, or optional static key)
 - `S3Backend::Minio`: use MinIO (custom endpoint + static access key/secret)
 
 This is an S3-compatible object-storage design. The ingest layer is coded against a common raw-data storage abstraction, while concrete configuration selects AWS S3 or MinIO without changing ingest business logic.
 
-Use these types from `ingest-api`:
+Use these types from `immutable_trace`:
 
 - `S3ObjectStoreConfig::for_aws_s3(...)`
 - `S3ObjectStoreConfig::for_minio(...)`

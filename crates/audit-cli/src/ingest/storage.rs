@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
-use ledger_core::{compute_payload_hash, AuditRecord};
 use thiserror::Error;
 
-use crate::{IngestError, IngestState};
+use crate::crypto::compute_payload_hash;
+use crate::record::AuditRecord;
+use super::verify::{IngestError, IngestState};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IngestDecision {

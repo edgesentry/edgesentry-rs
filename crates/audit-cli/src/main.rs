@@ -1,14 +1,13 @@
 use std::path::PathBuf;
 
-use audit_cli::{
+use immutable_trace::{
     build_lift_inspection_demo_records, parse_fixed_hex, sign_record, verify_chain_file,
-    verify_chain_records, verify_record, write_record_json, write_records_json,
+    verify_chain_records, verify_record, write_record_json, write_records_json, AuditRecord,
 };
 use clap::{Parser, Subcommand};
-use ledger_core::AuditRecord;
 
 #[derive(Debug, Parser)]
-#[command(name = "audit-cli")]
+#[command(name = "imt")]
 #[command(about = "CLI tools for tamper-evident audit records")]
 struct Cli {
     #[command(subcommand)]
