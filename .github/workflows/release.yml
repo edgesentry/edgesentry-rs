@@ -68,10 +68,24 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
         run: |
-          cargo publish --locked -p ledger-core
-          cargo publish --locked -p device-agent
-          cargo publish --locked -p ingest-api
-          cargo publish --locked -p audit-cli
+          publish_if_missing() {
+            crate="$1"
+            version="$(cargo pkgid -p "$crate" | cut -d'#' -f2)"
+            url="https://crates.io/api/v1/crates/${crate}/${version}"
+
+            if curl --silent --show-error --fail "$url" >/dev/null 2>&1; then
+              echo "${crate}@${version} already exists on crates.io. Skipping publish."
+              return 0
+            fi
+
+            echo "Publishing ${crate}@${version} ..."
+            cargo publish --locked -p "$crate"
+          }
+
+          publish_if_missing ledger-core
+          publish_if_missing device-agent
+          publish_if_missing ingest-api
+          publish_if_missing audit-cli
 
   build_cli_binaries:
     name: Build audit-cli (${{ matrix.target }})

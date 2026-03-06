@@ -153,8 +153,8 @@ jobs:
       - name: Sync Cargo.lock
         if: ${{ steps.guard.outputs.is_release_commit != 'true' && steps.tag_check.outputs.tag_exists != 'true' && steps.semver.outputs.next_version != steps.semver.outputs.current_version }}
         run: |
-          # Keep lockfile in sync after manifest version bump so downstream --locked jobs succeed.
-          cargo metadata --format-version 1 > /dev/null
+          # Regenerate lockfile after manifest version bump so downstream --locked jobs succeed.
+          cargo generate-lockfile
 
       - name: Commit version bump
         if: ${{ steps.guard.outputs.is_release_commit != 'true' && steps.tag_check.outputs.tag_exists != 'true' && steps.semver.outputs.next_version != steps.semver.outputs.current_version }}
