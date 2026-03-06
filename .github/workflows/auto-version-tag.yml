@@ -101,17 +101,21 @@ jobs:
           echo "next_version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
           echo "bump_kind=$BUMP_KIND" >> "$GITHUB_OUTPUT"
 
-      - name: Skip when tag already exists
+      - name: Check whether tag already exists
+        id: tag_check
         if: ${{ steps.guard.outputs.is_release_commit != 'true' }}
         run: |
           NEXT_TAG="v${{ steps.semver.outputs.next_version }}"
-          if git rev-parse "$NEXT_TAG" >/dev/null 2>&1; then
+          if git show-ref --verify --quiet "refs/tags/$NEXT_TAG" || \
+             git ls-remote --exit-code --tags origin "refs/tags/$NEXT_TAG" >/dev/null 2>&1; then
+            echo "tag_exists=true" >> "$GITHUB_OUTPUT"
             echo "Tag $NEXT_TAG already exists. Nothing to do."
-            exit 0
+          else
+            echo "tag_exists=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Update workspace version in Cargo.toml
-        if: ${{ steps.guard.outputs.is_release_commit != 'true' && steps.semver.outputs.next_version != steps.semver.outputs.current_version }}
+        if: ${{ steps.guard.outputs.is_release_commit != 'true' && steps.tag_check.outputs.tag_exists != 'true' && steps.semver.outputs.next_version != steps.semver.outputs.current_version }}
         env:
           NEXT_VERSION: ${{ steps.semver.outputs.next_version }}
         run: |
@@ -144,7 +148,7 @@ jobs:
           PY
 
       - name: Commit version bump
-        if: ${{ steps.guard.outputs.is_release_commit != 'true' && steps.semver.outputs.next_version != steps.semver.outputs.current_version }}
+        if: ${{ steps.guard.outputs.is_release_commit != 'true' && steps.tag_check.outputs.tag_exists != 'true' && steps.semver.outputs.next_version != steps.semver.outputs.current_version }}
         env:
           NEXT_VERSION: ${{ steps.semver.outputs.next_version }}
         run: |
@@ -152,12 +156,12 @@ jobs:
           git commit -m "chore(release): v${NEXT_VERSION} [skip ci]"
 
       - name: Push release commit to main
-        if: ${{ steps.guard.outputs.is_release_commit != 'true' && steps.semver.outputs.next_version != steps.semver.outputs.current_version }}
+        if: ${{ steps.guard.outputs.is_release_commit != 'true' && steps.tag_check.outputs.tag_exists != 'true' && steps.semver.outputs.next_version != steps.semver.outputs.current_version }}
         run: |
           git push origin HEAD:main
 
       - name: Create and push tag
-        if: ${{ steps.guard.outputs.is_release_commit != 'true' }}
+        if: ${{ steps.guard.outputs.is_release_commit != 'true' && steps.tag_check.outputs.tag_exists != 'true' }}
         env:
           NEXT_VERSION: ${{ steps.semver.outputs.next_version }}
         run: |
