@@ -1,27 +1,26 @@
-# Elevator Tamper-Evident Plan
+# Detailed Elevator Tamper-Evident Plan
 
-This plan details the tamper prevention and detection mechanisms for ensuring integrity in the evidence collected from elevators.
+## Scope Strict
+This section outlines the strict scope of the project ensuring that all elements align with the comprehensive objectives of tamper evidence.
 
-## Objectives
-- Ensure physical security of data devices.
-- Maintain continuity of operations through tamper-free data.
-- Detect any unauthorized access or tampering.
+## Default Deployment Profile
+The deployment will follow the default profile to ensure consistency across implementations and maintain a unified operational standard.
 
-## Tamper Prevention Mechanisms
-- Secured housing for data devices.
-- Use of tamper-evident seals.
-- Restricted access to critical systems and monitoring.
+## Evidence Data Model
+### Device Audit Record
+This record contains information regarding the audit events of the device used within the tamper-evident systems, ensuring that there is a verifiable trail of accountability.
 
-## Tamper Detection Protocols
-- Regular integrity checks of data devices.
-- Alarm systems activated upon any unauthorized access attempts.
+### Gateway Witness Record
+This record provides evidence submitted by gateway devices, acting as witnesses to events in the network concerning device identity and performance.
 
-# Future Profile: Near-shore Vessels (VDES Ship → Shore Office)
+## Verification Rules
+Verification rules will be established to ensure that all collected data meets the required standards for tamper detection and prevention.
 
-This section aims to address the scope limited strictly to tamper prevention and detection for data, device, and network evidence under the context of VDES ship-to-shore communications. Precision in data handling and integrity checks must be maintained to prevent unauthorized alterations when data is transmitted from vessels to shore offices. 
+## Pluggability
+The system will be designed for pluggability to integrate with various components seamlessly, providing flexibility in operation.
 
-- Implement encryption protocols for data transmission.
-- Use of secure channels to prevent interception.
-- Establish protocols for verifying data integrity upon receipt at shore offices.
+## Minimal Operational Guidance
+A minimal operational guideline will be developed to assist users in efficiently operating the tamper-evident systems while maintaining compliance with the outlined practices.
 
-Commitment to these practices will ensure that the data remain trustworthy and actionable in the face of potential tampering.
+# Future Profile (Not Required Now): Near-shore Vessels Using VDES (Ship → Shore Office)
+This section provides considerations for future enhancements focusing on tamper prevention and detection for data integrity, device identity management, and evidence regarding network handling and path evidence.
