@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: immutable-trace-postgres
+    container_name: edgesentry-rs-postgres
     environment:
       POSTGRES_USER: trace
       POSTGRES_PASSWORD: trace
@@ -19,7 +19,7 @@ services:
 
   minio:
     image: minio/minio:latest
-    container_name: immutable-trace-minio
+    container_name: edgesentry-rs-minio
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
@@ -32,7 +32,7 @@ services:
 
   minio-setup:
     image: minio/mc:latest
-    container_name: immutable-trace-minio-setup
+    container_name: edgesentry-rs-minio-setup
     depends_on:
       - minio
     entrypoint: >

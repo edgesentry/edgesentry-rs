@@ -1,5 +1,5 @@
 use ed25519_dalek::{SigningKey, VerifyingKey};
-use immutable_trace::{
+use edgesentry_rs::{
     build_signed_record, AuditRecord, InMemoryAuditLedger, InMemoryOperationLog,
     InMemoryRawDataStore, IngestDecision, IngestService, IngestServiceError, IngestState,
 };

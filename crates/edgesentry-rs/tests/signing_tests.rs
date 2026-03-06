@@ -1,5 +1,5 @@
 use ed25519_dalek::{SigningKey, VerifyingKey};
-use immutable_trace::{build_signed_record, compute_payload_hash, verify_payload_signature, AuditRecord};
+use edgesentry_rs::{build_signed_record, compute_payload_hash, verify_payload_signature, AuditRecord};
 
 #[test]
 fn build_signed_record_creates_verifiable_signature() {

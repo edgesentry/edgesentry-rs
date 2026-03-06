@@ -36,7 +36,7 @@ wait_for_ok "1/8"
 
 echo "[2/8] Waiting for PostgreSQL healthcheck..."
 for _ in $(seq 1 30); do
-  STATUS=$(docker inspect --format='{{.State.Health.Status}}' immutable-trace-postgres 2>/dev/null || true)
+  STATUS=$(docker inspect --format='{{.State.Health.Status}}' edgesentry-rs-postgres 2>/dev/null || true)
   if [[ "$STATUS" == "healthy" ]]; then
     break
   fi
@@ -52,8 +52,8 @@ wait_for_ok "2/8"
 
 echo "[3/8] Waiting for MinIO bucket setup..."
 for _ in $(seq 1 30); do
-  MINIO_SETUP_STATE=$(docker inspect --format='{{.State.Status}}' immutable-trace-minio-setup 2>/dev/null || true)
-  MINIO_SETUP_EXIT_CODE=$(docker inspect --format='{{.State.ExitCode}}' immutable-trace-minio-setup 2>/dev/null || true)
+  MINIO_SETUP_STATE=$(docker inspect --format='{{.State.Status}}' edgesentry-rs-minio-setup 2>/dev/null || true)
+  MINIO_SETUP_EXIT_CODE=$(docker inspect --format='{{.State.ExitCode}}' edgesentry-rs-minio-setup 2>/dev/null || true)
   if [[ "$MINIO_SETUP_STATE" == "exited" && "$MINIO_SETUP_EXIT_CODE" == "0" ]]; then
     break
   fi
@@ -70,10 +70,10 @@ wait_for_ok "3/8"
 echo "[4/8] Generating demo lift inspection records..."
 (
   cd "$ROOT_DIR"
-  cargo run -p immutable-trace -- demo-lift-inspection --device-id lift-01 --out-file "$RECORDS_FILE" >/dev/null
+  cargo run -p edgesentry-rs -- demo-lift-inspection --device-id lift-01 --out-file "$RECORDS_FILE" >/dev/null
 )
 echo "CLI check: chain generated -> $RECORDS_FILE"
-cargo run -p immutable-trace -- verify-chain --records-file "$RECORDS_FILE"
+cargo run -p edgesentry-rs -- verify-chain --records-file "$RECORDS_FILE"
 wait_for_ok "4/8"
 
 echo "[4.5/8] Tampering the chain and verifying detection..."
@@ -90,7 +90,7 @@ print(dst)
 PY
 
 set +e
-cargo run -p immutable-trace -- verify-chain --records-file "$TAMPERED_RECORDS_FILE"
+cargo run -p edgesentry-rs -- verify-chain --records-file "$TAMPERED_RECORDS_FILE"
 TAMPER_EXIT_CODE=$?
 set -e
 
@@ -144,13 +144,13 @@ echo "SQL prepared: $INSERT_SQL"
 wait_for_ok "5/8"
 
 echo "[6/8] Inserting demo data into PostgreSQL..."
-docker exec -i immutable-trace-postgres psql -U trace -d trace_audit < "$INSERT_SQL" >/dev/null
+docker exec -i edgesentry-rs-postgres psql -U trace -d trace_audit < "$INSERT_SQL" >/dev/null
 echo "Insert completed."
 wait_for_ok "6/8"
 
 echo "[7/8] Querying persisted data..."
-docker exec -i immutable-trace-postgres psql -U trace -d trace_audit -c "SELECT id, device_id, sequence, object_ref, ingested_at FROM audit_records ORDER BY sequence;"
-docker exec -i immutable-trace-postgres psql -U trace -d trace_audit -c "SELECT id, decision, device_id, sequence, message, created_at FROM operation_logs ORDER BY id;"
+docker exec -i edgesentry-rs-postgres psql -U trace -d trace_audit -c "SELECT id, device_id, sequence, object_ref, ingested_at FROM audit_records ORDER BY sequence;"
+docker exec -i edgesentry-rs-postgres psql -U trace -d trace_audit -c "SELECT id, decision, device_id, sequence, message, created_at FROM operation_logs ORDER BY id;"
 wait_for_ok "7/8"
 
 echo "[8/8] Stopping PostgreSQL + MinIO..."

@@ -39,8 +39,8 @@ jobs:
       - name: Unit tests (workspace)
         run: cargo test --workspace
 
-      - name: Unit tests (immutable-trace with s3)
-        run: cargo test -p immutable-trace --features s3
+      - name: Unit tests (edgesentry-rs with s3)
+        run: cargo test -p edgesentry-rs --features s3
 
   license_check:
     name: OSS License Check
@@ -77,6 +77,6 @@ jobs:
       - name: Cache Rust artifacts
         uses: Swatinem/rust-cache@v2
 
-      - name: Publish dry-run (immutable-trace)
+      - name: Publish dry-run (edgesentry-rs)
         run: |
-          cargo publish --dry-run --locked -p immutable-trace
+          cargo publish --dry-run --locked -p edgesentry-rs

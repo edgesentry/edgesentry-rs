@@ -1,4 +1,4 @@
-# Concepts in immutable-trace
+# Concepts in edgesentry-rs
 
 This document summarizes the core concepts used in this repository.
 
@@ -54,7 +54,7 @@ This detects insertion, deletion, and substitution inside the chain.
 
 ## 6. Ingest-time verification
 
-`immutable_trace::ingest` is responsible for completing trust checks before persistence.
+`edgesentry_rs::ingest` is responsible for completing trust checks before persistence.
 
 Main checks:
 
@@ -78,7 +78,7 @@ This separation keeps evidence metadata and payload storage independently manage
 
 ### 8.1 Library example (no DB/MinIO required)
 
-- Run: `cargo run -p immutable-trace --example lift_inspection_flow`
+- Run: `cargo run -p edgesentry-rs --example lift_inspection_flow`
 - Uses in-memory stores
 - Fast path to verify signing, ingest verification, and tamper rejection
 
