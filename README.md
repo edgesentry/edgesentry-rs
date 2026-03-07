@@ -1,6 +1,6 @@
 # edgesentry-rs
 
-This repository contains a tamper-evident audit log PoC built in Rust from IoT devices to cloud services.
+This repository contains a tamper-evident audit log system built in Rust from IoT devices to cloud services.
 
 ## Motivation
 
@@ -12,7 +12,7 @@ For public-infrastructure IoT deployments, Singapore's Cybersecurity Labelling S
 
 https://www.csa.gov.sg/our-programmes/certification-and-labelling-schemes/cybersecurity-labelling-scheme/about/
 
-Because those hardware-dependent setups are often difficult to evaluate quickly in an early PoC phase, this repository focuses on sample code for tamper prevention and tamper-evident audit records.
+Because those hardware-dependent setups are often difficult to evaluate quickly in an early evaluation phase, this repository focuses on sample code for tamper prevention and tamper-evident audit records.
 
 ## Package
 
@@ -24,7 +24,7 @@ For a glossary-style explanation of the core concepts in this repository, see [C
 
 ## Device Side vs Cloud Side
 
-This PoC assumes a public-infrastructure IoT deployment where field devices (for example, lift inspection devices) send inspection evidence to cloud services.
+This system assumes a public-infrastructure IoT deployment where field devices (for example, lift inspection devices) send inspection evidence to cloud services.
 
 ### Device side (resource-constrained edge)
 
