@@ -116,10 +116,6 @@ jobs:
             binary_name: eds
             archive_ext: tar.gz
           - os: macos-latest
-            target: x86_64-apple-darwin
-            binary_name: eds
-            archive_ext: tar.gz
-          - os: macos-latest
             target: aarch64-apple-darwin
             binary_name: eds
             archive_ext: tar.gz
