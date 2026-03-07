@@ -11,9 +11,16 @@ env:
   CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
 
 jobs:
+  create_tag:
+    name: Bump version and create tag
+    uses: ./.github/workflows/auto-version-tag.yml
+    permissions:
+      contents: write
+
   quality_gate:
     name: Quality Gate
     runs-on: ubuntu-latest
+    needs: create_tag
     permissions:
       contents: read
 
@@ -51,7 +58,7 @@ jobs:
   publish_crates:
     name: Publish crates.io packages
     runs-on: ubuntu-latest
-    needs: quality_gate
+    needs: [create_tag, quality_gate]
     permissions:
       contents: read
 
@@ -106,7 +113,7 @@ jobs:
   build_cli_binaries:
     name: Build eds (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
-    needs: quality_gate
+    needs: [create_tag, quality_gate]
     strategy:
       fail-fast: false
       matrix:
@@ -149,8 +156,9 @@ jobs:
       - name: Package binary (unix)
         if: runner.os != 'Windows'
         shell: bash
+        env:
+          TAG_NAME: ${{ needs.create_tag.outputs.tag_name }}
         run: |
-          TAG_NAME="${GITHUB_REF_NAME}"
           ASSET_NAME="eds-${TAG_NAME}-${{ matrix.target }}.tar.gz"
           mkdir -p dist
           cp "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" ./dist/
@@ -160,8 +168,10 @@ jobs:
       - name: Package binary (windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          TAG_NAME: ${{ needs.create_tag.outputs.tag_name }}
         run: |
-          $tag = "${env:GITHUB_REF_NAME}"
+          $tag = "${env:TAG_NAME}"
           $asset = "eds-$tag-${{ matrix.target }}.zip"
           New-Item -ItemType Directory -Path dist -Force | Out-Null
           Copy-Item "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "dist/${{ matrix.binary_name }}"
@@ -191,9 +201,10 @@ jobs:
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ needs.create_tag.outputs.tag_name }}
         run: |
-          gh release create "${{ github.ref_name }}" \
+          gh release create "${TAG_NAME}" \
             --repo "${{ github.repository }}" \
-            --title "${{ github.ref_name }}" \
+            --title "${TAG_NAME}" \
             --generate-notes \
             dist/**/*.tar.gz dist/**/*.zip

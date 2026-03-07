@@ -2,6 +2,11 @@ name: Auto Version Tag
 
 on:
   workflow_dispatch:
+  workflow_call:
+    outputs:
+      tag_name:
+        description: "The created vX.Y.Z tag"
+        value: ${{ jobs.bump_and_tag.outputs.tag_name }}
 
 concurrency:
   group: auto-version-tag-${{ github.ref_name }}
@@ -18,6 +23,8 @@ jobs:
     name: Bump version and create tag
     if: ${{ github.ref_name == 'main' }}
     runs-on: ubuntu-latest
+    outputs:
+      tag_name: ${{ steps.set_tag.outputs.tag_name }}
 
     steps:
       - name: Checkout target SHA
@@ -109,10 +116,16 @@ jobs:
           if git show-ref --verify --quiet "refs/tags/$NEXT_TAG" || \
              git ls-remote --exit-code --tags origin "refs/tags/$NEXT_TAG" >/dev/null 2>&1; then
             echo "tag_exists=true" >> "$GITHUB_OUTPUT"
-            echo "Tag $NEXT_TAG already exists. Nothing to do."
+            echo "Tag $NEXT_TAG already exists."
           else
             echo "tag_exists=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Fail if tag already exists
+        if: ${{ steps.guard.outputs.is_release_commit != 'true' && steps.tag_check.outputs.tag_exists == 'true' }}
+        run: |
+          echo "Tag v${{ steps.semver.outputs.next_version }} already exists. Merge more commits to bump the version before releasing."
+          exit 1
 
       - name: Update workspace version in Cargo.toml
         if: ${{ steps.guard.outputs.is_release_commit != 'true' && steps.tag_check.outputs.tag_exists != 'true' && steps.semver.outputs.next_version != steps.semver.outputs.current_version }}
@@ -173,3 +186,10 @@ jobs:
         run: |
           git tag "v${NEXT_VERSION}"
           git push origin "v${NEXT_VERSION}"
+
+      - name: Set tag output
+        id: set_tag
+        if: ${{ steps.guard.outputs.is_release_commit != 'true' && steps.tag_check.outputs.tag_exists != 'true' }}
+        env:
+          NEXT_VERSION: ${{ steps.semver.outputs.next_version }}
+        run: echo "tag_name=v${NEXT_VERSION}" >> "$GITHUB_OUTPUT"
