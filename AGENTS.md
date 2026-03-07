@@ -2,6 +2,14 @@
 
 This file is the canonical runbook for executable procedures.
 
+## Pull Request Conventions
+
+When creating a pull request, always assign it to the user who authored the branch:
+
+```bash
+gh pr create --assignee "@me" --title "..." --body "..."
+```
+
 ## Mandatory: Run Tests After Every Code Change
 
 After **every** code change, run:
