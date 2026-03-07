@@ -115,7 +115,7 @@ jobs:
             target: x86_64-unknown-linux-gnu
             binary_name: eds
             archive_ext: tar.gz
-          - os: macos-13
+          - os: macos-latest
             target: x86_64-apple-darwin
             binary_name: eds
             archive_ext: tar.gz
