@@ -118,6 +118,8 @@ jobs:
     name: Build eds (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
     needs: [create_tag, quality_gate]
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
