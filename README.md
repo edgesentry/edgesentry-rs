@@ -40,6 +40,7 @@ We believe the infrastructure of trust should not be owned by a single private e
 ## Documentation
 
 - [Introduction](docs/src/introduction.md) — motivation and package overview
+- [Roadmap](docs/src/roadmap.md) — phased plan: Singapore → Japan → Europe
 - [Concepts](docs/src/concepts.md) — tamper-evident design, AuditRecord, hash chain
 - [Architecture](docs/src/architecture.md) — device side vs cloud side, design flow
 - [Library Usage](docs/src/quickstart.md) — in-memory example, S3/MinIO switching
