@@ -5,6 +5,16 @@ A tamper-evident audit log system built in Rust for IoT devices to cloud service
 - **Repository:** [github.com/yohei1126/edgesentry-rs](https://github.com/yohei1126/edgesentry-rs)
 - **Documentation:** [yohei1126.github.io/edgesentry-rs](https://yohei1126.github.io/edgesentry-rs/)
 
+## Vision
+
+**"Establishing a Transparent, Software-Defined Foundation of Trust for Public Infrastructure."**
+
+EdgeSentry-RS is an **experimental**, commercially viable open-source reference implementation. Following the governance model of successful "in-process" systems like **DuckDB**, we separate the core intellectual property of the project from commercial interests to ensure its long-term neutrality and availability as a public good.
+
+Our goal is to serve as the **Common Trust Layer** for vendors in public infrastructure, maritime (MPA), and smart buildings (BCA), helping them meet the highest regulatory standards — including Singapore's **CLS Level 3/4**, **iM8**, and Japan's **Unified Government Standards**.
+
+See the [Roadmap](roadmap.md) for the phased plan.
+
 ## Motivation
 
 In recent years, labor shortages have become a serious challenge in infrastructure operations. Labor-intensive industries such as construction are increasingly adopting IoT devices for remote inspections.
