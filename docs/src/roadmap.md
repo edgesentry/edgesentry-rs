@@ -2,6 +2,18 @@
 
 EdgeSentry-RS follows a phased approach: first establish the Singapore regulatory baseline (CLS/iM8), then expand to Japan (JC-STAR) and Europe (CRA). This mirrors the DuckDB model — build an embeddable OSS core that becomes a de facto standard through ecosystem adoption rather than lock-in.
 
+## Why Singapore First
+
+Singapore's CLS is directly derived from the European **ETSI EN 303 645** standard. Japan's JC-STAR similarly references ETSI EN 303 645 as its technical basis. This means the three regulatory regimes share a common foundation:
+
+| Standard | Region | Based on |
+|----------|--------|----------|
+| ETSI EN 303 645 | Europe (CRA) | Original |
+| CLS Level 3/4 | Singapore | ETSI EN 303 645 |
+| JC-STAR | Japan | ETSI EN 303 645 |
+
+By implementing Singapore CLS compliance first, the majority of the technical work directly satisfies Japan's JC-STAR and Europe's CRA requirements. The Singapore gateway is not just a regional target — it is the fastest path to global compliance coverage.
+
 ---
 
 ## Phase 1: Foundation — "The Singapore Gateway" (Current – 6 Months)
