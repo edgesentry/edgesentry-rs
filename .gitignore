@@ -18,6 +18,9 @@
 .env.*
 !.env.example
 
+# mdBook build output
+docs/book/
+
 # Temporary files
 tmp/
 *.tmp
