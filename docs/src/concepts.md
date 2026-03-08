@@ -63,7 +63,7 @@ The `IntegrityPolicyGate` is the explicit P0 gate that enforces all integrity ru
 3. **Sequence** — must be strictly monotonic and non-duplicate per device
 4. **Previous-record hash** — must chain from the last accepted record's hash
 
-`IngestService` additionally checks that the raw payload matches `payload_hash` before invoking the policy gate.
+`IngestService` additionally checks that the raw payload matches `payload_hash`. This check runs after the policy gate — the policy gate enforces identity, signature, sequence, and chain continuity first, then the payload hash is verified before the record is persisted.
 
 ## 7. Storage model
 
