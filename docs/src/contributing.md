@@ -1,5 +1,39 @@
 # Contributing
 
+## Issue Labels
+
+Every issue should carry one **type** label, one **priority** label, and one or more **category** labels.
+
+### Type labels
+
+| Label | When to use |
+|-------|-------------|
+| `bug` | Something is broken or behaves incorrectly |
+| `enhancement` | New feature or improvement to existing behavior |
+| `documentation` | Docs-only change — no production code affected |
+
+### Priority labels
+
+| Label | Meaning | Examples |
+|-------|---------|---------|
+| `priority:P0` | Must-have — directly required to satisfy a target standard (CLS, JC-STAR, CRA). Work is blocked until resolved. | Broken signature verification, missing hash-chain link, failing integrity gate |
+| `priority:P1` | Good-to-have — strengthens compliance posture or developer experience but is not a hard blocker for standard conformance. | Key rotation tooling, CI hardening, traceability matrix, FFI bridge |
+| `priority:P2` | Best-effort — stretch goals, nice-to-haves, or anything that requires dedicated hardware. Pursue if capacity allows. | HSM integration, education white papers, reference architectures |
+
+When in doubt, ask: *"Does the standard explicitly require this?"* If yes → P0. Otherwise, if it helps but is not mandated → P1. For stretch goals, nice additions, or hardware-dependent work → P2.
+
+### Category labels
+
+| Label | When to use |
+|-------|-------------|
+| `core` | Core security controls — signing, hashing, integrity gate, ingest pipeline |
+| `compliance-governance` | Compliance evidence, traceability matrices, disclosure processes |
+| `devsecops` | CI/CD pipelines, supply-chain security, static analysis, audit tooling |
+| `platform-operations` | Infrastructure, deployment, operational readiness |
+| `hardware-needed` | Requires physical hardware or hardware-backed infrastructure (always pair with `priority:P2`) |
+
+---
+
 ## Pull Request Conventions
 
 When creating a pull request, always assign it to the user who authored the branch:
@@ -22,7 +56,7 @@ Do not consider a change complete until all tests pass.
 
 ### Prerequisites (macOS)
 
-Install Rust toolchain first:
+Install the Rust tool chain first:
 
 ```bash
 brew install rustup-init
@@ -53,7 +87,7 @@ Run tests for a specific crate:
 cargo test -p edgesentry-rs
 ```
 
-Run edgesentry-rs with S3-compatible backend feature enabled:
+Run the `edgesentry-rs` crate with the S3-compatible backend feature enabled:
 
 ```bash
 cargo test -p edgesentry-rs --features s3
