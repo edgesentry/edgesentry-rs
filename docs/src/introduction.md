@@ -9,7 +9,7 @@ A tamper-evident audit log system built in Rust for IoT devices to cloud service
 
 **"Paving the Way for a New Global Standard: Mathematically Provable Integrity at the Edge."**
 
-EdgeSentry-RS is an **experimental**, commercially viable open-source reference implementation. Following the governance model of successful "in-process" systems like **DuckDB**, we separate the core intellectual property of the project from commercial interests to ensure its long-term neutrality and availability as a public good.
+EdgeSentry-RS is an **early-stage learning project** — we are building this to deepen our understanding of IoT security techniques hands-on. The license is commercially compatible (MIT/Apache 2.0), but the implementation is just getting started and is not yet production-ready. Following the governance model of successful "in-process" systems like **DuckDB**, we keep the core intellectual property open and vendor-neutral so it can grow into a public good over time.
 
 Our goal is to serve as the **Common Trust Layer** for vendors in public infrastructure, maritime (MPA), and smart buildings (BCA), helping them meet the highest regulatory standards — including Singapore's **CLS Level 3/4**, **iM8**, and Japan's **Unified Government Standards**.
 
