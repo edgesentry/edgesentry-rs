@@ -434,10 +434,10 @@ fn rejects_out_of_order_sequence_and_logs_rejection() {
 }
 
 #[test]
-fn cert_identity_check_precedes_payload_hash_check() {
-    // A request with a spoofed cert_identity AND a mismatched payload hash must
-    // yield CertDeviceMismatch (not PayloadHashMismatch), confirming that the
-    // identity gate runs before the payload integrity check.
+fn payload_hash_check_precedes_policy_gate_check() {
+    // A request with a mismatched payload hash AND a spoofed cert_identity must
+    // yield PayloadHashMismatch (not CertDeviceMismatch), confirming that the
+    // payload integrity check runs before the identity/signature gate.
     let signing_key = SigningKey::from_bytes(&[42u8; 32]);
     let verifying_key = VerifyingKey::from(&signing_key);
 
@@ -464,14 +464,8 @@ fn cert_identity_check_precedes_payload_hash_check() {
         .expect_err("ingest should fail");
 
     assert!(
-        matches!(
-            err,
-            IngestServiceError::Verify(IngestError::CertDeviceMismatch {
-                ref cert_identity,
-                ref device_id,
-            }) if cert_identity == "spoofed-device" && device_id == "lift-01"
-        ),
-        "expected CertDeviceMismatch (not PayloadHashMismatch), got: {err}"
+        matches!(err, IngestServiceError::PayloadHashMismatch { .. }),
+        "expected PayloadHashMismatch (not CertDeviceMismatch), got: {err}"
     );
 }
 
