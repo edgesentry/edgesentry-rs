@@ -1,10 +1,52 @@
-# Quickstart
+# Library Usage Example
 
-Full setup instructions, prerequisites, and run commands are in [AGENTS.md](https://github.com/yohei1126/edgesentry-rs/blob/main/AGENTS.md).
+Run the end-to-end lift inspection example implemented directly with library APIs:
 
-Key sections:
+Prerequisites:
 
-- **Prerequisites (macOS)** — install Rust toolchain and `cargo-deny`
-- **Library example (no DB required)** — `cargo run -p edgesentry-rs --example lift_inspection_flow`
-- **Interactive local demo (PostgreSQL + MinIO)** — `bash scripts/local_demo.sh`
-- **Quality and license check** — `./scripts/run_unit_and_license_check.sh`
+- Rust toolchain (`cargo`)
+- PostgreSQL / MinIO are **not required** for this example (it uses in-memory stores)
+
+```bash
+cargo run -p edgesentry-rs --example lift_inspection_flow
+```
+
+Scenario covered by the sample:
+
+1. Register one lift device public key in `IntegrityPolicyGate`
+2. Generate three signed inspection records with `build_signed_record`
+3. Ingest all records via `IngestService` (accepted path)
+4. Tamper one record (`payload_hash`) and confirm rejection
+5. Print stored audit records and operation logs
+
+What it demonstrates:
+
+- Record signing with `edgesentry_rs::build_signed_record`
+- Ingestion verification with `edgesentry_rs::ingest::IngestService`
+- Tampering rejection (modified `payload_hash`)
+- Audit records and operation-log output
+
+Source:
+
+- `crates/edgesentry-rs/examples/lift_inspection_flow.rs`
+
+## S3 / MinIO Switching
+
+`edgesentry-rs` supports a switchable S3-compatible raw-data backend behind the `s3` feature.
+
+- `S3Backend::AwsS3`: use AWS S3 (default AWS credential chain, or optional static key)
+- `S3Backend::Minio`: use MinIO (custom endpoint + static access key/secret)
+
+The ingest layer is coded against a common raw-data storage abstraction, while concrete configuration selects AWS S3 or MinIO without changing ingest business logic.
+
+Use these types from `edgesentry_rs`:
+
+- `S3ObjectStoreConfig::for_aws_s3(...)`
+- `S3ObjectStoreConfig::for_minio(...)`
+- `S3CompatibleRawDataStore::new(config)`
+
+Build and test with the S3 feature enabled:
+
+```bash
+cargo test -p edgesentry-rs --features s3
+```
