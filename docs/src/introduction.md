@@ -21,7 +21,7 @@ Modeled after the "Simple, Portable, Fast" philosophy, EdgeSentry-RS implements 
 
 2. **Integrity** — BLAKE3 hash chains to ensure data immutability. Provides a verifiable cryptographic record that can be validated locally or in the cloud, ensuring forensic readiness even in offline scenarios.
 
-3. **Resilience** — Intelligent data summarization for narrow-bandwidth environments (e.g., VDES/Coastal Link), ensuring critical security signals are prioritized over limited links.
+3. **Resilience** *(planned)* — Intelligent data summarization for narrow-bandwidth environments (e.g., VDES/Coastal Link), ensuring critical security signals are prioritized over limited links. See [Phase 2 in the Roadmap](roadmap.md).
 
 ## Governance
 

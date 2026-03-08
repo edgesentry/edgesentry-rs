@@ -43,12 +43,14 @@ Deliver a software reference implementation that satisfies Singapore CLS Level 3
 
 ### Milestone 1.1: Identity & Integrity Core
 
-- `edgesentry-identity` — Ed25519 device signature implementation
-- `edgesentry-integrity` — BLAKE3 hash chain tamper-detection protocol
+These are planned module names — not yet separate crates. Currently implemented together in `crates/edgesentry-rs`.
+
+- `edgesentry-identity` *(planned)* — Ed25519 device signature implementation
+- `edgesentry-integrity` *(planned)* — BLAKE3 hash chain tamper-detection protocol
 
 ### Milestone 1.2: The C/C++ Bridge
 
-- `edgesentry-bridge` — FFI layer allowing C++ projects to call Rust signing and verification without a full rewrite
+- `edgesentry-bridge` *(planned)* — FFI layer allowing C++ projects to call Rust signing and verification without a full rewrite
 - **Goal:** inject Singapore-grade security into existing Japanese hardware (gateways, sensors) with minimal modification
 
 ### Milestone 1.3: Compliance Mapping v1.0
