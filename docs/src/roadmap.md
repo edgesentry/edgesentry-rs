@@ -69,7 +69,7 @@ Strengthen alignment with Japan's IoT security label scheme (JC-STAR) and unifie
 
 ### Milestone 2.2: Edge Intelligence
 
-- `edgesentry-summary` — data summarization logic for high-performance Japanese sensors (e.g., HMS AI cameras) over bandwidth-constrained links
+- `edgesentry-summary` — data summarization logic for high-performance Japanese sensors over bandwidth-constrained links
 - `edgesentry-detector` — local anomaly detection with signed audit evidence attached to results
 
 ### Milestone 2.3: Cross-Border Education Program
