@@ -4,7 +4,7 @@
 
 `edgesentry-rs` is a tamper-evident audit log proof-of-concept written in Rust for IoT-to-cloud deployments. It provides cryptographic signing, hash chaining, and ingestion-time verification for inspection records from edge devices (for example, lift inspection sensors).
 
-For core concept definitions see [CONCEPTS.md](../CONCEPTS.md).  
+For core concept definitions see [docs/src/concepts.md](../docs/src/concepts.md).
 For all executable procedures (build, test, CLI usage, demo scripts) see [AGENTS.md](../AGENTS.md).
 
 ## Repository Structure

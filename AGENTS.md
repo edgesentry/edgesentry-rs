@@ -5,6 +5,7 @@ All procedures are documented in [docs/src/](docs/src/) and apply equally to hum
 ## Quick Reference
 
 ### Understanding the system
+- **[Roadmap](docs/src/roadmap.md)** — phased compliance plan (Singapore → Japan → Europe), implementation mapping to ETSI EN 303 645 / CLS / JC-STAR
 - **[Concepts](docs/src/concepts.md)** — tamper-evident design, AuditRecord fields, hash chain, sequence policy, ingest-time verification, storage model
 - **[Architecture](docs/src/architecture.md)** — device side vs cloud side responsibilities, resource-constrained design, concrete sign-and-ingest flow
 

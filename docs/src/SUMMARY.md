@@ -2,6 +2,7 @@
 
 [Introduction](introduction.md)
 
+- [Roadmap](roadmap.md)
 - [Concepts](concepts.md)
 - [Architecture](architecture.md)
 - [Library Usage](quickstart.md)
