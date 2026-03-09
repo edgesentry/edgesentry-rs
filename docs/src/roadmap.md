@@ -33,8 +33,9 @@ These are modules within `crates/edgesentry-rs`, not yet separate crates.
 
 ### Milestone 1.2: The C/C++ Bridge
 
-- `edgesentry-bridge` *(planned)* — FFI layer allowing C++ projects to call Rust signing and verification without a full rewrite
+- `edgesentry-bridge` — C-compatible FFI layer exposing Ed25519 signing, signature verification, and hash-chain validation to C/C++ projects
 - **Goal:** inject Singapore-grade security into existing Japanese hardware (gateways, sensors) with minimal modification
+- See [C/C++ FFI Bridge](ffi_bridge.md) for usage, linking instructions, and memory safety conventions
 
 ### Milestone 1.3: Compliance Mapping v1.0
 
