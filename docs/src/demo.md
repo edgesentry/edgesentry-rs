@@ -7,7 +7,8 @@ This demo:
 - Starts PostgreSQL + MinIO backend services
 - Generates and verifies a signed chain with `eds`
 - Performs tampering and confirms verification failure
-- Persists accepted records into PostgreSQL
+- Ingests accepted records through `IngestService` (writes payloads to MinIO, writes metadata to PostgreSQL)
+- Demonstrates rejection of tampered records through the same `IngestService`
 - Prints audit records and operation logs from the DB
 - Stops PostgreSQL + MinIO in the final step
 
