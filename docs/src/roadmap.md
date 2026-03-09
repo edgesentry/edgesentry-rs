@@ -16,24 +16,7 @@ By implementing Singapore CLS compliance first, the majority of the technical wo
 
 ## Implementation Mapping
 
-The table below maps each requirement provision to the current implementation in this repository.
-
-Legend: ✅ Implemented — ⚠️ Partial — 🔲 Planned
-
-| Provision | ETSI EN 303 645 | Singapore CLS | Japan JC-STAR | Implementation | Status |
-|-----------|----------------|---------------|---------------|----------------|--------|
-| Device authenticity | 5.5 (Communicate securely) | CLS-05 | STAR-1 R1.1 | Ed25519 signature on every `AuditRecord` (`edgesentry_rs::build_signed_record`) | ✅ |
-| Data integrity | 5.7 (Ensure software integrity) | CLS-07 | STAR-1 R1.3 | BLAKE3 `payload_hash` over raw payload; verified on ingest | ✅ |
-| Replay / reorder prevention | 5.10 (Examine telemetry data) | CLS-10 | STAR-1 R2.1 | Strict monotonic `sequence` per device; duplicates rejected by `IntegrityPolicyGate` | ✅ |
-| Chain continuity | 5.7 | CLS-07 | STAR-1 R1.3 | `prev_record_hash` links each record to its predecessor; insertion/deletion detected | ✅ |
-| Audit trail | 5.10 | CLS-10 | STAR-2 R3.1 | Separate audit ledger and operation log (accept/reject decisions) persisted on ingest | ✅ |
-| Device registration & key management | 5.4 (Store parameters securely) | CLS-04 | STAR-1 R1.2 | Public key registry in `IntegrityPolicyGate`; private key management left to deployer | ⚠️ |
-| Secure transport | 5.5 | CLS-05 | STAR-1 R1.1 | Record-level signature ensures authenticity; transport encryption (TLS) not in scope | ⚠️ |
-| Vulnerability reporting | 5.2 | CLS-02 | STAR-1 R4.1 | OSS model + GitHub Issues; formal disclosure process not yet defined | ⚠️ |
-| Software update integrity | 5.3 | CLS-03 | STAR-2 R2.2 | Not in scope for current experimental phase | 🔲 |
-| Hardware security module (HSM) | — | CLS Level 4 | STAR-2 R1.4 | C/C++ FFI bridge planned (Phase 1 Milestone 1.2) | 🔲 |
-| Formal binary analysis | — | CLS Level 4 | — | Memory safety hardening planned (Phase 3 Milestone 3.2) | 🔲 |
-| ETSI EN 303 645 full mapping | — | — | STAR-2 | Traceability matrix planned (Phase 1 Milestone 1.3) | 🔲 |
+For the detailed clause-by-clause mapping of CLS / ETSI EN 303 645 / JC-STAR requirements to source code, see the [Compliance Traceability Matrix](traceability.md).
 
 ---
 
@@ -43,7 +26,7 @@ Deliver a software reference implementation that satisfies Singapore CLS Level 3
 
 ### Milestone 1.1: Identity & Integrity Core
 
-These are planned module names — not yet separate crates. Currently implemented together in `crates/edgesentry-rs`.
+These are planned module names — not yet separate crates. Currently, they are implemented together in `crates/edgesentry-rs`.
 
 - `edgesentry-identity` *(planned)* — Ed25519 device signature implementation
 - `edgesentry-integrity` *(planned)* — BLAKE3 hash chain tamper-detection protocol
@@ -102,6 +85,6 @@ Following the DuckDB model — a lightweight embeddable core that spreads via li
 
 1. **"In-Process" Security** — Embed as a library inside existing C++ applications regardless of OS or hardware, just as DuckDB embeds inside Python and Java processes.
 
-2. **Open Compliance** — OSS the "how to achieve security" knowledge so no single vendor controls the compliance pathway; the standard becomes public infrastructure.
+2. **Open Compliance** — OSS the "how to achieve security" knowledge, so no single vendor controls the compliance pathway; the standard becomes public infrastructure.
 
 3. **Collaborative Learning** — Provide a shared Rust codebase as a cross-company learning environment to develop the next generation of IoT security engineers.
