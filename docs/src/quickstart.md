@@ -50,3 +50,15 @@ Build and test with the S3 feature enabled:
 ```bash
 cargo test -p edgesentry-rs --features s3
 ```
+
+To run the S3 integration tests against a live MinIO instance, set the environment variables and run the dedicated test file:
+
+```bash
+TEST_S3_ENDPOINT=http://localhost:9000 \
+TEST_S3_ACCESS_KEY=minioadmin \
+TEST_S3_SECRET_KEY=minioadmin \
+TEST_S3_BUCKET=bucket \
+cargo test -p edgesentry-rs --features s3 --test s3_integration -- --nocapture
+```
+
+Tests skip automatically when any of the four `TEST_S3_*` variables are unset.
