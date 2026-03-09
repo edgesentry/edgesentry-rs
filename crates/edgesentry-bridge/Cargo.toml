@@ -1,0 +1,18 @@
+[package]
+name = "edgesentry-bridge"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "C/C++ FFI bridge — call Rust signing and verification from C without a full rewrite"
+
+[lib]
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+edgesentry-rs = { path = "../edgesentry-rs" }
+ed25519-dalek.workspace = true
+rand.workspace = true
+
+[build-dependencies]
+cbindgen = "0.27"

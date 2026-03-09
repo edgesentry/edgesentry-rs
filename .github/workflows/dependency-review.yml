@@ -21,10 +21,11 @@ jobs:
         uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high
-          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, Unicode-3.0, CC0-1.0
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, Unicode-3.0, CC0-1.0, Zlib
           allow-dependencies-licenses: >-
             pkg:github/actions/checkout,
             pkg:github/actions/dependency-review-action,
             pkg:cargo/postgres,
-            pkg:cargo/unicode-properties
+            pkg:cargo/unicode-properties,
+            pkg:cargo/cbindgen
           comment-summary-in-pr: always

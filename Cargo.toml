@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "crates/edgesentry-rs",
+  "crates/edgesentry-bridge",
 ]
 resolver = "2"
 

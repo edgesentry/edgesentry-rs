@@ -51,7 +51,7 @@ Verify one record signature:
 ```bash
 cargo run -p edgesentry-rs -- verify-record \
   --record-file record1.json \
-  --public-key-hex 8a88e3dd7409f195fd52db2d3cba5d72ca670bf1d94121bf3748801b40f6f5c0
+  --public-key-hex 8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
 ```
 
 Verify a whole chain from a JSON array file:
@@ -143,7 +143,7 @@ Verify signature:
 ```bash
 cargo run -p edgesentry-rs -- verify-record \
   --record-file lift_single_record.json \
-  --public-key-hex 8a88e3dd7409f195fd52db2d3cba5d72ca670bf1d94121bf3748801b40f6f5c0
+  --public-key-hex 8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
 ```
 
 Expected output:
@@ -177,7 +177,7 @@ Verify signature again:
 ```bash
 cargo run -p edgesentry-rs -- verify-record \
   --record-file lift_single_record.json \
-  --public-key-hex 8a88e3dd7409f195fd52db2d3cba5d72ca670bf1d94121bf3748801b40f6f5c0
+  --public-key-hex 8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
 ```
 
 Expected output:
@@ -185,3 +185,39 @@ Expected output:
 ```text
 INVALID
 ```
+
+---
+
+## Ingestion Demo (PostgreSQL + MinIO)
+
+Requires the `s3` and `postgres` Cargo features and a running PostgreSQL + MinIO instance (use `docker compose -f docker-compose.local.yml up -d`).
+
+### 1) Generate a chain with payloads file
+
+```bash
+cargo run -p edgesentry-rs --features s3,postgres -- demo-lift-inspection \
+  --device-id lift-01 \
+  --out-file lift_inspection_records.json \
+  --payloads-file lift_inspection_payloads.json
+```
+
+### 2) Ingest records through IngestService
+
+```bash
+cargo run -p edgesentry-rs --features s3,postgres -- demo-ingest \
+  --records-file lift_inspection_records.json \
+  --payloads-file lift_inspection_payloads.json \
+  --device-id lift-01 \
+  --pg-url postgresql://trace:trace@localhost:5433/trace_audit \
+  --minio-endpoint http://localhost:9000 \
+  --minio-bucket bucket \
+  --minio-access-key minioadmin \
+  --minio-secret-key minioadmin \
+  --reset
+```
+
+`--reset` truncates `audit_records` and `operation_logs` before ingesting.  Omit it to append to an existing run.
+
+Pass `--tampered-records-file <path>` to also demonstrate rejection of a tampered chain through the same `IngestService`.
+
+See [Interactive Demo](demo.md) for the full guided walkthrough with PostgreSQL and MinIO.

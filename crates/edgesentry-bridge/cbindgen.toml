@@ -1,0 +1,11 @@
+language = "C"
+include_guard = "EDGESENTRY_BRIDGE_H"
+tab_width = 4
+documentation = true
+no_includes = false
+sys_includes = ["stdint.h", "stddef.h"]
+
+[export]
+# Export pub const items as #define macros
+include = ["EDS_OK", "EDS_ERR_NULL_PTR", "EDS_ERR_INVALID_UTF8",
+           "EDS_ERR_INVALID_KEY", "EDS_ERR_STRING_TOO_LONG", "EDS_ERR_CHAIN_INVALID"]
