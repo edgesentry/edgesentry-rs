@@ -1,12 +1,12 @@
 mod agent;
-mod chain;
-mod crypto;
+pub mod identity;
+pub mod integrity;
 pub mod ingest;
 mod record;
 
 pub use agent::build_signed_record;
-pub use chain::{verify_chain, ChainError};
-pub use crypto::{compute_payload_hash, sign_payload_hash, verify_payload_signature};
+pub use identity::{sign_payload_hash, verify_payload_signature};
+pub use integrity::{compute_payload_hash, verify_chain, ChainError};
 pub use ingest::{
     AuditLedger, InMemoryAuditLedger, InMemoryOperationLog, InMemoryRawDataStore, IngestDecision,
     IngestError, IngestService, IngestServiceError, IngestState, IntegrityPolicyGate,
