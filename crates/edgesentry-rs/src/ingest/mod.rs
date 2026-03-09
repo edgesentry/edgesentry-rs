@@ -9,4 +9,6 @@ pub use storage::{
 };
 #[cfg(feature = "s3")]
 pub use storage::{S3Backend, S3CompatibleRawDataStore, S3ObjectStoreConfig, S3StoreError};
+#[cfg(feature = "postgres")]
+pub use storage::{PostgresAuditLedger, PostgresOperationLog, PostgresStoreError};
 pub use verify::{IngestError, IngestState};

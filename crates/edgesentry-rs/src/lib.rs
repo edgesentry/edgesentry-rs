@@ -14,6 +14,8 @@ pub use ingest::{
 };
 #[cfg(feature = "s3")]
 pub use ingest::{S3Backend, S3CompatibleRawDataStore, S3ObjectStoreConfig, S3StoreError};
+#[cfg(feature = "postgres")]
+pub use ingest::{PostgresAuditLedger, PostgresOperationLog, PostgresStoreError};
 pub use record::{AuditRecord, Hash32, Signature64};
 
 use std::{fs, path::Path};
@@ -92,19 +94,22 @@ pub fn verify_chain_records(records: &[AuditRecord]) -> Result<(), CliError> {
     verify_chain(records).map_err(|e| CliError::Chain(e.to_string()))
 }
 
-pub fn build_lift_inspection_demo_records(
+pub fn build_lift_inspection_demo_records_with_payloads(
     device_id: &str,
     private_key_hex: &str,
     start_timestamp_ms: u64,
     object_prefix: &str,
-) -> Result<Vec<AuditRecord>, CliError> {
+) -> Result<Vec<(AuditRecord, Vec<u8>)>, CliError> {
     let steps = [
         "check=door,status=ok,open_close_cycle=3",
         "check=vibration,status=ok,rms=0.18",
         "check=emergency_brake,status=ok,response_ms=120",
     ];
 
-    let mut records = Vec::with_capacity(steps.len());
+    let key_bytes = parse_fixed_hex::<32>(private_key_hex)?;
+    let signing_key = SigningKey::from_bytes(&key_bytes);
+
+    let mut results = Vec::with_capacity(steps.len());
     let mut prev_hash = AuditRecord::zero_hash();
 
     for (index, step) in steps.iter().enumerate() {
@@ -112,24 +117,40 @@ pub fn build_lift_inspection_demo_records(
         let timestamp_ms = start_timestamp_ms + (index as u64) * 60_000;
         let payload = format!(
             "scenario=lift-inspection,device={device_id},sequence={sequence},{step}"
-        );
+        )
+        .into_bytes();
         let object_ref = format!("{object_prefix}/inspection-{sequence}.bin");
 
-        let record = sign_record(
+        let record = build_signed_record(
             device_id.to_string(),
             sequence,
             timestamp_ms,
-            payload.into_bytes(),
+            &payload,
             prev_hash,
             object_ref,
-            private_key_hex,
-        )?;
+            &signing_key,
+        );
 
         prev_hash = record.hash();
-        records.push(record);
+        results.push((record, payload));
     }
 
-    Ok(records)
+    Ok(results)
+}
+
+pub fn build_lift_inspection_demo_records(
+    device_id: &str,
+    private_key_hex: &str,
+    start_timestamp_ms: u64,
+    object_prefix: &str,
+) -> Result<Vec<AuditRecord>, CliError> {
+    let pairs = build_lift_inspection_demo_records_with_payloads(
+        device_id,
+        private_key_hex,
+        start_timestamp_ms,
+        object_prefix,
+    )?;
+    Ok(pairs.into_iter().map(|(r, _)| r).collect())
 }
 
 pub fn write_record_json(path: Option<&Path>, record: &AuditRecord) -> Result<(), CliError> {
