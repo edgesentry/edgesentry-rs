@@ -63,7 +63,7 @@ Legend: ✅ Implemented — ⚠️ Partial — 🔲 Planned — ➖ Not in scope
 | Requirement | Data must be transmitted with authenticity guarantees |
 | Status | ⚠️ Partial |
 | Implementation | Every `AuditRecord` carries an Ed25519 signature over its BLAKE3 payload hash — `build_signed_record` ([`src/agent.rs`](https://github.com/yohei1126/edgesentry-rs/blob/main/crates/edgesentry-rs/src/agent.rs)), `sign_payload_hash` ([`src/crypto.rs:9`](https://github.com/yohei1126/edgesentry-rs/blob/main/crates/edgesentry-rs/src/crypto.rs#L9)) |
-| Gap | Transport-layer encryption (TLS) is not in scope — record-level signature provides authenticity but not channel confidentiality |
+| Gap | Transport-layer encryption (TLS) is not in scope — record-level signature provides authenticity but not channel confidentiality. Tracked in [#73](https://github.com/yohei1126/edgesentry-rs/issues/73) |
 
 ---
 
