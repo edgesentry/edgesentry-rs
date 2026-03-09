@@ -2,9 +2,9 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 use edgesentry_rs::{
-    build_lift_inspection_demo_records_with_payloads, parse_fixed_hex, sign_record,
-    verify_chain_file, verify_chain_records, verify_record, write_record_json, write_records_json,
-    AuditRecord,
+    build_lift_inspection_demo_records_with_payloads, generate_keypair, inspect_key,
+    parse_fixed_hex, sign_record, verify_chain_file, verify_chain_records, verify_record,
+    write_record_json, write_records_json, AuditRecord,
 };
 
 #[derive(Debug, Parser)]
@@ -62,6 +62,20 @@ enum Commands {
         /// Optional: write raw payloads as a JSON array of hex strings (required for demo-ingest)
         #[arg(long)]
         payloads_file: Option<PathBuf>,
+    },
+    /// Generate a fresh Ed25519 keypair; prints JSON with private_key_hex and public_key_hex
+    Keygen {
+        /// Write output to this file instead of stdout
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
+    /// Derive the public key from an existing private key hex
+    InspectKey {
+        #[arg(long)]
+        private_key_hex: String,
+        /// Write output to this file instead of stdout
+        #[arg(long)]
+        out: Option<PathBuf>,
     },
     #[cfg(all(feature = "s3", feature = "postgres"))]
     /// Ingest records through IngestService into PostgreSQL + MinIO (requires s3,postgres features)
@@ -146,6 +160,22 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         Commands::VerifyChain { records_file } => {
             verify_chain_file(&records_file)?;
             println!("CHAIN_VALID");
+        }
+        Commands::Keygen { out } => {
+            let keypair = generate_keypair();
+            let json = serde_json::to_string_pretty(&keypair)?;
+            match out {
+                Some(path) => std::fs::write(&path, &json)?,
+                None => println!("{json}"),
+            }
+        }
+        Commands::InspectKey { private_key_hex, out } => {
+            let keypair = inspect_key(&private_key_hex)?;
+            let json = serde_json::to_string_pretty(&keypair)?;
+            match out {
+                Some(path) => std::fs::write(&path, &json)?,
+                None => println!("{json}"),
+            }
         }
         Commands::DemoLiftInspection {
             device_id,

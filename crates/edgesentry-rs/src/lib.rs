@@ -21,6 +21,8 @@ pub use record::{AuditRecord, Hash32, Signature64};
 use std::{fs, path::Path};
 
 use ed25519_dalek::{SigningKey, VerifyingKey};
+use rand::rngs::OsRng;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -173,6 +175,36 @@ pub fn write_records_json(path: &Path, records: &[AuditRecord]) -> Result<(), Cl
     Ok(())
 }
 
+/// An Ed25519 keypair represented as hex strings.
+///
+/// `private_key_hex` is 32 bytes (64 hex chars) — keep this secret on the device.
+/// `public_key_hex`  is 32 bytes (64 hex chars) — register this on the cloud side
+/// via `IntegrityPolicyGate::register_device`.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct KeyPair {
+    pub private_key_hex: String,
+    pub public_key_hex: String,
+}
+
+/// Generate a fresh Ed25519 keypair using the OS CSPRNG.
+pub fn generate_keypair() -> KeyPair {
+    let signing_key = SigningKey::generate(&mut OsRng);
+    KeyPair {
+        private_key_hex: hex::encode(signing_key.to_bytes()),
+        public_key_hex: hex::encode(signing_key.verifying_key().to_bytes()),
+    }
+}
+
+/// Derive the public key from an existing private key hex string.
+pub fn inspect_key(private_key_hex: &str) -> Result<KeyPair, CliError> {
+    let key_bytes = parse_fixed_hex::<32>(private_key_hex)?;
+    let signing_key = SigningKey::from_bytes(&key_bytes);
+    Ok(KeyPair {
+        private_key_hex: hex::encode(signing_key.to_bytes()),
+        public_key_hex: hex::encode(signing_key.verifying_key().to_bytes()),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -256,6 +288,49 @@ mod tests {
 
         let valid = verify_record(&record, &wrong_public_key_hex).expect("verify should run");
         assert!(!valid, "wrong public key must not verify the signature");
+    }
+
+    #[test]
+    fn generate_keypair_produces_unique_pairs() {
+        let kp1 = generate_keypair();
+        let kp2 = generate_keypair();
+        assert_ne!(kp1.private_key_hex, kp2.private_key_hex, "each call must produce a unique key");
+        assert_ne!(kp1.public_key_hex, kp2.public_key_hex);
+        assert_eq!(kp1.private_key_hex.len(), 64);
+        assert_eq!(kp1.public_key_hex.len(), 64);
+    }
+
+    #[test]
+    fn inspect_key_roundtrips_with_generate_keypair() {
+        let kp = generate_keypair();
+        let inspected = inspect_key(&kp.private_key_hex).expect("inspect_key should succeed");
+        assert_eq!(kp.private_key_hex, inspected.private_key_hex);
+        assert_eq!(kp.public_key_hex, inspected.public_key_hex);
+    }
+
+    #[test]
+    fn inspect_key_matches_known_public_key() {
+        // This is the well-known test vector used throughout the test suite.
+        let private_key_hex = "0101010101010101010101010101010101010101010101010101010101010101";
+        let kp = inspect_key(private_key_hex).expect("inspect_key should succeed");
+        assert_eq!(kp.public_key_hex, "8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c");
+    }
+
+    #[test]
+    fn generated_keypair_can_sign_and_verify() {
+        let kp = generate_keypair();
+        let record = sign_record(
+            "lift-gen".to_string(),
+            1,
+            1_700_000_000_000,
+            b"payload".to_vec(),
+            AuditRecord::zero_hash(),
+            "s3://bucket/lift-gen/1.bin".to_string(),
+            &kp.private_key_hex,
+        )
+        .expect("sign_record should succeed with generated key");
+        let valid = verify_record(&record, &kp.public_key_hex).expect("verify should run");
+        assert!(valid, "generated keypair must verify its own signature");
     }
 
     #[test]
