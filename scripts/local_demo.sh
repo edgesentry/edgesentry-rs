@@ -4,8 +4,14 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 COMPOSE_FILE="$ROOT_DIR/docker-compose.local.yml"
 RECORDS_FILE="/tmp/lift_inspection_records.json"
-INSERT_SQL="/tmp/insert_lift_records.sql"
+PAYLOADS_FILE="/tmp/lift_inspection_payloads.json"
 TAMPERED_RECORDS_FILE="/tmp/lift_inspection_records_tampered.json"
+PG_URL="postgresql://trace:trace@localhost:5433/trace_audit"
+MINIO_ENDPOINT="http://localhost:9000"
+MINIO_BUCKET="bucket"
+MINIO_ACCESS_KEY="minioadmin"
+MINIO_SECRET_KEY="minioadmin"
+PRIVATE_KEY_HEX="0101010101010101010101010101010101010101010101010101010101010101"
 
 wait_for_ok() {
   local step_label="$1"
@@ -29,12 +35,12 @@ if ! command -v cargo >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "[1/8] Starting PostgreSQL + MinIO..."
+echo "[1/7] Starting PostgreSQL + MinIO..."
 docker compose -f "$COMPOSE_FILE" up -d postgres minio minio-setup >/dev/null
 echo "Backend started."
-wait_for_ok "1/8"
+wait_for_ok "1/7"
 
-echo "[2/8] Waiting for PostgreSQL healthcheck..."
+echo "[2/7] Waiting for PostgreSQL healthcheck..."
 for _ in $(seq 1 30); do
   STATUS=$(docker inspect --format='{{.State.Health.Status}}' edgesentry-rs-postgres 2>/dev/null || true)
   if [[ "$STATUS" == "healthy" ]]; then
@@ -48,9 +54,9 @@ if [[ "${STATUS:-}" != "healthy" ]]; then
   exit 1
 fi
 echo "PostgreSQL healthcheck: healthy"
-wait_for_ok "2/8"
+wait_for_ok "2/7"
 
-echo "[3/8] Waiting for MinIO bucket setup..."
+echo "[3/7] Waiting for MinIO bucket setup..."
 for _ in $(seq 1 30); do
   MINIO_SETUP_STATE=$(docker inspect --format='{{.State.Status}}' edgesentry-rs-minio-setup 2>/dev/null || true)
   MINIO_SETUP_EXIT_CODE=$(docker inspect --format='{{.State.ExitCode}}' edgesentry-rs-minio-setup 2>/dev/null || true)
@@ -65,18 +71,25 @@ if [[ "${MINIO_SETUP_STATE:-}" != "exited" || "${MINIO_SETUP_EXIT_CODE:-}" != "0
   exit 1
 fi
 echo "MinIO setup: completed"
-wait_for_ok "3/8"
+wait_for_ok "3/7"
 
-echo "[4/8] Generating demo lift inspection records..."
+echo "[4/7] Generating demo lift inspection records + payloads..."
 (
   cd "$ROOT_DIR"
-  cargo run -p edgesentry-rs -- demo-lift-inspection --device-id lift-01 --out-file "$RECORDS_FILE" >/dev/null
+  cargo run -p edgesentry-rs --features s3,postgres -- \
+    demo-lift-inspection \
+    --device-id lift-01 \
+    --private-key-hex "$PRIVATE_KEY_HEX" \
+    --out-file "$RECORDS_FILE" \
+    --payloads-file "$PAYLOADS_FILE" \
+    >/dev/null
 )
 echo "CLI check: chain generated -> $RECORDS_FILE"
-cargo run -p edgesentry-rs -- verify-chain --records-file "$RECORDS_FILE"
-wait_for_ok "4/8"
+echo "CLI check: payloads generated -> $PAYLOADS_FILE"
+(cd "$ROOT_DIR" && cargo run -p edgesentry-rs -- verify-chain --records-file "$RECORDS_FILE")
+wait_for_ok "4/7"
 
-echo "[4.5/8] Tampering the chain and verifying detection..."
+echo "[4.5/7] Tampering the chain and verifying detection..."
 python3 - <<'PY'
 import json
 import pathlib
@@ -90,7 +103,7 @@ print(dst)
 PY
 
 set +e
-cargo run -p edgesentry-rs -- verify-chain --records-file "$TAMPERED_RECORDS_FILE"
+(cd "$ROOT_DIR" && cargo run -p edgesentry-rs -- verify-chain --records-file "$TAMPERED_RECORDS_FILE")
 TAMPER_EXIT_CODE=$?
 set -e
 
@@ -99,64 +112,38 @@ if [[ "$TAMPER_EXIT_CODE" -eq 0 ]]; then
   exit 1
 fi
 echo "Tamper detection: PASSED (verify-chain exited with $TAMPER_EXIT_CODE)"
-wait_for_ok "4.5/8"
+wait_for_ok "4.5/7"
 
-echo "[5/8] Preparing SQL inserts..."
-python3 - <<'PY'
-import json
-import pathlib
+echo "[5/7] Ingesting records via IngestService (PostgreSQL + MinIO)..."
+(
+  cd "$ROOT_DIR"
+  cargo run -p edgesentry-rs --features s3,postgres -- \
+    demo-ingest \
+    --records-file "$RECORDS_FILE" \
+    --payloads-file "$PAYLOADS_FILE" \
+    --device-id lift-01 \
+    --private-key-hex "$PRIVATE_KEY_HEX" \
+    --pg-url "$PG_URL" \
+    --minio-endpoint "$MINIO_ENDPOINT" \
+    --minio-bucket "$MINIO_BUCKET" \
+    --minio-access-key "$MINIO_ACCESS_KEY" \
+    --minio-secret-key "$MINIO_SECRET_KEY" \
+    --reset \
+    --tampered-records-file "$TAMPERED_RECORDS_FILE"
+)
+wait_for_ok "5/7"
 
-records_file = pathlib.Path('/tmp/lift_inspection_records.json')
-insert_sql = pathlib.Path('/tmp/insert_lift_records.sql')
-records = json.loads(records_file.read_text(encoding='utf-8'))
+echo "[6/7] Querying persisted data..."
+docker exec -i edgesentry-rs-postgres psql -U trace -d trace_audit \
+  -c "SELECT id, device_id, sequence, object_ref, ingested_at FROM audit_records ORDER BY sequence;"
+docker exec -i edgesentry-rs-postgres psql -U trace -d trace_audit \
+  -c "SELECT id, decision, device_id, sequence, message, created_at FROM operation_logs ORDER BY id;"
+wait_for_ok "6/7"
 
-def esc(v: str) -> str:
-    return v.replace("'", "''")
-
-lines = [
-    'BEGIN;',
-    "TRUNCATE TABLE operation_logs, audit_records RESTART IDENTITY;",
-]
-
-for rec in records:
-    device_id = esc(rec['device_id'])
-    sequence = int(rec['sequence'])
-    timestamp_ms = int(rec['timestamp_ms'])
-    payload_hash = esc(json.dumps(rec['payload_hash']))
-    signature = esc(json.dumps(rec['signature']))
-    prev_hash = esc(json.dumps(rec['prev_record_hash']))
-    object_ref = esc(rec['object_ref'])
-    lines.append(
-        "INSERT INTO audit_records "
-        "(device_id, sequence, timestamp_ms, payload_hash, signature, prev_record_hash, object_ref) "
-        f"VALUES ('{device_id}', {sequence}, {timestamp_ms}, '{payload_hash}'::jsonb, "
-        f"'{signature}'::jsonb, '{prev_hash}'::jsonb, '{object_ref}');"
-    )
-    lines.append(
-        "INSERT INTO operation_logs (decision, device_id, sequence, message) "
-        f"VALUES ('Accepted', '{device_id}', {sequence}, 'ingest accepted via demo script');"
-    )
-
-lines.append('COMMIT;')
-insert_sql.write_text("\n".join(lines) + "\n", encoding='utf-8')
-PY
-echo "SQL prepared: $INSERT_SQL"
-wait_for_ok "5/8"
-
-echo "[6/8] Inserting demo data into PostgreSQL..."
-docker exec -i edgesentry-rs-postgres psql -U trace -d trace_audit < "$INSERT_SQL" >/dev/null
-echo "Insert completed."
-wait_for_ok "6/8"
-
-echo "[7/8] Querying persisted data..."
-docker exec -i edgesentry-rs-postgres psql -U trace -d trace_audit -c "SELECT id, device_id, sequence, object_ref, ingested_at FROM audit_records ORDER BY sequence;"
-docker exec -i edgesentry-rs-postgres psql -U trace -d trace_audit -c "SELECT id, decision, device_id, sequence, message, created_at FROM operation_logs ORDER BY id;"
-wait_for_ok "7/8"
-
-echo "[8/8] Stopping PostgreSQL + MinIO..."
+echo "[7/7] Stopping PostgreSQL + MinIO..."
 docker compose -f "$COMPOSE_FILE" down >/dev/null
 echo "Backend stopped."
-wait_for_ok "8/8"
+wait_for_ok "7/7"
 
 echo
 echo "Done. Demo completed successfully."

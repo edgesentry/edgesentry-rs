@@ -207,6 +207,94 @@ impl OperationLogStore for InMemoryOperationLog {
     }
 }
 
+#[cfg(feature = "postgres")]
+#[derive(Debug, Error)]
+pub enum PostgresStoreError {
+    #[error("postgres error: {0}")]
+    Postgres(#[from] ::postgres::Error),
+    #[error("json error: {0}")]
+    Json(#[from] serde_json::Error),
+}
+
+#[cfg(feature = "postgres")]
+pub struct PostgresAuditLedger {
+    client: ::postgres::Client,
+}
+
+#[cfg(feature = "postgres")]
+impl PostgresAuditLedger {
+    pub fn connect(url: &str) -> Result<Self, ::postgres::Error> {
+        let client = ::postgres::Client::connect(url, ::postgres::NoTls)?;
+        Ok(Self { client })
+    }
+}
+
+#[cfg(feature = "postgres")]
+impl AuditLedger for PostgresAuditLedger {
+    type Error = PostgresStoreError;
+
+    fn append(&mut self, record: AuditRecord) -> Result<(), Self::Error> {
+        use ::postgres::types::Json;
+        self.client.execute(
+            "INSERT INTO audit_records \
+             (device_id, sequence, timestamp_ms, payload_hash, signature, prev_record_hash, object_ref) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7)",
+            &[
+                &record.device_id,
+                &(record.sequence as i64),
+                &(record.timestamp_ms as i64),
+                &Json(serde_json::to_value(record.payload_hash.to_vec())?),
+                &Json(serde_json::to_value(record.signature.to_vec())?),
+                &Json(serde_json::to_value(record.prev_record_hash.to_vec())?),
+                &record.object_ref,
+            ],
+        )?;
+        Ok(())
+    }
+}
+
+#[cfg(feature = "postgres")]
+pub struct PostgresOperationLog {
+    client: ::postgres::Client,
+}
+
+#[cfg(feature = "postgres")]
+impl PostgresOperationLog {
+    pub fn connect(url: &str) -> Result<Self, ::postgres::Error> {
+        let client = ::postgres::Client::connect(url, ::postgres::NoTls)?;
+        Ok(Self { client })
+    }
+
+    pub fn reset(&mut self) -> Result<(), ::postgres::Error> {
+        self.client.batch_execute(
+            "TRUNCATE TABLE operation_logs, audit_records RESTART IDENTITY;",
+        )
+    }
+}
+
+#[cfg(feature = "postgres")]
+impl OperationLogStore for PostgresOperationLog {
+    type Error = ::postgres::Error;
+
+    fn write(&mut self, entry: OperationLogEntry) -> Result<(), Self::Error> {
+        let decision = match entry.decision {
+            IngestDecision::Accepted => "Accepted",
+            IngestDecision::Rejected => "Rejected",
+        };
+        self.client.execute(
+            "INSERT INTO operation_logs (decision, device_id, sequence, message) \
+             VALUES ($1, $2, $3, $4)",
+            &[
+                &decision,
+                &entry.device_id,
+                &(entry.sequence as i64),
+                &entry.message,
+            ],
+        )?;
+        Ok(())
+    }
+}
+
 #[cfg(feature = "s3")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum S3Backend {
