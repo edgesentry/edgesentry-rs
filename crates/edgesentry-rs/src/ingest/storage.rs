@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use thiserror::Error;
 
-use crate::crypto::compute_payload_hash;
+use crate::integrity::compute_payload_hash;
 use crate::record::AuditRecord;
 use super::policy::IntegrityPolicyGate;
 use super::verify::IngestError;

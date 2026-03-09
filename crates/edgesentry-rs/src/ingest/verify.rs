@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use ed25519_dalek::VerifyingKey;
 use thiserror::Error;
 
-use crate::crypto::verify_payload_signature;
+use crate::identity::verify_payload_signature;
 use crate::record::{AuditRecord, Hash32};
 
 #[derive(Debug, Error, PartialEq, Eq)]

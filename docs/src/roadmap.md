@@ -26,10 +26,10 @@ Deliver a software reference implementation that satisfies Singapore CLS Level 3
 
 ### Milestone 1.1: Identity & Integrity Core
 
-These are planned module names — not yet separate crates. Currently, they are implemented together in `crates/edgesentry-rs`.
+These are modules within `crates/edgesentry-rs`, not yet separate crates.
 
-- `edgesentry-identity` *(planned)* — Ed25519 device signature implementation
-- `edgesentry-integrity` *(planned)* — BLAKE3 hash chain tamper-detection protocol
+- `edgesentry_rs::identity` — Ed25519 device signature implementation
+- `edgesentry_rs::integrity` — BLAKE3 hash chain tamper-detection protocol
 
 ### Milestone 1.2: The C/C++ Bridge
 
