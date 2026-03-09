@@ -28,6 +28,16 @@ mod s3_integration {
         Some((endpoint, access_key, secret_key, bucket))
     }
 
+    /// Strip a `s3://bucket/` URI prefix from an object reference, returning the bare key.
+    fn s3_key(object_ref: &str) -> &str {
+        if let Some(rest) = object_ref.strip_prefix("s3://") {
+            if let Some(slash) = rest.find('/') {
+                return &rest[slash + 1..];
+            }
+        }
+        object_ref
+    }
+
     /// Fetch an object from MinIO; returns `None` when the key does not exist.
     fn get_object(
         endpoint: &str,
@@ -36,6 +46,7 @@ mod s3_integration {
         bucket: &str,
         key: &str,
     ) -> Option<Vec<u8>> {
+        let key = s3_key(key);
         use aws_config::BehaviorVersion;
         use aws_config::Region;
         use aws_credential_types::Credentials;
