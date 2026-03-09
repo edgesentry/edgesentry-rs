@@ -420,17 +420,34 @@ impl S3CompatibleRawDataStore {
 }
 
 #[cfg(feature = "s3")]
+impl S3CompatibleRawDataStore {
+    /// Extract the object key from an `object_ref` that may be a full `s3://bucket/key` URI
+    /// or a plain key path.  For example:
+    ///   `s3://bucket/lift-01/1.bin`  →  `lift-01/1.bin`
+    ///   `lift-01/1.bin`              →  `lift-01/1.bin`
+    fn object_key<'a>(&self, object_ref: &'a str) -> &'a str {
+        if let Some(rest) = object_ref.strip_prefix("s3://") {
+            if let Some(slash) = rest.find('/') {
+                return &rest[slash + 1..];
+            }
+        }
+        object_ref
+    }
+}
+
+#[cfg(feature = "s3")]
 impl RawDataStore for S3CompatibleRawDataStore {
     type Error = S3StoreError;
 
     fn put(&mut self, object_ref: &str, payload: &[u8]) -> Result<(), Self::Error> {
+        let key = self.object_key(object_ref);
         let stream = aws_sdk_s3::primitives::ByteStream::from(payload.to_vec());
         self.runtime
             .block_on(
                 self.client
                     .put_object()
                     .bucket(&self.bucket)
-                    .key(object_ref)
+                    .key(key)
                     .body(stream)
                     .send(),
             )
