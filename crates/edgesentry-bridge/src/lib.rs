@@ -106,6 +106,12 @@ fn to_audit_record(r: &EdsAuditRecord) -> AuditRecord {
 
 /// Generate a fresh Ed25519 keypair using the OS CSPRNG.
 ///
+/// # Safety
+///
+/// `private_key_out` and `public_key_out` must each be non-null and point to
+/// at least 32 bytes of valid writable memory.  Passing NULL returns
+/// `EDS_ERR_NULL_PTR` without writing anything.
+///
 /// # Parameters
 /// - `private_key_out`: caller-allocated buffer for the 32-byte private key.
 /// - `public_key_out`:  caller-allocated buffer for the 32-byte public key.
@@ -136,17 +142,24 @@ pub unsafe extern "C" fn eds_keygen(
 /// Computes `BLAKE3(payload)`, signs the hash with the device private key, and
 /// writes the resulting `EdsAuditRecord` to `out`.
 ///
+/// # Safety
+///
+/// - `device_id` and `object_ref` must be non-null, null-terminated UTF-8 strings.
+/// - `payload` must be non-null and valid for `payload_len` bytes.
+/// - `private_key` must be non-null and point to exactly 32 bytes.
+/// - `prev_record_hash`, if non-null, must point to exactly 32 bytes.
+/// - `out` must be non-null and point to a valid writable `EdsAuditRecord`.
+///
 /// # Parameters
-/// - `device_id`:         null-terminated device identifier string.
-/// - `sequence`:          monotonically increasing sequence number (start at 1).
-/// - `timestamp_ms`:      Unix epoch in milliseconds.
-/// - `payload`:           raw payload bytes.
-/// - `payload_len`:       length of `payload` in bytes.
-/// - `prev_record_hash`:  32-byte hash of the previous record, or NULL / all-zeros
-///                        for the first record in a chain.
-/// - `object_ref`:        null-terminated storage reference string.
-/// - `private_key`:       32-byte Ed25519 private key.
-/// - `out`:               caller-allocated `EdsAuditRecord` to fill.
+/// - `device_id`:        null-terminated device identifier string.
+/// - `sequence`:         monotonically increasing sequence number (start at 1).
+/// - `timestamp_ms`:     Unix epoch in milliseconds.
+/// - `payload`:          raw payload bytes.
+/// - `payload_len`:      length of `payload` in bytes.
+/// - `prev_record_hash`: 32-byte hash of the previous record, or NULL for the first record.
+/// - `object_ref`:       null-terminated storage reference string.
+/// - `private_key`:      32-byte Ed25519 private key.
+/// - `out`:              caller-allocated `EdsAuditRecord` to fill.
 ///
 /// # Returns
 /// `EDS_OK` on success, or a negative error code.
@@ -219,6 +232,11 @@ pub unsafe extern "C" fn eds_sign_record(
 ///
 /// The hash covers all fields of the record (BLAKE3 over its postcard encoding).
 ///
+/// # Safety
+///
+/// - `record` must be non-null and point to a valid `EdsAuditRecord`.
+/// - `hash_out` must be non-null and point to at least 32 bytes of writable memory.
+///
 /// # Parameters
 /// - `record`:   the record to hash.
 /// - `hash_out`: caller-allocated 32-byte buffer for the result.
@@ -243,6 +261,11 @@ pub unsafe extern "C" fn eds_record_hash(
 }
 
 /// Verify the Ed25519 signature on a single record.
+///
+/// # Safety
+///
+/// - `record` must be non-null and point to a valid `EdsAuditRecord`.
+/// - `public_key` must be non-null and point to exactly 32 bytes.
 ///
 /// # Parameters
 /// - `record`:     the record to verify.
@@ -282,6 +305,12 @@ pub unsafe extern "C" fn eds_verify_record(
 /// Checks that each record's `prev_record_hash` matches the hash of the
 /// preceding record and that sequence numbers are strictly monotonically
 /// increasing.
+///
+/// # Safety
+///
+/// - `records` must be non-null and point to `count` consecutive, valid
+///   `EdsAuditRecord` values.  Passing NULL with `count == 0` is safe and
+///   returns `EDS_OK`.
 ///
 /// # Parameters
 /// - `records`: pointer to an array of `count` consecutive `EdsAuditRecord`s.
