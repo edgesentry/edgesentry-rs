@@ -9,5 +9,6 @@
 - [Library Usage](quickstart.md)
 - [Interactive Demo](demo.md)
 - [CLI Reference](cli.md)
+- [Key Management](key_management.md)
 - [Contributing](contributing.md)
 - [Build and Release](release.md)

@@ -46,9 +46,12 @@ Legend: ✅ Implemented — ⚠️ Partial — 🔲 Planned — ➖ Not in scope
 |------|--------|
 | JC-STAR | STAR-1 R1.2 |
 | Requirement | Private keys must be stored securely; a key registration process must exist |
-| Status | ⚠️ Partial |
+| Status | ✅ Implemented |
 | Implementation | Public key registry: `IntegrityPolicyGate::register_device` ([`src/ingest/policy.rs:20`](https://github.com/yohei1126/edgesentry-rs/blob/main/crates/edgesentry-rs/src/ingest/policy.rs#L20)) |
-| Gap | Private key provisioning and rotation are left to the deployer. See [#57](https://github.com/yohei1126/edgesentry-rs/issues/57) |
+| Implementation | Key generation CLI: `eds keygen` ([`src/lib.rs — generate_keypair`](https://github.com/yohei1126/edgesentry-rs/blob/main/crates/edgesentry-rs/src/lib.rs)) |
+| Implementation | Key inspection CLI: `eds inspect-key` ([`src/lib.rs — inspect_key`](https://github.com/yohei1126/edgesentry-rs/blob/main/crates/edgesentry-rs/src/lib.rs)) |
+| Implementation | Provisioning and rotation guidance: [Key Management](key_management.md) |
+| Note | HSM-backed key storage (CLS Level 4) is planned in [#54](https://github.com/yohei1126/edgesentry-rs/issues/54) |
 
 ---
 

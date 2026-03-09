@@ -1,5 +1,30 @@
 # CLI Reference
 
+## Device Provisioning
+
+Generate a fresh Ed25519 keypair for a new device:
+
+```bash
+cargo run -p edgesentry-rs -- keygen
+```
+
+Save directly to a file:
+
+```bash
+cargo run -p edgesentry-rs -- keygen --out device-lift-01.key.json
+```
+
+Derive the public key from an existing private key:
+
+```bash
+cargo run -p edgesentry-rs -- inspect-key \
+  --private-key-hex 0101010101010101010101010101010101010101010101010101010101010101
+```
+
+See [Key Management](key_management.md) for the full provisioning and rotation workflow.
+
+---
+
 ## CLI Usage
 
 Build and show help:
