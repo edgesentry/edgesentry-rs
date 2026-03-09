@@ -106,7 +106,8 @@ Legend: ✅ Implemented — ⚠️ Partial — 🔲 Planned — ➖ Not in scope
 |------|--------|
 | JC-STAR | STAR-2 R3.2 |
 | Requirement | The device should remain operational and recover gracefully |
-| Status | ➖ Out of scope — availability and resilience are deployer responsibilities |
+| Status | ➖ Out of scope (partial path planned) |
+| Note | Full HA is a deployer responsibility, but the library can provide an offline buffer / store-and-forward module that accumulates signed records during connectivity loss and replays them in chain order when the link recovers. Tracked in [#74](https://github.com/yohei1126/edgesentry-rs/issues/74) |
 
 ---
 
