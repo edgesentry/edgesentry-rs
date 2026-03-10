@@ -3,6 +3,7 @@ pub mod identity;
 pub mod integrity;
 pub mod ingest;
 mod record;
+pub mod update;
 
 pub use agent::build_signed_record;
 pub use identity::{sign_payload_hash, verify_payload_signature};

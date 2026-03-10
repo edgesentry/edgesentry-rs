@@ -35,8 +35,9 @@ Legend: ✅ Implemented — ⚠️ Partial — 🔲 Planned — ➖ Not in scope
 |------|--------|
 | JC-STAR | STAR-2 R2.2 |
 | Requirement | Software update packages must be signed and verified before installation |
-| Status | 🔲 Planned |
-| Gap | Not in scope for current experimental phase. See [#56](https://github.com/yohei1126/edgesentry-rs/issues/56) |
+| Status | ✅ Implemented |
+| Implementation | `UpdateVerifier::verify` checks BLAKE3 payload hash then Ed25519 publisher signature before allowing installation; failed checks are logged as `UpdateVerifyDecision::Rejected` in `UpdateVerificationLog` ([`src/update.rs`](https://github.com/yohei1126/edgesentry-rs/blob/main/crates/edgesentry-rs/src/update.rs)) |
+| Tests | `tests/unit/update_tests.rs` — covers accepted path, tampered payload, invalid signature, unknown publisher, multi-publisher isolation |
 
 ---
 
@@ -165,7 +166,7 @@ Legend: ✅ Implemented — ⚠️ Partial — 🔲 Planned — ➖ Not in scope
 
 | Level | Total clauses | ✅ Implemented | ⚠️ Partial | 🔲 Planned | ➖ Out of scope |
 |-------|-------------|--------------|-----------|-----------|----------------|
-| CLS Level 3 | 11 | 2 | 4 | 1 | 4 |
+| CLS Level 3 | 11 | 3 | 4 | 0 | 4 |
 | CLS Level 4 | 1 | 0 | 0 | 1 | 0 |
 | JC-STAR additions | 1 | 1 | 0 | 0 | 0 |
 

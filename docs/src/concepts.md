@@ -52,13 +52,22 @@ This detects insertion, deletion, and substitution inside the chain.
 - Duplicate sequence values are rejected
 - Gaps or out-of-order sequences are rejected
 
-## 6. Network policy (deny-by-default)
+## 6. Software update integrity
+
+Before a device applies any firmware or software update, the update package must pass two checks via `edgesentry_rs::update::UpdateVerifier`:
+
+1. **Payload hash** — `BLAKE3(raw_payload)` must match the hash embedded in the `SoftwareUpdate` manifest
+2. **Publisher signature** — the Ed25519 signature over that hash must verify against a registered trusted publisher key
+
+Every attempt (accepted or rejected) is appended to `UpdateVerificationLog` for auditing. This satisfies CLS-03 / ETSI EN 303 645 §5.3 / JC-STAR STAR-2 R2.2.
+
+## 7. Network policy (deny-by-default)
 
 `edgesentry_rs::ingest::NetworkPolicy` enforces a deny-by-default IP/CIDR allowlist for incoming connections. Callers call `NetworkPolicy::check(source_ip)` **before** passing a record to `IngestService`. Connections from unlisted addresses are rejected without reaching any cryptographic check.
 
 Rules are additive: `allow_ip(addr)` for exact matches and `allow_cidr("10.0.0.0/8")` for CIDR blocks (IPv4 and IPv6). An empty policy denies everything.
 
-## 7. Ingest-time verification
+## 8. Ingest-time verification
 
 `edgesentry_rs::ingest` is responsible for completing trust checks before persistence.
 
@@ -73,7 +82,7 @@ The full check order when ingesting a record is:
 
 Steps 3–6 are enforced by `IntegrityPolicyGate`; step 2 by `IngestService` before invoking the gate.
 
-## 8. Storage model
+## 9. Storage model
 
 On accepted ingest, the system stores:
 
@@ -83,28 +92,28 @@ On accepted ingest, the system stores:
 
 This separation keeps evidence metadata and payload storage independently manageable.
 
-## 9. Demo modes
+## 10. Demo modes
 
-### 8.1 Library example (no DB/MinIO required)
+### 10.1 Library example (no DB/MinIO required)
 
 - Run: `cargo run -p edgesentry-rs --example lift_inspection_flow`
 - Uses in-memory stores
 - Fast path to verify signing, ingest verification, and tamper rejection
 
-### 8.2 Interactive local demo (DB/MinIO required)
+### 10.2 Interactive local demo (DB/MinIO required)
 
 - Run: `bash scripts/local_demo.sh`
 - End-to-end flow with PostgreSQL + MinIO + CLI
 - Shows persisted audit records and operation logs
 
-## 10. Trust boundary
+## 11. Trust boundary
 
 - Device side: signs facts and emits compact audit metadata
 - Cloud side: enforces strict verification rules before accepting data
 
 This split keeps edge and cloud responsibilities clear and auditable.
 
-## 11. Quality and release concepts
+## 12. Quality and release concepts
 
 - Static analysis: `clippy`
 - OSS license policy validation: `cargo-deny`

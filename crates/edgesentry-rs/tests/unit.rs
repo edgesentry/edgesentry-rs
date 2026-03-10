@@ -6,5 +6,7 @@ mod network_policy_tests;
 mod signing_tests;
 #[path = "unit/storage_tests.rs"]
 mod storage_tests;
+#[path = "unit/update_tests.rs"]
+mod update_tests;
 #[path = "unit/verify_tests.rs"]
 mod verify_tests;
