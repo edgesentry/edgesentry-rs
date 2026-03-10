@@ -54,8 +54,14 @@ jobs:
       - name: Unit tests + license check
         run: ./scripts/run_unit_and_license_check.sh
 
-      - name: Clippy
+      - name: Clippy (deny warnings)
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      - name: Deny vulnerable advisories
+        run: cargo deny check advisories
+
+      - name: Deny policy violations (bans + sources)
+        run: cargo deny check bans sources
 
   publish_crates:
     name: Publish crates.io packages
@@ -120,6 +126,8 @@ jobs:
     needs: [create_tag, quality_gate]
     permissions:
       contents: read
+      id-token: write
+      attestations: write
     strategy:
       fail-fast: false
       matrix:
@@ -185,6 +193,11 @@ jobs:
           Copy-Item "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "dist/${{ matrix.binary_name }}"
           Compress-Archive -Path "dist/${{ matrix.binary_name }}" -DestinationPath $asset -Force
           "ASSET_NAME=$asset" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Attest build provenance (SLSA)
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: ${{ env.ASSET_NAME }}
 
       - name: Upload packaged asset
         uses: actions/upload-artifact@v4

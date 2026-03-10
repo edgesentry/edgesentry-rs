@@ -24,22 +24,23 @@ For the detailed clause-by-clause mapping of CLS / ETSI EN 303 645 / JC-STAR req
 
 Deliver a software reference implementation that satisfies Singapore CLS Level 3/4 and iM8 requirements.
 
-### Milestone 1.1: Identity & Integrity Core
+### Milestone 1.1: Identity & Integrity Core ✅ Implemented
 
 These are modules within `crates/edgesentry-rs`, not yet separate crates.
 
 - `edgesentry_rs::identity` — Ed25519 device signature implementation
 - `edgesentry_rs::integrity` — BLAKE3 hash chain tamper-detection protocol
+- `edgesentry_rs::ingest::NetworkPolicy` — deny-by-default IP/CIDR allowlist (CLS-06)
 
-### Milestone 1.2: The C/C++ Bridge
+### Milestone 1.2: The C/C++ Bridge ✅ Implemented
 
 - `edgesentry-bridge` — C-compatible FFI layer exposing Ed25519 signing, signature verification, and hash-chain validation to C/C++ projects
 - **Goal:** inject Singapore-grade security into existing Japanese hardware (gateways, sensors) with minimal modification
 - See [C/C++ FFI Bridge](ffi_bridge.md) for usage, linking instructions, and memory safety conventions
 
-### Milestone 1.3: Compliance Mapping v1.0
+### Milestone 1.3: Compliance Mapping v1.0 ✅ Implemented
 
-- Publish a traceability matrix mapping Singapore CLS/iM8 clauses to source code
+- Traceability matrix mapping Singapore CLS/iM8 clauses to source code: [Compliance Traceability Matrix](traceability.md)
 
 ---
 

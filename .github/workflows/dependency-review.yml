@@ -25,6 +25,7 @@ jobs:
           allow-dependencies-licenses: >-
             pkg:github/actions/checkout,
             pkg:github/actions/dependency-review-action,
+            pkg:github/actions/attest-build-provenance,
             pkg:cargo/postgres,
             pkg:cargo/unicode-properties,
             pkg:cargo/cbindgen
