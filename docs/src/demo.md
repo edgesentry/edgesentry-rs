@@ -2,7 +2,19 @@
 
 Note: unlike the library-only example, this demo **requires** PostgreSQL and MinIO.
 
-This demo:
+## Three-role model
+
+EdgeSentry-RS is designed around three distinct roles. Understanding which role each step belongs to is key to reading the demo output correctly.
+
+| Role | Responsibility | In this demo |
+|------|---------------|-------------|
+| **Edge device** | Signs inspection records with an Ed25519 private key and emits them toward the cloud | Simulated by the `eds` CLI (`demo-lift-inspection`) |
+| **Edge gateway** | Forwards signed records from the device to the cloud over HTTPS / MQTT; does not verify content | Not implemented in this demo — in production this is an industrial PC or 5G gateway between the sensor and the cloud |
+| **Cloud backend** | Enforces `NetworkPolicy` (CLS-06), runs `IntegrityPolicyGate` (route identity → signature → sequence → hash-chain), and persists accepted records | PostgreSQL (audit ledger) + MinIO (raw payloads), driven by `demo-ingest` |
+
+The demo script labels each step with its role so you can see where the trust boundary is crossed.
+
+## What this demo does:
 
 - Starts PostgreSQL + MinIO backend services
 - Generates and verifies a signed chain with `eds`
