@@ -8,21 +8,22 @@ EdgeSentry-RS is designed around three distinct roles. Understanding which role 
 
 | Role | Responsibility | In this demo |
 |------|---------------|-------------|
-| **Edge device** | Signs inspection records with an Ed25519 private key and emits them toward the cloud | Simulated by the `eds` CLI (`demo-lift-inspection`) |
-| **Edge gateway** | Forwards signed records from the device to the cloud over HTTPS / MQTT; does not verify content | Not implemented in this demo — in production this is an industrial PC or 5G gateway between the sensor and the cloud |
-| **Cloud backend** | Enforces `NetworkPolicy` (CLS-06), runs `IntegrityPolicyGate` (route identity → signature → sequence → hash-chain), and persists accepted records | PostgreSQL (audit ledger) + MinIO (raw payloads), driven by `demo-ingest` |
+| **Edge device** | Signs inspection records with an Ed25519 private key and emits them toward the cloud | `examples/edge_device.rs` |
+| **Edge gateway** | Forwards signed records from the device to the cloud over HTTPS / MQTT; does not verify content | `examples/edge_gateway.rs` — HTTP transport is out of scope; files on disk simulate the transport |
+| **Cloud backend** | Enforces `NetworkPolicy` (CLS-06), runs `IntegrityPolicyGate` (route identity → signature → sequence → hash-chain), and persists accepted records | `examples/cloud_backend.rs` with `--features s3,postgres` |
 
-The demo script labels each step with its role so you can see where the trust boundary is crossed.
+## What this demo does
 
-## What this demo does:
+The script starts Docker services and then runs the three role examples in sequence:
 
-- Starts PostgreSQL + MinIO backend services
-- Generates and verifies a signed chain with `eds`
-- Performs tampering and confirms verification failure
-- Ingests accepted records through `IngestService` (writes payloads to MinIO, writes metadata to PostgreSQL)
-- Demonstrates rejection of tampered records through the same `IngestService`
-- Prints audit records and operation logs from the DB
-- Stops PostgreSQL + MinIO in the final step
+| Step | Role | What happens |
+|------|------|-------------|
+| 1–3 | Infrastructure | Start PostgreSQL + MinIO via Docker Compose; wait for health checks |
+| 4 | Edge device | `edge_device` — sign 3 records, write `/tmp/eds_*.json` |
+| 5 | Edge gateway | `edge_gateway` — read device output, forward unchanged to `/tmp/eds_fwd_*.json` |
+| 6 | Cloud backend | `cloud_backend` — `NetworkPolicy` check → `IngestService` → PostgreSQL + MinIO; also shows tamper rejection |
+| 7 | Cloud backend | Query persisted audit records and operation log from PostgreSQL |
+| 8 | Infrastructure | Stop Docker services |
 
 Prerequisites:
 
@@ -38,7 +39,29 @@ bash scripts/local_demo.sh
 The script pauses after each step and waits for Enter (or `OK`) before proceeding.
 At the end of the flow, it runs a shutdown step (`docker compose -f docker-compose.local.yml down`).
 
-Manual inspection example:
+## Running individual role examples
+
+Each example can also be run standalone without Docker (using in-memory storage for the cloud backend):
+
+```bash
+# Step 1: edge device signs records
+cargo run -p edgesentry-rs --example edge_device
+
+# Step 2: edge gateway forwards records
+cargo run -p edgesentry-rs --example edge_gateway
+
+# Step 3a: cloud backend (in-memory — no Docker required)
+cargo run -p edgesentry-rs --example cloud_backend
+
+# Step 3b: cloud backend (PostgreSQL + MinIO — requires Docker)
+cargo run -p edgesentry-rs --features s3,postgres --example cloud_backend
+```
+
+Each example reads the output files of the previous one from `/tmp/`. Run them in order.
+
+## Manual inspection
+
+Connect to PostgreSQL after step 6:
 
 ```bash
 docker exec -it edgesentry-rs-postgres psql -U trace -d trace_audit
