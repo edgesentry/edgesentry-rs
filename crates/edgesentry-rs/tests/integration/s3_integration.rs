@@ -10,9 +10,9 @@
 //!
 //! Tests skip automatically when any variable is unset.
 
-#[cfg(feature = "s3")]
-mod s3_integration {
-    use ed25519_dalek::{SigningKey, VerifyingKey};
+#![cfg(feature = "s3")]
+
+use ed25519_dalek::{SigningKey, VerifyingKey};
     use edgesentry_rs::{
         build_signed_record, AuditRecord, InMemoryAuditLedger, InMemoryOperationLog,
         IngestService, IngestServiceError, IntegrityPolicyGate, S3CompatibleRawDataStore,
@@ -253,4 +253,3 @@ mod s3_integration {
             "no object should exist under a key that was never written"
         );
     }
-}
