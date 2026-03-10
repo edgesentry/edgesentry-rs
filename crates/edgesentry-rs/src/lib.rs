@@ -8,9 +8,10 @@ pub use agent::build_signed_record;
 pub use identity::{sign_payload_hash, verify_payload_signature};
 pub use integrity::{compute_payload_hash, verify_chain, ChainError};
 pub use ingest::{
-    AuditLedger, InMemoryAuditLedger, InMemoryOperationLog, InMemoryRawDataStore, IngestDecision,
-    IngestError, IngestService, IngestServiceError, IngestState, IntegrityPolicyGate,
-    OperationLogEntry, OperationLogStore, RawDataStore,
+    AllowedSource, AuditLedger, InMemoryAuditLedger, InMemoryOperationLog, InMemoryRawDataStore,
+    IngestDecision, IngestError, IngestService, IngestServiceError, IngestState,
+    IntegrityPolicyGate, NetworkPolicy, NetworkPolicyError, OperationLogEntry, OperationLogStore,
+    RawDataStore,
 };
 #[cfg(feature = "s3")]
 pub use ingest::{S3Backend, S3CompatibleRawDataStore, S3ObjectStoreConfig, S3StoreError};

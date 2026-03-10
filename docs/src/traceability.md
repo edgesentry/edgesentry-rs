@@ -62,7 +62,7 @@ Legend: ✅ Implemented — ⚠️ Partial — 🔲 Planned — ➖ Not in scope
 | JC-STAR | STAR-1 R1.1 |
 | Requirement | Data must be transmitted with authenticity guarantees |
 | Status | ⚠️ Partial |
-| Implementation | Every `AuditRecord` carries an Ed25519 signature over its BLAKE3 payload hash — `build_signed_record` ([`src/agent.rs`](https://github.com/yohei1126/edgesentry-rs/blob/main/crates/edgesentry-rs/src/agent.rs)), `sign_payload_hash` ([`src/crypto.rs:9`](https://github.com/yohei1126/edgesentry-rs/blob/main/crates/edgesentry-rs/src/crypto.rs#L9)) |
+| Implementation | Every `AuditRecord` carries an Ed25519 signature over its BLAKE3 payload hash — `build_signed_record` ([`src/agent.rs`](https://github.com/yohei1126/edgesentry-rs/blob/main/crates/edgesentry-rs/src/agent.rs)), `sign_payload_hash` ([`src/identity.rs:12`](https://github.com/yohei1126/edgesentry-rs/blob/main/crates/edgesentry-rs/src/identity.rs#L12)) |
 | Gap | Transport-layer encryption (TLS) is not in scope — record-level signature provides authenticity but not channel confidentiality. Tracked in [#73](https://github.com/yohei1126/edgesentry-rs/issues/73) |
 
 ---
@@ -73,7 +73,9 @@ Legend: ✅ Implemented — ⚠️ Partial — 🔲 Planned — ➖ Not in scope
 |------|--------|
 | JC-STAR | STAR-1 R3.2 |
 | Requirement | Only necessary interfaces and services should be exposed |
-| Status | ➖ Out of scope — no network service is exposed by this library |
+| Status | ⚠️ Partial |
+| Implementation | `NetworkPolicy` provides deny-by-default IP/CIDR allowlist enforcement — callers gate each ingest request through `NetworkPolicy::check(source_ip)` before invoking `IngestService` ([`src/ingest/network_policy.rs`](https://github.com/yohei1126/edgesentry-rs/blob/main/crates/edgesentry-rs/src/ingest/network_policy.rs)) |
+| Gap | The library does not expose a network service directly; transport-layer controls (VPN, firewall rules) remain the deployer's responsibility |
 
 ---
 
@@ -84,9 +86,9 @@ Legend: ✅ Implemented — ⚠️ Partial — 🔲 Planned — ➖ Not in scope
 | JC-STAR | STAR-1 R1.3 |
 | Requirement | The device must verify the integrity of software and data |
 | Status | ✅ Implemented |
-| Implementation — payload hash | BLAKE3 hash over raw payload: `compute_payload_hash` ([`src/crypto.rs:5`](https://github.com/yohei1126/edgesentry-rs/blob/main/crates/edgesentry-rs/src/crypto.rs#L5)) |
-| Implementation — hash chain | `prev_record_hash` links each record to its predecessor; insertion/deletion detected by `verify_chain` ([`src/chain.rs:17`](https://github.com/yohei1126/edgesentry-rs/blob/main/crates/edgesentry-rs/src/chain.rs#L17)) |
-| Tests | `tampered_lift_demo_chain_is_detected` ([`src/lib.rs:241`](https://github.com/yohei1126/edgesentry-rs/blob/main/crates/edgesentry-rs/src/lib.rs#L241)) |
+| Implementation — payload hash | BLAKE3 hash over raw payload: `compute_payload_hash` ([`src/integrity.rs:12`](https://github.com/yohei1126/edgesentry-rs/blob/main/crates/edgesentry-rs/src/integrity.rs#L12)) |
+| Implementation — hash chain | `prev_record_hash` links each record to its predecessor; insertion/deletion detected by `verify_chain` ([`src/integrity.rs:35`](https://github.com/yohei1126/edgesentry-rs/blob/main/crates/edgesentry-rs/src/integrity.rs#L35)) |
+| Tests | `tampered_lift_demo_chain_is_detected` ([`src/lib.rs:337`](https://github.com/yohei1126/edgesentry-rs/blob/main/crates/edgesentry-rs/src/lib.rs#L337)) |
 
 ---
 
@@ -163,7 +165,7 @@ Legend: ✅ Implemented — ⚠️ Partial — 🔲 Planned — ➖ Not in scope
 
 | Level | Total clauses | ✅ Implemented | ⚠️ Partial | 🔲 Planned | ➖ Out of scope |
 |-------|-------------|--------------|-----------|-----------|----------------|
-| CLS Level 3 | 11 | 2 | 3 | 1 | 5 |
+| CLS Level 3 | 11 | 2 | 4 | 1 | 4 |
 | CLS Level 4 | 1 | 0 | 0 | 1 | 0 |
 | JC-STAR additions | 1 | 1 | 0 | 0 | 0 |
 

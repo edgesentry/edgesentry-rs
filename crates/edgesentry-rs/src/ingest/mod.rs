@@ -1,7 +1,9 @@
+mod network_policy;
 mod policy;
 mod storage;
 mod verify;
 
+pub use network_policy::{AllowedSource, NetworkPolicy, NetworkPolicyError};
 pub use policy::IntegrityPolicyGate;
 pub use storage::{
     AuditLedger, InMemoryAuditLedger, InMemoryOperationLog, InMemoryRawDataStore, IngestDecision,
