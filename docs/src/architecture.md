@@ -18,6 +18,7 @@ The device-side responsibility is implemented by `edgesentry_rs::agent` and rela
 
 The cloud-side responsibility is implemented by `edgesentry_rs::ingest` and related modules.
 
+- Gate incoming connections to approved IP addresses and CIDR ranges (`NetworkPolicy::check`) — deny-by-default
 - Verify that the device is known (`device_id` -> public key)
 - Verify signature validity for each incoming record
 - Enforce sequence monotonicity and reject duplicates
