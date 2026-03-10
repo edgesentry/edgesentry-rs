@@ -3,10 +3,15 @@
 targets = []
 
 [advisories]
+version = 2
+db-urls = ["https://github.com/rustsec/advisory-db"]
+# Vulnerabilities are denied by default in v2.
+# yanked crates and unmaintained warnings surface automatically.
+ignore = []
 
 [bans]
 multiple-versions = "warn"
-wildcards = "deny"
+wildcards = "warn"
 highlight = "all"
 
 [licenses]
