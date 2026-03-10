@@ -52,20 +52,28 @@ This detects insertion, deletion, and substitution inside the chain.
 - Duplicate sequence values are rejected
 - Gaps or out-of-order sequences are rejected
 
-## 6. Ingest-time verification
+## 6. Network policy (deny-by-default)
+
+`edgesentry_rs::ingest::NetworkPolicy` enforces a deny-by-default IP/CIDR allowlist for incoming connections. Callers call `NetworkPolicy::check(source_ip)` **before** passing a record to `IngestService`. Connections from unlisted addresses are rejected without reaching any cryptographic check.
+
+Rules are additive: `allow_ip(addr)` for exact matches and `allow_cidr("10.0.0.0/8")` for CIDR blocks (IPv4 and IPv6). An empty policy denies everything.
+
+## 7. Ingest-time verification
 
 `edgesentry_rs::ingest` is responsible for completing trust checks before persistence.
 
-The `IntegrityPolicyGate` is the explicit P0 gate that enforces all integrity rules before a record is allowed through to storage. It runs in order:
+The full check order when ingesting a record is:
 
-1. **Route identity** — `cert_identity` must match `record.device_id` when present
-2. **Signature** — payload hash must be signed by the registered device key
-3. **Sequence** — must be strictly monotonic and non-duplicate per device
-4. **Previous-record hash** — must chain from the last accepted record's hash
+1. **Network gate** — `NetworkPolicy::check(source_ip)` denies unlisted sources before any crypto runs
+2. **Payload hash** — `IngestService` verifies raw payload matches `record.payload_hash`
+3. **Route identity** — `cert_identity` must match `record.device_id` when present
+4. **Signature** — payload hash must be signed by the registered device key
+5. **Sequence** — must be strictly monotonic and non-duplicate per device
+6. **Previous-record hash** — must chain from the last accepted record's hash
 
-`IngestService` additionally checks that the raw payload matches `payload_hash` before invoking the policy gate.
+Steps 3–6 are enforced by `IntegrityPolicyGate`; step 2 by `IngestService` before invoking the gate.
 
-## 7. Storage model
+## 8. Storage model
 
 On accepted ingest, the system stores:
 
@@ -75,7 +83,7 @@ On accepted ingest, the system stores:
 
 This separation keeps evidence metadata and payload storage independently manageable.
 
-## 8. Demo modes
+## 9. Demo modes
 
 ### 8.1 Library example (no DB/MinIO required)
 
@@ -89,14 +97,14 @@ This separation keeps evidence metadata and payload storage independently manage
 - End-to-end flow with PostgreSQL + MinIO + CLI
 - Shows persisted audit records and operation logs
 
-## 9. Trust boundary
+## 10. Trust boundary
 
 - Device side: signs facts and emits compact audit metadata
 - Cloud side: enforces strict verification rules before accepting data
 
 This split keeps edge and cloud responsibilities clear and auditable.
 
-## 10. Quality and release concepts
+## 11. Quality and release concepts
 
 - Static analysis: `clippy`
 - OSS license policy validation: `cargo-deny`

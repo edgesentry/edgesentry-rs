@@ -88,7 +88,7 @@ Legend: ✅ Implemented — ⚠️ Partial — 🔲 Planned — ➖ Not in scope
 | Status | ✅ Implemented |
 | Implementation — payload hash | BLAKE3 hash over raw payload: `compute_payload_hash` ([`src/integrity.rs:12`](https://github.com/yohei1126/edgesentry-rs/blob/main/crates/edgesentry-rs/src/integrity.rs#L12)) |
 | Implementation — hash chain | `prev_record_hash` links each record to its predecessor; insertion/deletion detected by `verify_chain` ([`src/integrity.rs:35`](https://github.com/yohei1126/edgesentry-rs/blob/main/crates/edgesentry-rs/src/integrity.rs#L35)) |
-| Tests | `tampered_lift_demo_chain_is_detected` ([`src/lib.rs:337`](https://github.com/yohei1126/edgesentry-rs/blob/main/crates/edgesentry-rs/src/lib.rs#L337)) |
+| Tests | `tampered_lift_demo_chain_is_detected` ([`src/lib.rs:338`](https://github.com/yohei1126/edgesentry-rs/blob/main/crates/edgesentry-rs/src/lib.rs#L338)) |
 
 ---
 
