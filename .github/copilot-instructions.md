@@ -18,14 +18,16 @@ crates/
       lib.rs                        # Public library surface
       main.rs                       # eds CLI entry point
       record.rs                     # AuditRecord type and hashing
-      chain.rs                      # Hash-chain verification
-      crypto.rs                     # Ed25519 sign/verify helpers (BLAKE3 hash)
+      integrity.rs                  # Hash-chain verification (BLAKE3)
+      identity.rs                   # Ed25519 sign/verify helpers
       agent.rs                      # Device-side signed-record builder
+      update.rs                     # Software update integrity verification (CLS-03 / STAR-2 R2.2)
       ingest/                       # Cloud-side ingestion and trust enforcement
         mod.rs                      # Module exports
         policy.rs                   # IntegrityPolicyGate — P0 gate (route, sig, seq, hash)
         verify.rs                   # IngestState — per-device sequence/hash state machine
-        storage.rs                  # IngestService + in-memory and S3 store impls
+        storage.rs                  # AuditLedger, RawDataStore (in-memory, S3, PostgreSQL)
+        network_policy.rs           # NetworkPolicy — deny-by-default IP/CIDR allowlist (CLS-06)
     examples/
       lift_inspection_flow.rs       # End-to-end library example (no external deps)
     tests/                          # Integration tests
@@ -42,7 +44,7 @@ The codebase is split into **device side** and **cloud side** concerns within a 
 
 - **Device side** (`agent` module): builds `AuditRecord` values, computes `payload_hash` (BLAKE3), signs with Ed25519, and links records into a hash chain via `prev_record_hash`.
 - **Cloud side** (`ingest` module): verifies device identity, validates signatures, enforces sequence monotonicity, checks hash-chain continuity, and rejects tampered or replayed data before persistence.
-- **Shared** (`record`, `chain`, `crypto` modules): types and algorithms used by both sides.
+- **Shared** (`record`, `integrity`, `identity` modules): types and algorithms used by both sides.
 
 The `AuditRecord` fields are:
 
