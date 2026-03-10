@@ -35,6 +35,17 @@ if ! command -v cargo >/dev/null 2>&1; then
   exit 1
 fi
 
+# Three-role model
+# ════════════════════════════════════════════════════════════════════════════
+# EDGE DEVICE   — lift-01 sensor (simulated by the eds CLI on this machine).
+#                 Signs inspection records with an Ed25519 private key.
+# EDGE GATEWAY  — not implemented in this demo; in production a gateway would
+#                 forward signed records from the device to the cloud over
+#                 HTTPS / MQTT.
+# CLOUD BACKEND — PostgreSQL (audit ledger) + MinIO (raw payload store).
+#                 Runs NetworkPolicy, IntegrityPolicyGate, and IngestService.
+# ════════════════════════════════════════════════════════════════════════════
+
 echo "[1/7] Starting PostgreSQL + MinIO..."
 docker compose -f "$COMPOSE_FILE" up -d postgres minio minio-setup >/dev/null
 echo "Backend started."
@@ -73,6 +84,9 @@ fi
 echo "MinIO setup: completed"
 wait_for_ok "3/7"
 
+echo "──────────────────────────────────────────────────────────────────────────"
+echo "EDGE DEVICE: generating and signing lift inspection records"
+echo "──────────────────────────────────────────────────────────────────────────"
 echo "[4/7] Generating demo lift inspection records + payloads..."
 (
   cd "$ROOT_DIR"
@@ -89,6 +103,9 @@ echo "CLI check: payloads generated -> $PAYLOADS_FILE"
 (cd "$ROOT_DIR" && cargo run -p edgesentry-rs -- verify-chain --records-file "$RECORDS_FILE")
 wait_for_ok "4/7"
 
+echo "──────────────────────────────────────────────────────────────────────────"
+echo "EDGE DEVICE (tamper simulation): flipping a bit to simulate data corruption"
+echo "──────────────────────────────────────────────────────────────────────────"
 echo "[4.5/7] Tampering the chain and verifying detection..."
 python3 - <<'PY'
 import json
@@ -114,6 +131,10 @@ fi
 echo "Tamper detection: PASSED (verify-chain exited with $TAMPER_EXIT_CODE)"
 wait_for_ok "4.5/7"
 
+echo "──────────────────────────────────────────────────────────────────────────"
+echo "CLOUD BACKEND: ingesting records through NetworkPolicy + IntegrityPolicyGate"
+echo "(in production, records arrive here from the edge gateway over HTTPS/MQTT)"
+echo "──────────────────────────────────────────────────────────────────────────"
 echo "[5/7] Ingesting records via IngestService (PostgreSQL + MinIO)..."
 (
   cd "$ROOT_DIR"
@@ -133,6 +154,9 @@ echo "[5/7] Ingesting records via IngestService (PostgreSQL + MinIO)..."
 )
 wait_for_ok "5/7"
 
+echo "──────────────────────────────────────────────────────────────────────────"
+echo "CLOUD BACKEND: querying persisted audit records and operation log"
+echo "──────────────────────────────────────────────────────────────────────────"
 echo "[6/7] Querying persisted data..."
 docker exec -i edgesentry-rs-postgres psql -U trace -d trace_audit \
   -c "SELECT id, device_id, sequence, object_ref, ingested_at FROM audit_records ORDER BY sequence;"
