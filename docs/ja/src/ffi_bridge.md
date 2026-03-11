@@ -75,7 +75,7 @@ typedef struct {
 } EdsAuditRecord;
 ```
 
-`EdsAuditRecord`は **呼び出し元が確保** します。 Rust は`malloc`を呼び出したりヒープポインタを返したりしません。そのため`_free`関数は不要です。
+`EdsAuditRecord`は**呼び出し元が確保**します。 Rust は`malloc`を呼び出したりヒープポインタを返したりしません。そのため`_free`関数は不要です。
 
 ### 関数
 

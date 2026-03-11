@@ -31,3 +31,5 @@ record*.json
 lift_*_record*.json
 lift_inspection_records.json
 crates/edgesentry-bridge/examples/c_integration/c_integration_test
+
+_inputs/

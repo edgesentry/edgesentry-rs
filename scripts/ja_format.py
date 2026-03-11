@@ -12,10 +12,12 @@ ASCII_CHAR = r'[A-Za-z0-9]'
 
 
 def add_spaces(text):
-    # Remove any spaces that were incorrectly added inside bold/italic markers
-    # e.g. ** テキスト ** → **テキスト**
-    text = re.sub(r'\*\*\s+(.+?)\s+\*\*', r'**\1**', text)
-    text = re.sub(r'\*\s+(.+?)\s+\*', r'*\1*', text)
+    # Remove spaces immediately inside bold/italic markers (either side independently)
+    # e.g. ** テキスト** → **テキスト**  and  **テキスト ** → **テキスト**
+    text = re.sub(r'\*\*\s+([^*])', r'**\1', text)
+    text = re.sub(r'([^*])\s+\*\*', r'\1**', text)
+    text = re.sub(r'\*\s+([^*])', r'*\1', text)
+    text = re.sub(r'([^*])\s+\*([^*])', r'\1*\2', text)
     # Space between ASCII letters/digits and CJK (both directions)
     text = re.sub(f'({ASCII_CHAR})({CJK})', r'\1 \2', text)
     text = re.sub(f'({CJK})({ASCII_CHAR})', r'\1 \2', text)
