@@ -1,8 +1,21 @@
 # Compliance Traceability Matrix
 
-This page maps each Singapore CLS / iM8 clause and corresponding ETSI EN 303 645 provision to the source code that satisfies it. Japan JC-STAR cross-references are included for each row.
+This page maps each Singapore CLS / iM8 clause and corresponding ETSI EN 303 645 provision to the source code that satisfies it. Japan JC-STAR cross-references and SS 711:2025 design principle alignment are included for each row.
 
 Legend: ✅ Implemented — ⚠️ Partial — 🔲 Planned — ➖ Not in scope
+
+## SS 711:2025 Design Principles Coverage
+
+Singapore's national IoT standard SS 711:2025 defines four principles. See the [Roadmap](roadmap.md) for the full module mapping.
+
+| Principle | SS 711:2025 Requirement | Status |
+|-----------|------------------------|--------|
+| Secure by Default | Unique device identity, signed OTA updates | ✅ `identity.rs`, `update.rs` |
+| Rigour in Defence | STRIDE threat model, tamper detection | ⚠️ Hash chain ✅ — STRIDE artifact 🔲 [#93](https://github.com/yohei1126/edgesentry-rs/issues/93) |
+| Accountability | Audit trail, operation logs, RBAC design | ✅ `ingest/` (AuditLedger, OperationLog) |
+| Resiliency | Deny-by-default networking, DoS protection | ✅ `ingest/network_policy.rs` |
+
+---
 
 ---
 
@@ -145,7 +158,7 @@ Legend: ✅ Implemented — ⚠️ Partial — 🔲 Planned — ➖ Not in scope
 | JC-STAR | STAR-2 R1.4 |
 | Requirement | Private keys must be stored and used inside an HSM |
 | Status | 🔲 Planned |
-| Gap | C/C++ FFI bridge with HSM backend planned for Phase 1 Milestone 1.2. See [#54](https://github.com/yohei1126/edgesentry-rs/issues/54) |
+| Gap | HSM-backed key storage planned for Phase 3 (IEC 62443-4-2 / CII/OT). See [#54](https://github.com/yohei1126/edgesentry-rs/issues/54) and [#98](https://github.com/yohei1126/edgesentry-rs/issues/98) |
 
 ---
 
