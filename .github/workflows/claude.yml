@@ -25,12 +25,27 @@ jobs:
       id-token: write
       actions: read # Required for Claude to read CI results on PRs
     steps:
+      - name: Check admin team membership
+        id: auth
+        run: |
+          STATE=$(gh api orgs/edgesentry/teams/admin/memberships/${{ github.actor }} --jq '.state' 2>/dev/null || echo "not_found")
+          if [[ "$STATE" == "active" ]]; then
+            echo "allowed=true" >> $GITHUB_OUTPUT
+          else
+            echo "allowed=false" >> $GITHUB_OUTPUT
+            echo "::notice::${{ github.actor }} is not in the admin team — skipping Claude."
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Checkout repository
+        if: steps.auth.outputs.allowed == 'true'
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
       - name: Run Claude Code
+        if: steps.auth.outputs.allowed == 'true'
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
