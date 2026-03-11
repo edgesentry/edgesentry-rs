@@ -200,9 +200,9 @@ git rebase origin/main
 
 1. コンフリクトしているファイルを特定：`git diff --name-only --diff-filter=U`
 2. 各ファイルについて、どちら側を保持するかを決定：
-   -**自分のバージョンを採用：** `git checkout --theirs <file>`
-   -**main のバージョンを採用：** `git checkout --ours <file>`
-   -**手動でマージ：** `<<<<<<<` / `=======` / `>>>>>>>`マーカーを削除するようにファイルを編集する
+   - **自分のバージョンを採用：** `git checkout --theirs <file>`
+   - **main のバージョンを採用：** `git checkout --ours <file>`
+   - **手動でマージ：** `<<<<<<<` / `=======` / `>>>>>>>`マーカーを削除するようにファイルを編集する
 3. 解消したファイルをステージ：`git add <file>`
 4. 続行：`GIT_EDITOR=true git rebase --continue`
 5. 次のコミットで再度コンフリクトが発生した場合は、ステップ 1 から繰り返す。

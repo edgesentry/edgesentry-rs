@@ -2,7 +2,8 @@
 """
 Apply Japanese typographic spacing rules to Markdown files:
 - Half-width space between CJK and ASCII characters (both directions)
-Spaces are added OUTSIDE bold/italic markers, never inside (**テキスト** stays intact).
+- Remove spaces inside bold/italic markers (**テキスト** stays intact)
+- Space between list marker and bold: -** → - **
 Code blocks and inline code spans are left unchanged.
 """
 import re, os, sys
@@ -11,27 +12,40 @@ CJK = r'[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff\uff00-\uffef\u3400
 ASCII_CHAR = r'[A-Za-z0-9]'
 
 
-def add_spaces(text):
-    # Remove spaces immediately inside bold/italic markers (either side independently)
-    # e.g. ** テキスト** → **テキスト**  and  **テキスト ** → **テキスト**
-    text = re.sub(r'\*\*\s+([^*])', r'**\1', text)
-    text = re.sub(r'([^*])\s+\*\*', r'\1**', text)
-    text = re.sub(r'\*\s+([^*])', r'*\1', text)
-    text = re.sub(r'([^*])\s+\*([^*])', r'\1*\2', text)
-    # Space between ASCII letters/digits and CJK (both directions)
+def fix_bold_spaces(text):
+    """Remove spaces immediately after opening ** or before closing **."""
+    # Space after opening **: **「space」text → **text
+    text = re.sub(r'\*\*\s+([^*\s])', r'**\1', text)
+    # Space before closing **: text「space」** — only when ** is followed by
+    # space, punctuation, or end-of-string (i.e. it is a closing marker)
+    text = re.sub(r'([^*\s])\s+(\*\*(?=[ \t,.:;!?）】』。、」\-]|$))', r'\1\2', text)
+    # Same for single *
+    text = re.sub(r'\*\s+([^*\s])', r'*\1', text)
+    text = re.sub(r'([^*\s])\s+(\*(?=[^*]|$))', r'\1\2', text)
+    return text
+
+
+def add_cjk_spaces(text):
+    """Add half-width space between CJK and ASCII characters."""
     text = re.sub(f'({ASCII_CHAR})({CJK})', r'\1 \2', text)
     text = re.sub(f'({CJK})({ASCII_CHAR})', r'\1 \2', text)
     return text
 
 
 def process_line(line):
+    # Fix list marker directly adjacent to bold: -** → - **
+    line = re.sub(r'^(\s*[-*+])\*\*', r'\1 **', line)
+
+    # Split on inline code spans to protect their contents
     parts = re.split(r'(`[^`\n]+`)', line)
     result = []
     for i, part in enumerate(parts):
-        if i % 2 == 1:
+        if i % 2 == 1:  # inside backticks — leave unchanged
             result.append(part)
         else:
-            result.append(add_spaces(part))
+            part = fix_bold_spaces(part)
+            part = add_cjk_spaces(part)
+            result.append(part)
     return ''.join(result)
 
 
