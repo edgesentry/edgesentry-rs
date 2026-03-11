@@ -1,5 +1,23 @@
 # Contributing
 
+## Consistency Check
+
+After every change — whether to code, tests, scripts, or docs — check that all three layers stay in sync:
+
+1. **Code → Docs**: If you add, remove, or rename a module, function, CLI command, or behavior, update all docs that reference it (`concepts.md`, `architecture.md`, `cli.md`, `quickstart.md`, `demo.md`, `traceability.md`).
+2. **Docs → Code**: If a doc describes a feature or command, verify it exists and works as described. Stale examples and wrong test target names cause CI failures.
+3. **Scripts → Code**: If you rename a test file or cargo feature, update every script and workflow that references it (e.g. `scripts/integration_test.sh`, `.github/workflows/`).
+4. **Traceability**: If you implement or change a compliance control, update the status in `docs/src/traceability.md` (✅ / ⚠️ / 🔲).
+
+A quick grep before opening a PR:
+
+```bash
+# Find docs that mention a symbol you changed
+grep -r "<old-name>" docs/ scripts/ .github/
+```
+
+---
+
 ## Issue Labels
 
 Every issue should carry one **type** label, one **priority** label, and one or more **category** labels.
@@ -100,7 +118,7 @@ TEST_S3_ENDPOINT=http://localhost:9000 \
 TEST_S3_ACCESS_KEY=minioadmin \
 TEST_S3_SECRET_KEY=minioadmin \
 TEST_S3_BUCKET=bucket \
-cargo test -p edgesentry-rs --features s3 --test s3_integration -- --nocapture
+cargo test -p edgesentry-rs --features s3 --test integration -- --nocapture
 ```
 
 Tests skip automatically when any of the four `TEST_S3_*` variables are unset.
