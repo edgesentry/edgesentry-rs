@@ -100,7 +100,7 @@ TEST_S3_ENDPOINT=http://localhost:9000 \
 TEST_S3_ACCESS_KEY=minioadmin \
 TEST_S3_SECRET_KEY=minioadmin \
 TEST_S3_BUCKET=bucket \
-cargo test -p edgesentry-rs --features s3 --test s3_integration -- --nocapture
+cargo test -p edgesentry-rs --features s3 --test integration -- --nocapture
 ```
 
 Tests skip automatically when any of the four `TEST_S3_*` variables are unset.
