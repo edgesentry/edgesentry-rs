@@ -29,7 +29,10 @@ crates/
         storage.rs                  # AuditLedger, RawDataStore (in-memory, S3, PostgreSQL)
         network_policy.rs           # NetworkPolicy — deny-by-default IP/CIDR allowlist (CLS-06)
     examples/
-      lift_inspection_flow.rs       # End-to-end library example (no external deps)
+      lift_inspection_flow.rs       # Combined quickstart — no external deps, all roles in one file
+      edge_device.rs                # EDGE DEVICE role — signs records, writes /tmp/eds_*.json
+      edge_gateway.rs               # EDGE GATEWAY role — forwards records, no crypto verification
+      cloud_backend.rs              # CLOUD BACKEND role — NetworkPolicy + IngestService
     tests/                          # Integration tests
 scripts/
   run_unit_and_license_check.sh     # Unit tests + cargo-deny license check

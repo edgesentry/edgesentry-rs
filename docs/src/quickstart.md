@@ -30,6 +30,48 @@ Source:
 
 - `crates/edgesentry-rs/examples/lift_inspection_flow.rs`
 
+---
+
+## Three-Role Distributed Demo
+
+For a more realistic view of the edge-to-cloud flow, three separate examples can be run in sequence. Each example owns exactly one role:
+
+| Example | Role | External deps |
+|---------|------|--------------|
+| `edge_device` | Signs records, writes `/tmp/eds_*.json` | None |
+| `edge_gateway` | Routes records, no crypto verification | None |
+| `cloud_backend` | NetworkPolicy + IngestService + storage | None (in-memory) or PostgreSQL + MinIO (`--features s3,postgres`) |
+
+Run in order:
+
+```bash
+cargo run -p edgesentry-rs --example edge_device
+cargo run -p edgesentry-rs --example edge_gateway
+cargo run -p edgesentry-rs --example cloud_backend
+```
+
+Each example reads the output files of the previous one from `/tmp/`. The full sequence with real backends (requires Docker — see [Interactive Demo](demo.md)):
+
+```bash
+cargo run -p edgesentry-rs --example edge_device
+cargo run -p edgesentry-rs --example edge_gateway
+cargo run -p edgesentry-rs --features s3,postgres --example cloud_backend
+```
+
+What the sequence demonstrates:
+
+- `edge_device` — device-side signing with `build_signed_record`; tampered copy written for rejection demo
+- `edge_gateway` — gateway receives records but does NOT verify signatures (routing-only responsibility)
+- `cloud_backend` — `NetworkPolicy::check` runs before every `IngestService::ingest`; accepted and rejected records both visible
+
+Sources:
+
+- `crates/edgesentry-rs/examples/edge_device.rs`
+- `crates/edgesentry-rs/examples/edge_gateway.rs`
+- `crates/edgesentry-rs/examples/cloud_backend.rs`
+
+---
+
 ## S3 / MinIO Switching
 
 `edgesentry-rs` supports a switchable S3-compatible raw-data backend behind the `s3` feature.

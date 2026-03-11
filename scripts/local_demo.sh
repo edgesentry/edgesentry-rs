@@ -3,15 +3,21 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 COMPOSE_FILE="$ROOT_DIR/docker-compose.local.yml"
-RECORDS_FILE="/tmp/lift_inspection_records.json"
-PAYLOADS_FILE="/tmp/lift_inspection_payloads.json"
-TAMPERED_RECORDS_FILE="/tmp/lift_inspection_records_tampered.json"
-PG_URL="postgresql://trace:trace@localhost:5433/trace_audit"
-MINIO_ENDPOINT="http://localhost:9000"
-MINIO_BUCKET="bucket"
-MINIO_ACCESS_KEY="minioadmin"
-MINIO_SECRET_KEY="minioadmin"
-PRIVATE_KEY_HEX="0101010101010101010101010101010101010101010101010101010101010101"
+
+# ════════════════════════════════════════════════════════════════════════════
+# Three-role demo
+#
+# EDGE DEVICE   — examples/edge_device.rs
+#                 Signs lift inspection records and writes them to /tmp/.
+#
+# EDGE GATEWAY  — examples/edge_gateway.rs
+#                 Reads device output, logs each record, forwards unchanged.
+#                 No cryptographic verification — routing only.
+#
+# CLOUD BACKEND — examples/cloud_backend.rs (--features s3,postgres)
+#                 Applies NetworkPolicy (CLS-06), runs IntegrityPolicyGate,
+#                 persists accepted records to PostgreSQL + MinIO.
+# ════════════════════════════════════════════════════════════════════════════
 
 wait_for_ok() {
   local step_label="$1"
@@ -35,16 +41,7 @@ if ! command -v cargo >/dev/null 2>&1; then
   exit 1
 fi
 
-# Three-role model
-# ════════════════════════════════════════════════════════════════════════════
-# EDGE DEVICE   — lift-01 sensor (simulated by the eds CLI on this machine).
-#                 Signs inspection records with an Ed25519 private key.
-# EDGE GATEWAY  — not implemented in this demo; in production a gateway would
-#                 forward signed records from the device to the cloud over
-#                 HTTPS / MQTT.
-# CLOUD BACKEND — PostgreSQL (audit ledger) + MinIO (raw payload store).
-#                 Runs NetworkPolicy, IntegrityPolicyGate, and IngestService.
-# ════════════════════════════════════════════════════════════════════════════
+# ── CLOUD BACKEND: start storage services ───────────────────────────────────
 
 echo "[1/7] Starting PostgreSQL + MinIO..."
 docker compose -f "$COMPOSE_FILE" up -d postgres minio minio-setup >/dev/null
@@ -84,91 +81,36 @@ fi
 echo "MinIO setup: completed"
 wait_for_ok "3/7"
 
-echo "──────────────────────────────────────────────────────────────────────────"
-echo "EDGE DEVICE: generating and signing lift inspection records"
-echo "──────────────────────────────────────────────────────────────────────────"
-echo "[4/7] Generating demo lift inspection records + payloads..."
-(
-  cd "$ROOT_DIR"
-  cargo run -p edgesentry-rs --features s3,postgres -- \
-    demo-lift-inspection \
-    --device-id lift-01 \
-    --private-key-hex "$PRIVATE_KEY_HEX" \
-    --out-file "$RECORDS_FILE" \
-    --payloads-file "$PAYLOADS_FILE" \
-    >/dev/null
-)
-echo "CLI check: chain generated -> $RECORDS_FILE"
-echo "CLI check: payloads generated -> $PAYLOADS_FILE"
-(cd "$ROOT_DIR" && cargo run -p edgesentry-rs -- verify-chain --records-file "$RECORDS_FILE")
+# ── EDGE DEVICE: sign records ────────────────────────────────────────────────
+
+echo "[4/7] EDGE DEVICE: signing lift inspection records..."
+(cd "$ROOT_DIR" && cargo run -p edgesentry-rs --example edge_device)
 wait_for_ok "4/7"
 
-echo "──────────────────────────────────────────────────────────────────────────"
-echo "EDGE DEVICE (tamper simulation): flipping a bit to simulate data corruption"
-echo "──────────────────────────────────────────────────────────────────────────"
-echo "[4.5/7] Tampering the chain and verifying detection..."
-python3 - <<'PY'
-import json
-import pathlib
+# ── EDGE GATEWAY: forward records ───────────────────────────────────────────
 
-src = pathlib.Path('/tmp/lift_inspection_records.json')
-dst = pathlib.Path('/tmp/lift_inspection_records_tampered.json')
-records = json.loads(src.read_text(encoding='utf-8'))
-records[0]["payload_hash"][0] ^= 0x01
-dst.write_text(json.dumps(records, indent=2), encoding='utf-8')
-print(dst)
-PY
-
-set +e
-(cd "$ROOT_DIR" && cargo run -p edgesentry-rs -- verify-chain --records-file "$TAMPERED_RECORDS_FILE")
-TAMPER_EXIT_CODE=$?
-set -e
-
-if [[ "$TAMPER_EXIT_CODE" -eq 0 ]]; then
-  echo "Tamper detection failed: tampered chain was accepted"
-  exit 1
-fi
-echo "Tamper detection: PASSED (verify-chain exited with $TAMPER_EXIT_CODE)"
-wait_for_ok "4.5/7"
-
-echo "──────────────────────────────────────────────────────────────────────────"
-echo "CLOUD BACKEND: ingesting records through NetworkPolicy + IntegrityPolicyGate"
-echo "(in production, records arrive here from the edge gateway over HTTPS/MQTT)"
-echo "──────────────────────────────────────────────────────────────────────────"
-echo "[5/7] Ingesting records via IngestService (PostgreSQL + MinIO)..."
-(
-  cd "$ROOT_DIR"
-  cargo run -p edgesentry-rs --features s3,postgres -- \
-    demo-ingest \
-    --records-file "$RECORDS_FILE" \
-    --payloads-file "$PAYLOADS_FILE" \
-    --device-id lift-01 \
-    --private-key-hex "$PRIVATE_KEY_HEX" \
-    --pg-url "$PG_URL" \
-    --minio-endpoint "$MINIO_ENDPOINT" \
-    --minio-bucket "$MINIO_BUCKET" \
-    --minio-access-key "$MINIO_ACCESS_KEY" \
-    --minio-secret-key "$MINIO_SECRET_KEY" \
-    --reset \
-    --tampered-records-file "$TAMPERED_RECORDS_FILE"
-)
+echo "[5/7] EDGE GATEWAY: forwarding records to cloud backend..."
+(cd "$ROOT_DIR" && cargo run -p edgesentry-rs --example edge_gateway)
 wait_for_ok "5/7"
 
-echo "──────────────────────────────────────────────────────────────────────────"
-echo "CLOUD BACKEND: querying persisted audit records and operation log"
-echo "──────────────────────────────────────────────────────────────────────────"
-echo "[6/7] Querying persisted data..."
+# ── CLOUD BACKEND: ingest via NetworkPolicy + IntegrityPolicyGate ───────────
+
+echo "[6/7] CLOUD BACKEND: ingesting records (NetworkPolicy + IngestService → PostgreSQL + MinIO)..."
+(cd "$ROOT_DIR" && cargo run -p edgesentry-rs --features s3,postgres --example cloud_backend)
+wait_for_ok "6/7"
+
+# ── CLOUD BACKEND: query persisted data ─────────────────────────────────────
+
+echo "[7/7] CLOUD BACKEND: querying persisted audit records and operation log..."
 docker exec -i edgesentry-rs-postgres psql -U trace -d trace_audit \
   -c "SELECT id, device_id, sequence, object_ref, ingested_at FROM audit_records ORDER BY sequence;"
 docker exec -i edgesentry-rs-postgres psql -U trace -d trace_audit \
   -c "SELECT id, decision, device_id, sequence, message, created_at FROM operation_logs ORDER BY id;"
-wait_for_ok "6/7"
+wait_for_ok "7/7"
 
-echo "[7/7] Stopping PostgreSQL + MinIO..."
+echo "[8/8] Stopping PostgreSQL + MinIO..."
 docker compose -f "$COMPOSE_FILE" down >/dev/null
 echo "Backend stopped."
-wait_for_ok "7/7"
 
 echo
 echo "Done. Demo completed successfully."
-echo "PostgreSQL and MinIO have been stopped."
