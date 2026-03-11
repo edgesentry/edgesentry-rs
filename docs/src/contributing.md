@@ -156,3 +156,50 @@ cargo deny check advisories bans licenses sources
 ```
 
 If this check fails, inspect violating crates and update dependencies or the policy only after legal/security review.
+
+---
+
+## Avoiding Conflicts with Main
+
+Conflicts occur when a feature branch diverges from main while main receives other merged PRs that touch the same files. The highest-conflict files in this repo are `scripts/local_demo.sh`, `docs/src/demo.md`, and `.github/copilot-instructions.md`.
+
+**Before starting work**
+
+```bash
+git fetch origin
+git checkout main && git pull origin main
+git checkout -b <your-branch>
+```
+
+**Keep your branch up to date** — rebase onto main regularly, especially before opening a PR:
+
+```bash
+git fetch origin
+git rebase origin/main
+```
+
+**Resolving a conflict during rebase**
+
+1. Identify conflicted files: `git diff --name-only --diff-filter=U`
+2. For each file, decide which side to keep:
+   - **Take your version:** `git checkout --theirs <file>`
+   - **Take main's version:** `git checkout --ours <file>`
+   - **Merge manually:** edit the file to remove `<<<<<<<` / `=======` / `>>>>>>>` markers
+3. Stage the resolved file: `git add <file>`
+4. Continue: `GIT_EDITOR=true git rebase --continue`
+5. If a conflict recurs on the next commit, repeat from step 1.
+
+**After resolving, force-push the rebased branch:**
+
+```bash
+git push --force-with-lease origin <your-branch>
+```
+
+**Files most likely to conflict — coordinate before editing these:**
+
+| File | Why it conflicts often |
+|------|----------------------|
+| `scripts/local_demo.sh` | Multiple PRs add steps or restructure the demo flow |
+| `docs/src/demo.md` | Mirrors demo script changes |
+| `.github/copilot-instructions.md` | Structure section updated whenever new modules or examples are added |
+| `crates/edgesentry-rs/examples/lift_inspection_flow.rs` | Touched by both quickstart improvements and role-boundary work |
