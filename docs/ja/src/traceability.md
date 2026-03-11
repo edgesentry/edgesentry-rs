@@ -15,7 +15,7 @@
 
 | 原則 | SS 711:2025 要件 | ステータス |
 |-----------|------------------------|--------|
-| セキュア・バイ・デフォルト | 一意のデバイスアイデンティティ、署名付き OTA アップデート | ✅ `identity.rs`、`update.rs` |
+| セキュア・バイ・デフォルト | 一意のデバイス同一性、署名付き OTA アップデート | ✅ `identity.rs`、`update.rs` |
 | 防御の厳格性 | STRIDE の脅威モデル、改ざん検知 | ⚠️ ハッシュチェーン ✅ — STRIDE アーティファクト 🔲 [#93](https://github.com/edgesentry/edgesentry-rs/issues/93) |
 | アカウンタビリティ | 監査証跡、操作ログ、 RBAC 設計 | ✅ `ingest/`（ AuditLedger 、 OperationLog ） |
 | レジリエンス | デフォルト拒否のネットワーキング、 DoS 対策 | ✅ `ingest/network_policy.rs` |
@@ -98,12 +98,12 @@
 
 ---
 
-### CLS-07 / §5.7 — ソフトウェアインテグリティの保証
+### CLS-07 / §5.7 — ソフトウェア完全性の保証
 
 | 項目 | 詳細 |
 |------|--------|
 | JC-STAR | STAR-1 R1.3 |
-| 要件 | デバイスはソフトウェアとデータのインテグリティを検証しなければならない |
+| 要件 | デバイスはソフトウェアとデータの完全性を検証しなければならない |
 | ステータス | ✅ 実装済み |
 | 実装 — ペイロードハッシュ | 生ペイロードに対する BLAKE3 ハッシュ：`compute_payload_hash`（[`src/integrity.rs:12`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/integrity.rs#L12)） |
 | 実装 — ハッシュチェーン | `prev_record_hash`が各レコードを前のレコードにリンク。挿入/削除は`verify_chain`で検知（[`src/integrity.rs:35`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/integrity.rs#L35)） |

@@ -83,7 +83,7 @@ DEMO_CREATED:lift_inspection_records.json
 CHAIN_VALID
 ```
 
-### 2) ファイルからチェーンのインテグリティを検証する
+### 2) ファイルからチェーンの完全性を検証する
 
 ```bash
 cargo run -p edgesentry-rs -- verify-chain --records-file lift_inspection_records.json

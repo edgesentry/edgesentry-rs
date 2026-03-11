@@ -10,7 +10,7 @@ EdgeSentry-RS は 3 つの明確なロールを中心に設計されています
 |------|---------------|-------------|
 |**エッジデバイス**| Ed25519 秘密鍵で点検レコードに署名し、クラウドへ送出する | `examples/edge_device.rs` |
 |**エッジゲートウェイ**| 署名済みレコードをデバイスから HTTPS/MQTT 経由でクラウドへ転送する。コンテンツは検証しない | `examples/edge_gateway.rs` — HTTP トランスポートはスコープ外。ディスク上のファイルがトランスポートをシミュレートする |
-|**クラウドバックエンド**| `NetworkPolicy`（ CLS-06 ）を強制し、`IntegrityPolicyGate`（ルートアイデンティティ→署名→シーケンス→ハッシュチェーン）を実行し、承認されたレコードを永続化する | `examples/cloud_backend.rs`（`--features s3,postgres`付き） |
+|**クラウドバックエンド**| `NetworkPolicy`（ CLS-06 ）を強制し、`IntegrityPolicyGate`（ルート同一性→署名→シーケンス→ハッシュチェーン）を実行し、承認されたレコードを永続化する | `examples/cloud_backend.rs`（`--features s3,postgres`付き） |
 
 ## このデモの内容
 
