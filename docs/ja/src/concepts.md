@@ -63,7 +63,7 @@
 
 ## 7. ネットワークポリシー（デフォルト拒否）
 
-`edgesentry_rs::ingest::NetworkPolicy`は、受信接続に対してデフォルト拒否の IP/CIDR アローリストを強制します。呼び出し元はレコードを`IngestService`に渡す**前に**`NetworkPolicy::check(source_ip)`を呼び出します。リストにないアドレスからの接続は、暗号チェックに達することなく拒否されます。
+`edgesentry_rs::ingest::NetworkPolicy`は、受信接続に対してデフォルト拒否の IP/CIDR アローリストを強制します。呼び出し元はレコードを`IngestService`に渡す **前に**`NetworkPolicy::check(source_ip)`を呼び出します。リストにないアドレスからの接続は、暗号チェックに達することなく拒否されます。
 
 ルールは追加的です：`allow_ip(addr)`で完全一致、`allow_cidr("10.0.0.0/8")`で CIDR ブロック（ IPv4 ・ IPv6 両対応）を許可します。空のポリシーはすべてを拒否します。
 

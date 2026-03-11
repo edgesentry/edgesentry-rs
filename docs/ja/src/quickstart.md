@@ -5,7 +5,7 @@
 前提条件：
 
 - Rust ツールチェーン（`cargo`）
-- このサンプルには PostgreSQL / MinIO は**不要**です（インメモリストアを使用）
+- このサンプルには PostgreSQL / MinIO は **不要** です（インメモリストアを使用）
 
 ```bash
 cargo run -p edgesentry-rs --example lift_inspection_flow

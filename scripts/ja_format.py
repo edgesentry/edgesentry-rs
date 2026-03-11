@@ -26,9 +26,14 @@ def fix_bold_spaces(text):
 
 
 def add_cjk_spaces(text):
-    """Add half-width space between CJK and ASCII characters."""
+    """Add half-width space between CJK and ASCII characters, and around bold spans."""
+    # Space between ASCII letters/digits and CJK
     text = re.sub(f'({ASCII_CHAR})({CJK})', r'\1 \2', text)
     text = re.sub(f'({CJK})({ASCII_CHAR})', r'\1 \2', text)
+    # Space between a complete bold span and adjacent CJK
+    # e.g. **すべてに開放：**ベンダー → **すべてに開放：** ベンダー
+    text = re.sub(r'(\*\*[^*\n]+\*\*)(' + CJK + ')', r'\1 \2', text)
+    text = re.sub('(' + CJK + r')(\*\*[^*\n]+\*\*)', r'\1 \2', text)
     return text
 
 
