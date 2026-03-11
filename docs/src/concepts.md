@@ -136,7 +136,7 @@ SS 711:2025 and the IMDA IoT Cyber Security Guide require recorded STRIDE-based 
 | **D**enial of Service | Ingest endpoint | `NetworkPolicy` deny-by-default rejects unlisted sources before any crypto runs |
 | **E**levation of Privilege | Ingest gate | `IntegrityPolicyGate` verifies device registration and signature before accepting data |
 
-Producing the formal design artifact for CLS Level 3 assessment is tracked in [#93](https://github.com/yohei1126/edgesentry-rs/issues/93).
+Producing the formal design artifact for CLS Level 3 assessment is tracked in [#93](https://github.com/edgesentry/edgesentry-rs/issues/93).
 
 ## 14. SBOM (Software Bill of Materials)
 
@@ -144,4 +144,4 @@ A Software Bill of Materials lists all software components and their versions us
 
 For Rust projects, SBOM is generated from `Cargo.lock` using tools such as `cargo-sbom` or `cargo-cyclonedx`, producing a machine-readable inventory of all crates and their transitive dependencies.
 
-Generating and publishing the SBOM alongside the vendor disclosure checklist is tracked in [#92](https://github.com/yohei1126/edgesentry-rs/issues/92).
+Generating and publishing the SBOM alongside the vendor disclosure checklist is tracked in [#92](https://github.com/edgesentry/edgesentry-rs/issues/92).

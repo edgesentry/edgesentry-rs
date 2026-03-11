@@ -6,5 +6,5 @@ language = "en"
 src = "src"
 
 [output.html]
-git-repository-url = "https://github.com/yohei1126/edgesentry-rs"
-edit-url-template = "https://github.com/yohei1126/edgesentry-rs/edit/main/docs/src/{path}"
+git-repository-url = "https://github.com/edgesentry/edgesentry-rs"
+edit-url-template = "https://github.com/edgesentry/edgesentry-rs/edit/main/docs/src/{path}"

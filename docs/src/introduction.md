@@ -2,8 +2,8 @@
 
 **"Paving the Way for a New Global Standard: Mathematically Provable Integrity at the Edge."**
 
-- **Repository:** [github.com/yohei1126/edgesentry-rs](https://github.com/yohei1126/edgesentry-rs)
-- **Documentation:** [yohei1126.github.io/edgesentry-rs](https://yohei1126.github.io/edgesentry-rs/)
+- **Repository:** [github.com/edgesentry/edgesentry-rs](https://github.com/edgesentry/edgesentry-rs)
+- **Documentation:** [edgesentry.github.io/edgesentry-rs](https://edgesentry.github.io/edgesentry-rs/)
 
 ## Why
 
@@ -43,7 +43,7 @@ Modeled after the "Simple, Portable, Fast" philosophy, EdgeSentry-RS implements 
 
 This project is licensed under either of:
 
-- [Apache License, Version 2.0](https://github.com/yohei1126/edgesentry-rs/blob/main/LICENSE-APACHE)
-- [MIT license](https://github.com/yohei1126/edgesentry-rs/blob/main/LICENSE-MIT)
+- [Apache License, Version 2.0](https://github.com/edgesentry/edgesentry-rs/blob/main/LICENSE-APACHE)
+- [MIT license](https://github.com/edgesentry/edgesentry-rs/blob/main/LICENSE-MIT)
 
 At your option.

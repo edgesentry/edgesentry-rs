@@ -68,7 +68,7 @@ The private key must be kept secret on the device. Recommended practices:
 |-------------|---------------------|
 | Development / CI | Environment variable (`DEVICE_PRIVATE_KEY_HEX`) — never commit to version control |
 | Production (software) | Encrypted secrets store (e.g., HashiCorp Vault, AWS Secrets Manager, Azure Key Vault) |
-| Production (hardware) | Hardware Security Module (HSM) or Trusted Execution Environment (TEE) — see [#54](https://github.com/yohei1126/edgesentry-rs/issues/54) for the planned HSM path |
+| Production (hardware) | Hardware Security Module (HSM) or Trusted Execution Environment (TEE) — see [#54](https://github.com/edgesentry/edgesentry-rs/issues/54) for the planned HSM path |
 
 File-based storage (development only):
 
@@ -131,7 +131,7 @@ Rotate a device key when:
 5. Securely delete or revoke the old private key from all storage locations.
 
 > **Note:** Multi-key-per-device support (allowing old and new keys simultaneously
-> under the same `device_id`) is tracked in [#57](https://github.com/yohei1126/edgesentry-rs/issues/57).
+> under the same `device_id`) is tracked in [#57](https://github.com/edgesentry/edgesentry-rs/issues/57).
 
 ---
 
@@ -199,7 +199,7 @@ Rotate a publisher key when the private key may have been exposed or your securi
 
 ### 6.5 FFI (C/C++ devices)
 
-For devices integrating via the C/C++ FFI bridge, publisher key verification will be exposed as `eds_verify_update` (tracked in [#80](https://github.com/yohei1126/edgesentry-rs/issues/80)). Until that function is available, C/C++ devices must call into Rust via a thin wrapper or handle publisher verification at the application layer.
+For devices integrating via the C/C++ FFI bridge, publisher key verification will be exposed as `eds_verify_update` (tracked in [#80](https://github.com/edgesentry/edgesentry-rs/issues/80)). Until that function is available, C/C++ devices must call into Rust via a thin wrapper or handle publisher verification at the application layer.
 
 The public key bytes to pass to `eds_verify_update` are the same 32-byte Ed25519 public key described above — provision them into the device at manufacture time, stored in a read-only flash region or secure element.
 

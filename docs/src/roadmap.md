@@ -66,7 +66,7 @@ IMDA's IoT Cyber Security Guide requires a vendor disclosure checklist as CLS Le
 - Generate and publish SBOM (Software Bill of Materials) for all crates
 - Document vendor disclosure checklist responses for each category
 - Map checklist responses to existing implementation in the traceability matrix
-- See [#92](https://github.com/yohei1126/edgesentry-rs/issues/92)
+- See [#92](https://github.com/edgesentry/edgesentry-rs/issues/92)
 
 ### Milestone 1.5: STRIDE Threat Model + Binary Analysis Evidence 🔲 Planned
 
@@ -75,7 +75,7 @@ CLS Level 3 assessors expect recorded design artifacts, not just code. SS 711:20
 - STRIDE threat model covering: Spoofing (device identity), Tampering (audit records), Repudiation (operation logs), Information Disclosure (payload storage), Denial of Service (network policy), Elevation of Privilege (ingest gate)
 - Binary analysis report confirming no known CVEs in shipped crates (`cargo-audit`, `cargo-deny`)
 - Link threat model mitigations to traceability matrix entries
-- See [#93](https://github.com/yohei1126/edgesentry-rs/issues/93)
+- See [#93](https://github.com/edgesentry/edgesentry-rs/issues/93)
 
 ---
 
@@ -90,22 +90,22 @@ GCLI is the primary mechanism for Japan market entry without duplicate certifica
 - GCLI compliance pathway guide for Japan-based customers
 - CLS ↔ JC-STAR clause equivalence table
 - MRA fast-track guidance for customers holding Finnish, German, or Korean IoT certification
-- See [#94](https://github.com/yohei1126/edgesentry-rs/issues/94)
+- See [#94](https://github.com/edgesentry/edgesentry-rs/issues/94)
 
 ### Milestone 2.1: JC-STAR STAR-1/2 Alignment 🔲 Planned
 
 - Self-checklist and implementation guidance based on Japan's IoT Product Security Conformity Assessment criteria
-- See [#82](https://github.com/yohei1126/edgesentry-rs/issues/82)
+- See [#82](https://github.com/edgesentry/edgesentry-rs/issues/82)
 
 ### Milestone 2.2: Edge Intelligence 🔲 Planned
 
-- `edgesentry-summary` — data summarisation logic for high-performance Japanese sensors over bandwidth-constrained links. See [#83](https://github.com/yohei1126/edgesentry-rs/issues/83)
-- `edgesentry-detector` — local anomaly detection with signed audit evidence attached to results. See [#84](https://github.com/yohei1126/edgesentry-rs/issues/84)
+- `edgesentry-summary` — data summarisation logic for high-performance Japanese sensors over bandwidth-constrained links. See [#83](https://github.com/edgesentry/edgesentry-rs/issues/83)
+- `edgesentry-detector` — local anomaly detection with signed audit evidence attached to results. See [#84](https://github.com/edgesentry/edgesentry-rs/issues/84)
 
 ### Milestone 2.3: Cross-Border Education Program 🔲 Planned
 
 - Joint technical white paper to help Japanese companies bid on Singapore public-infrastructure projects
-- See [#85](https://github.com/yohei1126/edgesentry-rs/issues/85)
+- See [#85](https://github.com/edgesentry/edgesentry-rs/issues/85)
 
 ### Milestone 2.4: Cyber Trust Mark / ISO 27001 Organisational Track 🔲 Planned
 
@@ -113,7 +113,7 @@ Singapore's Cyber Trust Mark becomes mandatory for Critical Information Infrastr
 
 - Map EdgeSentry-RS implementation evidence to Cyber Trust Mark assessment categories
 - ISO 27001 control alignment documentation
-- See [#95](https://github.com/yohei1126/edgesentry-rs/issues/95)
+- See [#95](https://github.com/edgesentry/edgesentry-rs/issues/95)
 
 ### Milestone 2.5: CLS(MD) — Medical Device Variant 🔲 Planned
 
@@ -121,7 +121,7 @@ Singapore launched CLS for Medical Devices (CLS(MD)) in October 2024. If medical
 
 - CLS(MD) gap analysis against current implementation
 - Medical device–specific requirements identification
-- See [#96](https://github.com/yohei1126/edgesentry-rs/issues/96)
+- See [#96](https://github.com/edgesentry/edgesentry-rs/issues/96)
 
 ---
 
@@ -140,7 +140,7 @@ The UK Product Security and Telecommunications Infrastructure (PSTI) Act aligns 
 
 - Gap analysis between CLS Level 3 and UK PSTI requirements
 - PSTI compliance statement documentation
-- See [#97](https://github.com/yohei1126/edgesentry-rs/issues/97)
+- See [#97](https://github.com/edgesentry/edgesentry-rs/issues/97)
 
 ### Milestone 3.3: IEC 62443-4-2 + Hardware RoT 🔲 Planned
 
@@ -149,7 +149,7 @@ IEC 62443-4-2 governs component-level requirements for Critical Infrastructure (
 - IEC 62443-4-2 component requirement mapping
 - HSM integration via `edgesentry-bridge` for hardware-backed key storage (CLS Level 4)
 - RBAC/PAM design guidance for deployers
-- See [#54](https://github.com/yohei1126/edgesentry-rs/issues/54) and [#98](https://github.com/yohei1126/edgesentry-rs/issues/98)
+- See [#54](https://github.com/edgesentry/edgesentry-rs/issues/54) and [#98](https://github.com/edgesentry/edgesentry-rs/issues/98)
 
 ### Milestone 3.4: CCoP 2.0 / MTCS Tier 3 🔲 Planned
 
@@ -157,7 +157,7 @@ Singapore's Cybersecurity Code of Practice 2.0 (CCoP 2.0) is the operational com
 
 - CCoP 2.0 operational requirement mapping
 - MTCS Tier 3 applicability assessment for cloud deployment scenarios
-- See [#99](https://github.com/yohei1126/edgesentry-rs/issues/99)
+- See [#99](https://github.com/edgesentry/edgesentry-rs/issues/99)
 
 ### Milestone 3.5: Formal Verification & Hardening 🔲 Planned
 
