@@ -15,13 +15,15 @@ ASCII_CHAR = r'[A-Za-z0-9]'
 def fix_bold_spaces(text):
     """Remove spaces immediately after opening ** or before closing **."""
     # Space after opening **: **「space」text → **text
-    text = re.sub(r'\*\*\s+([^*\s])', r'**\1', text)
+    # Only match when ** is preceded by whitespace or start-of-string
+    # (prevents matching the closing ** of a bold span, e.g. **foo:** [link])
+    text = re.sub(r'(?:^|(?<=\s))\*\*\s+([^*\s])', r'**\1', text)
     # Space before closing **: text「space」** — only when ** is followed by
     # space, punctuation, or end-of-string (i.e. it is a closing marker)
     text = re.sub(r'([^*\s])\s+(\*\*(?=[ \t,.:;!?）】』。、」\-]|$))', r'\1\2', text)
-    # Same for single *
-    text = re.sub(r'\*\s+([^*\s])', r'*\1', text)
-    text = re.sub(r'([^*\s])\s+(\*(?=[^*]|$))', r'\1\2', text)
+    # Same for single * (not part of **)
+    text = re.sub(r'(?<!\*)\*\s+([^*\s])', r'*\1', text)
+    text = re.sub(r'([^*\s])\s+(\*(?!\*)(?=[^*]|$))', r'\1\2', text)
     return text
 
 
@@ -30,16 +32,23 @@ def add_cjk_spaces(text):
     # Space between ASCII letters/digits and CJK
     text = re.sub(f'({ASCII_CHAR})({CJK})', r'\1 \2', text)
     text = re.sub(f'({CJK})({ASCII_CHAR})', r'\1 \2', text)
-    # Space between a complete bold span and adjacent CJK
-    # e.g. **すべてに開放：**ベンダー → **すべてに開放：** ベンダー
-    text = re.sub(r'(\*\*[^*\n]+\*\*)(' + CJK + ')', r'\1 \2', text)
-    text = re.sub('(' + CJK + r')(\*\*[^*\n]+\*\*)', r'\1 \2', text)
+    # Space between a complete bold span and adjacent CJK or ASCII.
+    # (?!\s) prevents matching the closing ** of one span as the opening of
+    # a phantom span (e.g. "**A** text **B**" must not match "** text **").
+    BOLD = r'\*\*(?!\s)[^*\n]+\*\*'
+    text = re.sub(r'(' + BOLD + r')(' + CJK + r')', r'\1 \2', text)
+    text = re.sub(r'(' + BOLD + r')([A-Za-z0-9—])', r'\1 \2', text)
+    text = re.sub('(' + CJK + r')(' + BOLD + r')', r'\1 \2', text)
+    # Space around → arrow when directly adjacent to non-space characters
+    text = re.sub(r'([^\s])(→)([^\s])', r'\1 → \3', text)
     return text
 
 
 def process_line(line):
     # Fix list marker directly adjacent to bold: -** → - **
     line = re.sub(r'^(\s*[-*+])\*\*', r'\1 **', line)
+    # Fix numbered list marker directly adjacent to bold: 1.** → 1. **
+    line = re.sub(r'^(\s*\d+\.)\*\*', r'\1 **', line)
 
     # Split on inline code spans to protect their contents
     parts = re.split(r'(`[^`\n]+`)', line)

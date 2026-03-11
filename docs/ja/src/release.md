@@ -1,6 +1,6 @@
 # ビルドとリリース
 
-## リリースアーティファクトのビルド
+## リリース成果物のビルド
 
 ```bash
 cargo build --workspace --release
