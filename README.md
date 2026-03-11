@@ -4,8 +4,8 @@
 
 An early-stage learning project building tamper-evident audit log infrastructure in Rust for IoT devices to cloud services. The license is commercially compatible (MIT/Apache 2.0); the implementation is actively in development and not yet production-ready.
 
-- **Repository:** [github.com/yohei1126/edgesentry-rs](https://github.com/yohei1126/edgesentry-rs)
-- **Documentation:** [yohei1126.github.io/edgesentry-rs](https://yohei1126.github.io/edgesentry-rs/)
+- **Repository:** [github.com/edgesentry/edgesentry-rs](https://github.com/edgesentry/edgesentry-rs)
+- **Documentation:** [edgesentry.github.io/edgesentry-rs](https://edgesentry.github.io/edgesentry-rs/)
 
 ## Documentation
 

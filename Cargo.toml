@@ -9,7 +9,7 @@ resolver = "2"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 version = "0.1.2"
-repository = "https://github.com/yohei1126/edgesentry-rs"
+repository = "https://github.com/edgesentry/edgesentry-rs"
 
 [workspace.dependencies]
 blake3 = "1.5"

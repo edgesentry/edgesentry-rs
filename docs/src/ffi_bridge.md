@@ -162,6 +162,6 @@ See the full example in
 ## HSM path
 
 For CLS Level 4, the private key should never exist as an extractable byte
-array.  The planned HSM integration ([#54](https://github.com/yohei1126/edgesentry-rs/issues/54))
+array.  The planned HSM integration ([#54](https://github.com/edgesentry/edgesentry-rs/issues/54))
 will delegate the `eds_sign_record` operation to an HSM-backed provider
 without exposing key bytes to the caller.
