@@ -11,5 +11,5 @@
 - [CLI リファレンス](cli.md)
 - [鍵管理](key_management.md)
 - [C/C++ FFI ブリッジ](ffi_bridge.md)
-- [コントリビューション](contributing.md)
+- [プロジェクトへの貢献](contributing.md)
 - [ビルドとリリース](release.md)
