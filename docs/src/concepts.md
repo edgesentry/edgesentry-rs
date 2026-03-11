@@ -117,7 +117,31 @@ This split keeps edge and cloud responsibilities clear and auditable.
 
 - Static analysis: `clippy`
 - OSS license policy validation: `cargo-deny`
+- Advisory scanning: `cargo-audit` (CVE checks against RustSec advisory DB)
 - Release readiness: CI + release workflows
 - Tag-driven release: `vX.Y.Z`
 
 See [Contributing](contributing.md) and [Build and Release](release.md) for executable procedures.
+
+## 13. STRIDE threat model
+
+SS 711:2025 and the IMDA IoT Cyber Security Guide require recorded STRIDE-based threat model artifacts for CLS Level 3 assessment. The six threat categories map to EdgeSentry-RS attack surfaces as follows:
+
+| Threat | Attack surface | Mitigation |
+|--------|---------------|------------|
+| **S**poofing | Device identity | Ed25519 signature — only the registered public key can verify a record |
+| **T**ampering | Audit records, payload storage | BLAKE3 hash chain — any modification breaks chain continuity |
+| **R**epudiation | Ingest decisions | `OperationLog` records every accept/reject decision with reason |
+| **I**nformation Disclosure | Raw payload storage | `object_ref` separation keeps payload body out of the audit metadata stream |
+| **D**enial of Service | Ingest endpoint | `NetworkPolicy` deny-by-default rejects unlisted sources before any crypto runs |
+| **E**levation of Privilege | Ingest gate | `IntegrityPolicyGate` verifies device registration and signature before accepting data |
+
+Producing the formal design artifact for CLS Level 3 assessment is tracked in [#93](https://github.com/yohei1126/edgesentry-rs/issues/93).
+
+## 14. SBOM (Software Bill of Materials)
+
+A Software Bill of Materials lists all software components and their versions used in a product. The IMDA IoT Cyber Security Guide requires SBOM availability as part of the lifecycle support category in the vendor disclosure checklist — a mandatory CLS Level 3 evidence artifact.
+
+For Rust projects, SBOM is generated from `Cargo.lock` using tools such as `cargo-sbom` or `cargo-cyclonedx`, producing a machine-readable inventory of all crates and their transitive dependencies.
+
+Generating and publishing the SBOM alongside the vendor disclosure checklist is tracked in [#92](https://github.com/yohei1126/edgesentry-rs/issues/92).
