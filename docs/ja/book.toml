@@ -9,7 +9,6 @@ src = "src"
 build-dir = "../book/ja"
 
 [output.html]
-site-url = "/edgesentry-rs/ja/"
 git-repository-url = "https://github.com/edgesentry/edgesentry-rs"
 edit-url-template = "https://github.com/edgesentry/edgesentry-rs/edit/main/docs/ja/src/{path}"
 additional-js = ["theme/lang-switcher.js"]
