@@ -21,6 +21,10 @@
 # mdBook build output
 docs/book/
 
+# Python
+__pycache__/
+*.pyc
+
 # Temporary files
 tmp/
 *.tmp
