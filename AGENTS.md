@@ -2,6 +2,10 @@
 
 All procedures are documented in [docs/src/](docs/src/) and apply equally to humans and AI agents.
 
+## Guidelines
+
+**After every change, verify consistency across code, tests, and docs.** See [Contributing — Consistency Check](docs/src/contributing.md#consistency-check) for the checklist.
+
 ## Quick Reference
 
 ### Understanding the system
