@@ -21,6 +21,10 @@
 # mdBook build output
 docs/book/
 
+# Python
+scripts/__pycache__/
+*.pyc
+
 # Temporary files
 tmp/
 *.tmp
@@ -31,3 +35,5 @@ record*.json
 lift_*_record*.json
 lift_inspection_records.json
 crates/edgesentry-bridge/examples/c_integration/c_integration_test
+
+_inputs/

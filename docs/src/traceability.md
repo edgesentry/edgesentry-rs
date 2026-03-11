@@ -2,7 +2,12 @@
 
 This page maps each Singapore CLS / iM8 clause and corresponding ETSI EN 303 645 provision to the source code that satisfies it. Japan JC-STAR cross-references and SS 711:2025 design principle alignment are included for each row.
 
-Legend: ✅ Implemented — ⚠️ Partial — 🔲 Planned — ➖ Not in scope
+Legend:
+
+- ✅ Implemented
+— ⚠️ Partial
+— 🔲 Planned
+— ➖ Not in scope
 
 ## SS 711:2025 Design Principles Coverage
 

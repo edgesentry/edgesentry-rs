@@ -1,0 +1,14 @@
+[book]
+title = "edgesentry-rs"
+description = "IoTデバイスからクラウドまでをカバーする、Rustで実装した改ざん検知型監査ログ"
+authors = ["edgesentry-rs contributors"]
+language = "ja"
+src = "src"
+
+[build]
+build-dir = "../book/ja"
+
+[output.html]
+git-repository-url = "https://github.com/edgesentry/edgesentry-rs"
+edit-url-template = "https://github.com/edgesentry/edgesentry-rs/edit/main/docs/ja/src/{path}"
+additional-js = ["theme/lang-switcher.js"]

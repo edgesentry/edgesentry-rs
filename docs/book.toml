@@ -5,6 +5,10 @@ authors = ["edgesentry-rs contributors"]
 language = "en"
 src = "src"
 
+[build]
+build-dir = "book/en"
+
 [output.html]
 git-repository-url = "https://github.com/edgesentry/edgesentry-rs"
 edit-url-template = "https://github.com/edgesentry/edgesentry-rs/edit/main/docs/src/{path}"
+additional-js = ["theme/lang-switcher.js"]
