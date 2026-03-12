@@ -6,6 +6,8 @@ All procedures are documented in [docs/src/](docs/src/) and apply equally to hum
 
 **After every change, verify consistency across code, tests, and docs.** See [Contributing — Consistency Check](docs/src/contributing.md#consistency-check) for the checklist.
 
+**English and Japanese documentation must be updated together.** Every change to `docs/src/*.md` requires a corresponding update to `docs/ja/src/*.md`, and vice versa. Never update one language without updating the other.
+
 ## Quick Reference
 
 ### Understanding the system
