@@ -11,8 +11,6 @@ In recent years, labor shortages have become a serious challenge in infrastructu
 
 At the same time, if device spoofing, device takeover, or inspection data tampering occurs, trust in the entire system is fundamentally undermined. This makes continuous verification of both device authenticity and data integrity essential.
 
-For public-infrastructure IoT deployments, Singapore's Cybersecurity Labelling Scheme (CLS) may require Level 3 or Level 4, which introduces hardware-level security requirements. Because those hardware-dependent setups are often difficult to evaluate quickly in an early evaluation phase, this repository focuses on sample code for tamper prevention and tamper-evident audit records.
-
 ## Vision and Principles
 
 EdgeSentry-RS is an **early-stage learning project** — we are building this to deepen our understanding of IoT security techniques hands-on. The license is commercially compatible (MIT/Apache 2.0), but the implementation is just getting started and is not yet production-ready. Following the governance model of successful "in-process" systems like **DuckDB**, we keep the core intellectual property open and vendor-neutral, so it can grow into a public good over time.
@@ -26,6 +24,10 @@ We believe the infrastructure of trust should not be owned by a single private e
 - **Sustainable Growth:** The core remains a community-driven reference implementation; commercial services (advanced analytics, automated compliance reporting) are built on top of this stable foundation.
 
 See the [Roadmap](roadmap.md) for the phased compliance plan.
+
+## Initial Scope
+
+For public-infrastructure IoT deployments, Singapore's Cybersecurity Labelling Scheme (CLS) Level 3 and Level 4 introduce hardware-level security requirements. EdgeSentry-RS is designed to support these requirements through hardware extensions — hardware security itself is implemented on the hardware side, with this library providing the software integration layer. The initial scope covers tamper prevention and tamper-evident audit records, with hardware-level extension points built in from the start.
 
 ## How
 
