@@ -6,7 +6,7 @@ This system assumes a public-infrastructure IoT deployment where field devices (
 
 ### Device side (resource-constrained edge)
 
-The device-side responsibility is implemented by `edgesentry_rs::agent` and related modules.
+The device-side responsibility is implemented by `edgesentry_rs::build_signed_record` and related functions.
 
 - Generate inspection event payloads (door check, vibration check, emergency brake check)
 - Compute `payload_hash` (BLAKE3)
