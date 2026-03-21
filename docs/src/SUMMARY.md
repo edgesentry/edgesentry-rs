@@ -4,6 +4,7 @@
 
 - [Roadmap](roadmap.md)
 - [Compliance Traceability](traceability.md)
+- [STRIDE Threat Model](threat_model.md)
 - [SBOM and Vendor Disclosure](sbom.md)
 - [Concepts](concepts.md)
 - [Architecture](architecture.md)
