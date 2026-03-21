@@ -44,6 +44,16 @@
 #define EDS_ERR_PANIC -6
 
 /**
+ * The BLAKE3 hash of the supplied payload does not match the expected hash.
+ */
+#define EDS_ERR_HASH_MISMATCH -7
+
+/**
+ * The Ed25519 publisher signature is invalid.
+ */
+#define EDS_ERR_BAD_SIGNATURE -8
+
+/**
  * A tamper-evident audit record with a C-compatible layout.
  *
  * All fields are value types — no heap allocation.  `device_id` and
@@ -174,6 +184,45 @@ int32_t eds_record_hash(const struct EdsAuditRecord *record, uint8_t *hash_out);
 int32_t eds_verify_record(const struct EdsAuditRecord *record, const uint8_t *public_key);
 
 /**
+ * Verify a software update package before installation (CLS-03 / STAR-2 R2.2).
+ *
+ * Performs two checks in order:
+ * 1. `BLAKE3(payload) == payload_hash` — payload integrity.
+ * 2. Ed25519 signature over `payload_hash` is valid for `publisher_key` — authenticity.
+ *
+ * This is a stateless one-shot function. The caller is responsible for
+ * supplying the trusted `publisher_key` (e.g. baked into the firmware image
+ * at manufacture time or provisioned via a secure bootstrap channel).
+ *
+ * # Safety
+ *
+ * - `payload` must be non-null and valid for `payload_len` bytes.
+ * - `payload_hash` must be non-null and point to exactly 32 bytes.
+ * - `signature` must be non-null and point to exactly 64 bytes.
+ * - `publisher_key` must be non-null and point to exactly 32 bytes.
+ *
+ * # Parameters
+ * - `payload`:       raw firmware / update bytes.
+ * - `payload_len`:   length of `payload` in bytes.
+ * - `payload_hash`:  expected BLAKE3 hash (32 bytes).
+ * - `signature`:     Ed25519 signature over `payload_hash` (64 bytes).
+ * - `publisher_key`: trusted Ed25519 public key (32 bytes).
+ *
+ * # Returns
+ * - `EDS_OK` (0) — both checks passed; update may be applied.
+ * - `EDS_ERR_NULL_PTR` — a required pointer was NULL.
+ * - `EDS_ERR_INVALID_KEY` — `publisher_key` is not a valid Ed25519 key.
+ * - `EDS_ERR_HASH_MISMATCH` — `BLAKE3(payload) != payload_hash`.
+ * - `EDS_ERR_BAD_SIGNATURE` — signature verification failed.
+ * - `EDS_ERR_PANIC` — unexpected internal error.
+ */
+int32_t eds_verify_update(const uint8_t *payload,
+                          uintptr_t payload_len,
+                          const uint8_t *payload_hash,
+                          const uint8_t *signature,
+                          const uint8_t *publisher_key);
+
+/**
  * Verify that an array of records forms a valid BLAKE3 hash chain.
  *
  * Checks that each record's `prev_record_hash` matches the hash of the
@@ -195,5 +244,26 @@ int32_t eds_verify_record(const struct EdsAuditRecord *record, const uint8_t *pu
  * negative error code.
  */
 int32_t eds_verify_chain(const struct EdsAuditRecord *records, uintptr_t count);
+
+/**
+ * Return a human-readable description of the last error on this thread.
+ *
+ * The returned pointer is valid until the next call to **any** `eds_*`
+ * function on the same thread.  It must **not** be freed by the caller.
+ *
+ * This follows the same contract as `sqlite3_errmsg()`:
+ * - Returns a pointer to a null-terminated UTF-8 string.
+ * - Returns an empty string (`""`) when no error has occurred yet.
+ * - The string is owned by the library and stored in thread-local storage.
+ *
+ * # Safety
+ *
+ * This function is always safe to call with no arguments.  Do not write to
+ * or free the returned pointer.
+ *
+ * # Returns
+ * A pointer to a null-terminated, library-owned error string.  Never NULL.
+ */
+const char *eds_last_error_message(void);
 
 #endif  /* EDGESENTRY_BRIDGE_H */

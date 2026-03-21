@@ -19,7 +19,8 @@
 //! - Rust panics are caught at every FFI boundary and converted to
 //!   `EDS_ERR_PANIC`.
 
-use std::ffi::CStr;
+use std::cell::RefCell;
+use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 
 use ed25519_dalek::{SigningKey, VerifyingKey};
@@ -27,6 +28,29 @@ use edgesentry_rs::{
     compute_payload_hash, sign_payload_hash, verify_chain, verify_payload_signature, AuditRecord,
 };
 use rand::rngs::OsRng;
+
+// ── Thread-local error storage ────────────────────────────────────────────────
+
+thread_local! {
+    static LAST_ERROR: RefCell<CString> = RefCell::new(
+        // SAFETY: empty string has no interior NUL bytes
+        CString::new("").unwrap()
+    );
+}
+
+/// Store a human-readable error message for the current thread.
+///
+/// Called internally before every non-`EDS_OK` return so that callers can
+/// retrieve a diagnostic string with `eds_last_error_message()`.
+fn set_last_error(msg: &str) {
+    LAST_ERROR.with(|cell| {
+        // Replace NUL bytes with '?' so CString::new never fails.
+        let sanitized: String = msg.chars().map(|c| if c == '\0' { '?' } else { c }).collect();
+        *cell.borrow_mut() = CString::new(sanitized).unwrap_or_else(|_| {
+            CString::new("(error message contained interior NUL)").unwrap()
+        });
+    });
+}
 
 // ── Error codes ──────────────────────────────────────────────────────────────
 
@@ -129,6 +153,7 @@ pub unsafe extern "C" fn eds_keygen(
 ) -> i32 {
     std::panic::catch_unwind(|| {
         if private_key_out.is_null() || public_key_out.is_null() {
+            set_last_error("eds_keygen: private_key_out or public_key_out is NULL");
             return EDS_ERR_NULL_PTR;
         }
         let signing_key = SigningKey::generate(&mut OsRng);
@@ -138,7 +163,10 @@ pub unsafe extern "C" fn eds_keygen(
             .copy_from_slice(&signing_key.verifying_key().to_bytes());
         EDS_OK
     })
-    .unwrap_or(EDS_ERR_PANIC)
+    .unwrap_or_else(|_| {
+        set_last_error("eds_keygen: unexpected panic");
+        EDS_ERR_PANIC
+    })
 }
 
 /// Create a signed audit record.
@@ -186,29 +214,44 @@ pub unsafe extern "C" fn eds_sign_record(
             || private_key.is_null()
             || out.is_null()
         {
+            set_last_error("eds_sign_record: one or more required pointer arguments is NULL");
             return EDS_ERR_NULL_PTR;
         }
 
         let device_id_str = match CStr::from_ptr(device_id).to_str() {
             Ok(s) => s,
-            Err(_) => return EDS_ERR_INVALID_UTF8,
+            Err(_) => {
+                set_last_error("eds_sign_record: device_id is not valid UTF-8");
+                return EDS_ERR_INVALID_UTF8;
+            }
         };
         let object_ref_str = match CStr::from_ptr(object_ref).to_str() {
             Ok(s) => s,
-            Err(_) => return EDS_ERR_INVALID_UTF8,
+            Err(_) => {
+                set_last_error("eds_sign_record: object_ref is not valid UTF-8");
+                return EDS_ERR_INVALID_UTF8;
+            }
         };
 
         let payload_slice = std::slice::from_raw_parts(payload, payload_len);
         let key_bytes: [u8; 32] = match std::slice::from_raw_parts(private_key, 32).try_into() {
             Ok(b) => b,
-            Err(_) => return EDS_ERR_INVALID_KEY,
+            Err(_) => {
+                set_last_error("eds_sign_record: private_key must point to exactly 32 bytes");
+                return EDS_ERR_INVALID_KEY;
+            }
         };
         let prev_hash: [u8; 32] = if prev_record_hash.is_null() {
             [0u8; 32]
         } else {
             match std::slice::from_raw_parts(prev_record_hash, 32).try_into() {
                 Ok(b) => b,
-                Err(_) => return EDS_ERR_INVALID_KEY,
+                Err(_) => {
+                    set_last_error(
+                        "eds_sign_record: prev_record_hash must point to exactly 32 bytes",
+                    );
+                    return EDS_ERR_INVALID_KEY;
+                }
             }
         };
 
@@ -225,11 +268,21 @@ pub unsafe extern "C" fn eds_sign_record(
 
         let rc = copy_str_to_buf(device_id_str, &mut out_ref.device_id);
         if rc != EDS_OK {
+            set_last_error("eds_sign_record: device_id exceeds maximum length of 255 characters");
             return rc;
         }
-        copy_str_to_buf(object_ref_str, &mut out_ref.object_ref)
+        let rc = copy_str_to_buf(object_ref_str, &mut out_ref.object_ref);
+        if rc != EDS_OK {
+            set_last_error(
+                "eds_sign_record: object_ref exceeds maximum length of 511 characters",
+            );
+        }
+        rc
     })
-    .unwrap_or(EDS_ERR_PANIC)
+    .unwrap_or_else(|_| {
+        set_last_error("eds_sign_record: unexpected panic");
+        EDS_ERR_PANIC
+    })
 }
 
 /// Compute the record hash used as `prev_record_hash` for the next record.
@@ -254,6 +307,7 @@ pub unsafe extern "C" fn eds_record_hash(
 ) -> i32 {
     std::panic::catch_unwind(|| {
         if record.is_null() || hash_out.is_null() {
+            set_last_error("eds_record_hash: record or hash_out is NULL");
             return EDS_ERR_NULL_PTR;
         }
         let audit_record = to_audit_record(&*record);
@@ -261,7 +315,10 @@ pub unsafe extern "C" fn eds_record_hash(
         std::slice::from_raw_parts_mut(hash_out, 32).copy_from_slice(&hash);
         EDS_OK
     })
-    .unwrap_or(EDS_ERR_PANIC)
+    .unwrap_or_else(|_| {
+        set_last_error("eds_record_hash: unexpected panic");
+        EDS_ERR_PANIC
+    })
 }
 
 /// Verify the Ed25519 signature on a single record.
@@ -284,15 +341,22 @@ pub unsafe extern "C" fn eds_verify_record(
 ) -> i32 {
     std::panic::catch_unwind(|| {
         if record.is_null() || public_key.is_null() {
+            set_last_error("eds_verify_record: record or public_key is NULL");
             return EDS_ERR_NULL_PTR;
         }
         let key_bytes: [u8; 32] = match std::slice::from_raw_parts(public_key, 32).try_into() {
             Ok(b) => b,
-            Err(_) => return EDS_ERR_INVALID_KEY,
+            Err(_) => {
+                set_last_error("eds_verify_record: public_key must point to exactly 32 bytes");
+                return EDS_ERR_INVALID_KEY;
+            }
         };
         let verifying_key = match VerifyingKey::from_bytes(&key_bytes) {
             Ok(k) => k,
-            Err(_) => return EDS_ERR_INVALID_KEY,
+            Err(_) => {
+                set_last_error("eds_verify_record: public_key is not a valid Ed25519 point");
+                return EDS_ERR_INVALID_KEY;
+            }
         };
         let rec = &*record;
         if verify_payload_signature(&verifying_key, &rec.payload_hash, &rec.signature) {
@@ -301,7 +365,10 @@ pub unsafe extern "C" fn eds_verify_record(
             0
         }
     })
-    .unwrap_or(EDS_ERR_PANIC)
+    .unwrap_or_else(|_| {
+        set_last_error("eds_verify_record: unexpected panic");
+        EDS_ERR_PANIC
+    })
 }
 
 /// Verify a software update package before installation (CLS-03 / STAR-2 R2.2).
@@ -411,14 +478,43 @@ pub unsafe extern "C" fn eds_verify_chain(
             return EDS_OK;
         }
         if records.is_null() {
+            set_last_error("eds_verify_chain: records is NULL but count is non-zero");
             return EDS_ERR_NULL_PTR;
         }
         let slice = std::slice::from_raw_parts(records, count);
         let audit_records: Vec<AuditRecord> = slice.iter().map(to_audit_record).collect();
         match verify_chain(&audit_records) {
             Ok(()) => EDS_OK,
-            Err(_) => EDS_ERR_CHAIN_INVALID,
+            Err(e) => {
+                set_last_error(&format!("eds_verify_chain: chain verification failed: {e}"));
+                EDS_ERR_CHAIN_INVALID
+            }
         }
     })
-    .unwrap_or(EDS_ERR_PANIC)
+    .unwrap_or_else(|_| {
+        set_last_error("eds_verify_chain: unexpected panic");
+        EDS_ERR_PANIC
+    })
+}
+
+/// Return a human-readable description of the last error on this thread.
+///
+/// The returned pointer is valid until the next call to **any** `eds_*`
+/// function on the same thread.  It must **not** be freed by the caller.
+///
+/// This follows the same contract as `sqlite3_errmsg()`:
+/// - Returns a pointer to a null-terminated UTF-8 string.
+/// - Returns an empty string (`""`) when no error has occurred yet.
+/// - The string is owned by the library and stored in thread-local storage.
+///
+/// # Safety
+///
+/// This function is always safe to call with no arguments.  Do not write to
+/// or free the returned pointer.
+///
+/// # Returns
+/// A pointer to a null-terminated, library-owned error string.  Never NULL.
+#[no_mangle]
+pub extern "C" fn eds_last_error_message() -> *const c_char {
+    LAST_ERROR.with(|cell| cell.borrow().as_ptr())
 }
