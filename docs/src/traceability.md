@@ -81,9 +81,9 @@ Singapore's national IoT standard SS 711:2025 defines four principles. See the [
 |------|--------|
 | JC-STAR | STAR-1 R1.1 |
 | Requirement | Data must be transmitted with authenticity guarantees |
-| Status | ⚠️ Partial |
+| Status | ✅ Implemented |
 | Implementation | Every `AuditRecord` carries an Ed25519 signature over its BLAKE3 payload hash — `build_signed_record` ([`src/agent.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/agent.rs)), `sign_payload_hash` ([`src/identity.rs:12`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/identity.rs#L12)) |
-| Gap | Transport-layer encryption (TLS) is not in scope — record-level signature provides authenticity but not channel confidentiality. Tracked in [#73](https://github.com/edgesentry/edgesentry-rs/issues/73) |
+| Implementation — TLS | `transport-tls` feature: `serve_tls()` wraps the HTTP ingest handler in `tokio-rustls` with TLS 1.2 minimum / TLS 1.3 preferred, enforcing CLS-05 channel confidentiality ([`src/transport/http.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/transport/http.rs), [`src/transport/tls.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/transport/tls.rs)) — see [#73](https://github.com/edgesentry/edgesentry-rs/issues/73) |
 
 ---
 

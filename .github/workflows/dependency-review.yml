@@ -21,7 +21,9 @@ jobs:
         uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high
-          allow-licenses: MIT, Apache-2.0, ISC, BSD-2-Clause, BSD-3-Clause, Unicode-3.0, CC0-1.0, Zlib
+          # CDLA-Permissive-2.0 is the license for webpki-roots (Mozilla root CA bundle),
+          # a permissive data license required by tokio-rustls/rustls for TLS.
+          allow-licenses: MIT, Apache-2.0, ISC, BSD-2-Clause, BSD-3-Clause, Unicode-3.0, CC0-1.0, Zlib, CDLA-Permissive-2.0
           allow-dependencies-licenses: >-
             pkg:github/actions/checkout,
             pkg:github/actions/dependency-review-action,
@@ -29,7 +31,13 @@ jobs:
             pkg:cargo/postgres,
             pkg:cargo/unicode-properties,
             pkg:cargo/cbindgen,
-            pkg:cargo/axum
+            pkg:cargo/axum,
+            pkg:cargo/hyper,
+            pkg:cargo/hyper-util,
+            pkg:cargo/rustls,
+            pkg:cargo/rustls-pemfile,
+            pkg:cargo/tokio-rustls,
+            pkg:cargo/tower
           # Warn only if OpenSSF Scorecard score drops below 2.
           # mime 0.3.17 scores 2.1 (inactive project, not a security issue) and is a
           # transitive dependency of axum/reqwest that cannot be updated independently.
