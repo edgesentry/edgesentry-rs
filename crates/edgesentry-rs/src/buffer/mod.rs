@@ -133,10 +133,7 @@ impl<S: BufferStore> OfflineBuffer<S> {
                 Err(other) => {
                     // Unrecoverable error for this record; stop here.
                     self.store.drop_oldest(accepted).map_err(FlushError::Store)?;
-                    let remaining = total - accepted;
                     return Err(FlushError::Ingest(other));
-                    // Note: `remaining` is returned inside the error path via `FlushReport`
-                    // only if callers inspect it; the error variant carries the cause.
                 }
             }
         }
@@ -320,8 +317,8 @@ mod tests {
     use crate::{
         build_lift_inspection_demo_records_with_payloads,
         ingest::{
-            AuditLedger, InMemoryAuditLedger, InMemoryOperationLog, InMemoryRawDataStore,
-            IngestService, IntegrityPolicyGate, RawDataStore,
+            InMemoryAuditLedger, InMemoryOperationLog, InMemoryRawDataStore,
+            IngestService, IntegrityPolicyGate,
         },
         parse_fixed_hex,
         record::AuditRecord,
