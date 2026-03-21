@@ -483,30 +483,39 @@ use tokio::sync::Mutex as AsyncMutex;
 /// Async variant of [`RawDataStore`] for use in async ingest pipelines.
 ///
 /// Implementations must be `Send + Sync` so they can be shared across tasks.
+/// The `+ Send` bound on the returned future is required for use with
+/// multi-threaded tokio runtimes.
 #[cfg(feature = "async-ingest")]
-#[async_trait::async_trait]
 pub trait AsyncRawDataStore: Send + Sync {
     type Error: std::error::Error + Send;
 
-    async fn put(&self, object_ref: &str, payload: &[u8]) -> Result<(), Self::Error>;
+    fn put(
+        &self,
+        object_ref: &str,
+        payload: &[u8],
+    ) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send;
 }
 
 /// Async variant of [`AuditLedger`] for use in async ingest pipelines.
 #[cfg(feature = "async-ingest")]
-#[async_trait::async_trait]
 pub trait AsyncAuditLedger: Send + Sync {
     type Error: std::error::Error + Send;
 
-    async fn append(&self, record: AuditRecord) -> Result<(), Self::Error>;
+    fn append(
+        &self,
+        record: AuditRecord,
+    ) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send;
 }
 
 /// Async variant of [`OperationLogStore`] for use in async ingest pipelines.
 #[cfg(feature = "async-ingest")]
-#[async_trait::async_trait]
 pub trait AsyncOperationLogStore: Send + Sync {
     type Error: std::error::Error + Send;
 
-    async fn write(&self, entry: OperationLogEntry) -> Result<(), Self::Error>;
+    fn write(
+        &self,
+        entry: OperationLogEntry,
+    ) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send;
 }
 
 // ── In-memory async implementations (for testing) ────────────────────────────
@@ -526,7 +535,6 @@ impl AsyncInMemoryRawDataStore {
 }
 
 #[cfg(feature = "async-ingest")]
-#[async_trait::async_trait]
 impl AsyncRawDataStore for AsyncInMemoryRawDataStore {
     type Error = InMemoryStoreError;
 
@@ -554,7 +562,6 @@ impl AsyncInMemoryAuditLedger {
 }
 
 #[cfg(feature = "async-ingest")]
-#[async_trait::async_trait]
 impl AsyncAuditLedger for AsyncInMemoryAuditLedger {
     type Error = InMemoryStoreError;
 
@@ -579,7 +586,6 @@ impl AsyncInMemoryOperationLog {
 }
 
 #[cfg(feature = "async-ingest")]
-#[async_trait::async_trait]
 impl AsyncOperationLogStore for AsyncInMemoryOperationLog {
     type Error = InMemoryStoreError;
 
@@ -595,7 +601,6 @@ impl AsyncOperationLogStore for AsyncInMemoryOperationLog {
 /// `s3` and `async-ingest` features are active.  The async path calls `.await`
 /// directly on the SDK future, bypassing the embedded synchronous runtime.
 #[cfg(all(feature = "s3", feature = "async-ingest"))]
-#[async_trait::async_trait]
 impl AsyncRawDataStore for S3CompatibleRawDataStore {
     type Error = S3StoreError;
 

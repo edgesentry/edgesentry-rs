@@ -20,7 +20,6 @@ path = "src/lib.rs"
 [features]
 default = []
 async-ingest = [
-    "dep:async-trait",
     "dep:tokio",
 ]
 s3 = [
@@ -42,7 +41,6 @@ serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
-async-trait = { version = "0.1", optional = true }
 aws-config = { version = "1", optional = true }
 aws-sdk-s3 = { version = "1", optional = true }
 aws-credential-types = { version = "1", optional = true }

@@ -967,7 +967,6 @@ dependencies = [
 name = "edgesentry-rs"
 version = "0.1.2"
 dependencies = [
- "async-trait",
  "aws-config",
  "aws-credential-types",
  "aws-sdk-s3",
