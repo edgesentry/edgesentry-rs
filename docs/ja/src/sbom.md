@@ -12,12 +12,20 @@ EdgeSentry-RS は [CycloneDX](https://cyclonedx.org/) JSON 形式（仕様バー
 
 ### 公開アーティファクト
 
-各 GitHub Release には 2 つの SBOM ファイルがリリースアセットとして含まれます：
+各 GitHub Release には 2 つの SBOM ファイルがリリースアセットとして含まれます。リリースページからダウンロードできます：
+
+```
+https://github.com/edgesentry/edgesentry-rs/releases/tag/v<version>
+```
 
 | ファイル | スコープ |
 |---------|---------|
 | `edgesentry-rs-<version>.cdx.json` | `edgesentry-rs` クレートおよびすべての推移的依存関係 |
 | `edgesentry-bridge-<version>.cdx.json` | `edgesentry-bridge` C/C++ FFI クレートとその依存関係 |
+
+例として v0.1.2 の場合：
+- `https://github.com/edgesentry/edgesentry-rs/releases/download/v0.1.2/edgesentry-rs-0.1.2.cdx.json`
+- `https://github.com/edgesentry/edgesentry-rs/releases/download/v0.1.2/edgesentry-bridge-0.1.2.cdx.json`
 
 ### SBOM のローカル生成手順
 

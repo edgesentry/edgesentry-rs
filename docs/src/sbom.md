@@ -12,12 +12,20 @@ EdgeSentry-RS publishes SBOMs in [CycloneDX](https://cyclonedx.org/) JSON format
 
 ### Published artifacts
 
-Each GitHub Release includes two SBOM files as release assets:
+Each GitHub Release includes two SBOM files as release assets. Download them from the Releases page:
+
+```
+https://github.com/edgesentry/edgesentry-rs/releases/tag/v<version>
+```
 
 | File | Scope |
 |------|-------|
 | `edgesentry-rs-<version>.cdx.json` | `edgesentry-rs` crate and all transitive dependencies |
 | `edgesentry-bridge-<version>.cdx.json` | `edgesentry-bridge` C/C++ FFI crate and its dependencies |
+
+For example, for v0.1.2:
+- `https://github.com/edgesentry/edgesentry-rs/releases/download/v0.1.2/edgesentry-rs-0.1.2.cdx.json`
+- `https://github.com/edgesentry/edgesentry-rs/releases/download/v0.1.2/edgesentry-bridge-0.1.2.cdx.json`
 
 ### Generating the SBOM locally
 
