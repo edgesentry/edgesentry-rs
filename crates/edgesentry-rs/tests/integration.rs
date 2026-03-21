@@ -10,3 +10,5 @@ mod async_ingest_integration;
 mod http_integration;
 #[path = "integration/buffer_integration.rs"]
 mod buffer_integration;
+#[path = "integration/mqtt_integration.rs"]
+mod mqtt_integration;

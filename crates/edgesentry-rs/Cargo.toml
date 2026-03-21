@@ -26,7 +26,10 @@ transport-http = [
     "async-ingest",
     "dep:axum",
 ]
-transport-mqtt = []
+transport-mqtt = [
+    "async-ingest",
+    "dep:rumqttc",
+]
 s3 = [
     "dep:aws-config",
     "dep:aws-sdk-s3",
@@ -48,6 +51,7 @@ serde_json.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 axum = { version = "0.8", optional = true }
+rumqttc = { version = "0.24", optional = true }
 aws-config = { version = "1", optional = true }
 aws-sdk-s3 = { version = "1", optional = true }
 aws-credential-types = { version = "1", optional = true }
