@@ -60,6 +60,8 @@ cc -o my_app main.c \
 | `EDS_ERR_STRING_TOO_LONG` | `-4` | 文字列が固定バッファサイズを超えている |
 | `EDS_ERR_CHAIN_INVALID` | `-5` | ハッシュチェーン検証に失敗 |
 | `EDS_ERR_PANIC` | `-6` | 予期しない内部エラー |
+| `EDS_ERR_HASH_MISMATCH` | `-7` | ペイロードハッシュが期待値と一致しない |
+| `EDS_ERR_BAD_SIGNATURE` | `-8` | Ed25519 署名が無効 |
 
 ### レコード構造体
 
@@ -106,6 +108,19 @@ int32_t eds_verify_record(const EdsAuditRecord *record,
 
 /* Verify the entire hash chain. Returns EDS_OK or EDS_ERR_CHAIN_INVALID. */
 int32_t eds_verify_chain(const EdsAuditRecord *records, size_t count);
+
+/* インストール前にソフトウェアアップデートを検証する（CLS-03 / STAR-2 R2.2）。
+   BLAKE3(payload) == payload_hash を確認し、次に payload_hash に対する
+   Ed25519 パブリッシャー署名を検証する。
+   payload_hash は 32 バイト、signature は 64 バイト、
+   publisher_key は 32 バイトを指す必要がある。
+   成功時 EDS_OK、失敗時 EDS_ERR_HASH_MISMATCH / EDS_ERR_BAD_SIGNATURE、
+   入力不正時 EDS_ERR_INVALID_KEY / EDS_ERR_NULL_PTR を返す。 */
+int32_t eds_verify_update(const uint8_t *payload,
+                          size_t         payload_len,
+                          const uint8_t *payload_hash,
+                          const uint8_t *signature,
+                          const uint8_t *publisher_key);
 ```
 
 ---

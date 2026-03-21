@@ -3,9 +3,9 @@ CREATE TABLE IF NOT EXISTS audit_records (
   device_id TEXT NOT NULL,
   sequence BIGINT NOT NULL,
   timestamp_ms BIGINT NOT NULL,
-  payload_hash JSONB NOT NULL,
-  signature JSONB NOT NULL,
-  prev_record_hash JSONB NOT NULL,
+  payload_hash BYTEA NOT NULL,
+  signature BYTEA NOT NULL,
+  prev_record_hash BYTEA NOT NULL,
   object_ref TEXT NOT NULL,
   ingested_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (device_id, sequence)

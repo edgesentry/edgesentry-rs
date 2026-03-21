@@ -4,6 +4,7 @@
 
 - [ロードマップ](roadmap.md)
 - [コンプライアンス・トレーサビリティ](traceability.md)
+- [SBOM とベンダー開示](sbom.md)
 - [コンセプト](concepts.md)
 - [アーキテクチャ](architecture.md)
 - [ライブラリの使い方](quickstart.md)

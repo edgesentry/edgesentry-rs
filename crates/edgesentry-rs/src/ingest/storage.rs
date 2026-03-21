@@ -232,8 +232,6 @@ impl OperationLogStore for InMemoryOperationLog {
 pub enum PostgresStoreError {
     #[error("postgres error: {0}")]
     Postgres(#[from] ::postgres::Error),
-    #[error("json error: {0}")]
-    Json(#[from] serde_json::Error),
 }
 
 #[cfg(feature = "postgres")]
@@ -254,7 +252,6 @@ impl AuditLedger for PostgresAuditLedger {
     type Error = PostgresStoreError;
 
     fn append(&mut self, record: AuditRecord) -> Result<(), Self::Error> {
-        use ::postgres::types::Json;
         self.client.execute(
             "INSERT INTO audit_records \
              (device_id, sequence, timestamp_ms, payload_hash, signature, prev_record_hash, object_ref) \
@@ -263,9 +260,9 @@ impl AuditLedger for PostgresAuditLedger {
                 &record.device_id,
                 &(record.sequence as i64),
                 &(record.timestamp_ms as i64),
-                &Json(serde_json::to_value(record.payload_hash.to_vec())?),
-                &Json(serde_json::to_value(record.signature.to_vec())?),
-                &Json(serde_json::to_value(record.prev_record_hash.to_vec())?),
+                &record.payload_hash.as_ref(),
+                &record.signature.as_ref(),
+                &record.prev_record_hash.as_ref(),
                 &record.object_ref,
             ],
         )?;

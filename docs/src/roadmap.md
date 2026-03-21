@@ -63,14 +63,14 @@ Deliver a software reference implementation that satisfies Singapore CLS Level 2
 
 - Traceability matrix mapping Singapore CLS/iM8 clauses to source code: [Compliance Traceability Matrix](traceability.md)
 
-### Milestone 1.4: SBOM + Vendor Disclosure Checklist 🔲 Planned
+### Milestone 1.4: SBOM + Vendor Disclosure Checklist ✅ Implemented
 
 IMDA's IoT Cyber Security Guide requires a vendor disclosure checklist as CLS Level 3 assessment evidence. The five mandatory categories are: encryption support, identification and authentication, data protection, network protection, and lifecycle support (SBOM).
 
-- Generate and publish SBOM (Software Bill of Materials) for all crates
-- Document vendor disclosure checklist responses for each category
-- Map checklist responses to existing implementation in the traceability matrix
-- See [#92](https://github.com/edgesentry/edgesentry-rs/issues/92)
+- CycloneDX JSON SBOM generated for all crates and published with each GitHub Release
+- Vendor disclosure checklist responses documented for all five categories
+- Responses mapped to implementation in the traceability matrix
+- See [SBOM and Vendor Disclosure](sbom.md) and [#92](https://github.com/edgesentry/edgesentry-rs/issues/92)
 
 ### Milestone 1.5: STRIDE Threat Model + Binary Analysis Evidence 🔲 Planned
 
