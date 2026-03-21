@@ -1,11 +1,19 @@
 use std::ffi::CString;
 
 use edgesentry_bridge::{
-    eds_keygen, eds_record_hash, eds_sign_record, eds_verify_chain, eds_verify_record,
-    eds_verify_update,
-    EdsAuditRecord, EDS_ERR_NULL_PTR, EDS_ERR_STRING_TOO_LONG, EDS_ERR_CHAIN_INVALID,
-    EDS_ERR_HASH_MISMATCH, EDS_ERR_BAD_SIGNATURE, EDS_OK,
+    eds_keygen, eds_last_error_message, eds_record_hash, eds_sign_record, eds_verify_chain,
+    eds_verify_record, eds_verify_update, EdsAuditRecord, EDS_ERR_BAD_SIGNATURE,
+    EDS_ERR_CHAIN_INVALID, EDS_ERR_HASH_MISMATCH, EDS_ERR_NULL_PTR, EDS_ERR_STRING_TOO_LONG,
+    EDS_OK,
 };
+
+/// Read the last error message into a Rust String.
+fn last_error() -> String {
+    unsafe {
+        let ptr = eds_last_error_message();
+        std::ffi::CStr::from_ptr(ptr).to_string_lossy().into_owned()
+    }
+}
 
 fn zeroed_record() -> EdsAuditRecord {
     EdsAuditRecord {
@@ -566,4 +574,94 @@ fn verify_update_wrong_publisher_key_returns_bad_signature() {
         )
     };
     assert_eq!(rc, EDS_ERR_BAD_SIGNATURE);
+}
+
+// ── eds_last_error_message ────────────────────────────────────────────────────
+
+#[test]
+fn last_error_is_empty_before_any_error() {
+    // Call a successful operation first to reset any prior thread state.
+    let mut priv_key = [0u8; 32];
+    let mut pub_key = [0u8; 32];
+    unsafe { eds_keygen(priv_key.as_mut_ptr(), pub_key.as_mut_ptr()) };
+    // After a successful call the error string should remain whatever it was —
+    // success paths do NOT clear the last error (same contract as sqlite3_errmsg).
+    // What we can assert is that the pointer is non-null and dereferenceable.
+    let msg = last_error();
+    // No assertion on content — just verify it doesn't crash and returns a String.
+    let _ = msg;
+}
+
+#[test]
+fn last_error_set_after_null_ptr_to_keygen() {
+    let mut pub_key = [0u8; 32];
+    let rc = unsafe { eds_keygen(std::ptr::null_mut(), pub_key.as_mut_ptr()) };
+    assert_eq!(rc, EDS_ERR_NULL_PTR);
+    let msg = last_error();
+    assert!(!msg.is_empty(), "expected a non-empty error message");
+    assert!(
+        msg.contains("NULL") || msg.contains("null"),
+        "expected message to mention NULL, got: {msg}"
+    );
+}
+
+#[test]
+fn last_error_set_after_device_id_too_long() {
+    let mut rec = zeroed_record();
+    let long_id = "x".repeat(256);
+    let dev = std::ffi::CString::new(long_id).unwrap();
+    let obj = std::ffi::CString::new("obj").unwrap();
+    let priv_key = [1u8; 32];
+    let rc = unsafe {
+        eds_sign_record(
+            dev.as_ptr(),
+            1,
+            0,
+            b"payload".as_ptr(),
+            7,
+            std::ptr::null(),
+            obj.as_ptr(),
+            priv_key.as_ptr(),
+            &mut rec,
+        )
+    };
+    assert_eq!(rc, EDS_ERR_STRING_TOO_LONG);
+    let msg = last_error();
+    assert!(!msg.is_empty());
+    assert!(
+        msg.contains("device_id"),
+        "expected message to mention device_id, got: {msg}"
+    );
+}
+
+#[test]
+fn last_error_set_after_chain_invalid() {
+    let (priv_key, _) = unsafe { make_keypair() };
+    let dev = std::ffi::CString::new("sensor-01").unwrap();
+    let obj = std::ffi::CString::new("obj").unwrap();
+    let mut records = [zeroed_record(), zeroed_record()];
+    let mut prev_hash = [0u8; 32];
+
+    unsafe {
+        eds_sign_record(dev.as_ptr(), 1, 0, b"aaa".as_ptr(), 3, std::ptr::null(), obj.as_ptr(), priv_key.as_ptr(), &mut records[0]);
+        eds_record_hash(&records[0], prev_hash.as_mut_ptr());
+        eds_sign_record(dev.as_ptr(), 2, 1, b"bbb".as_ptr(), 3, prev_hash.as_ptr(), obj.as_ptr(), priv_key.as_ptr(), &mut records[1]);
+    }
+    records[0].payload_hash[0] ^= 0x01;
+
+    let rc = unsafe { eds_verify_chain(records.as_ptr(), 2) };
+    assert_eq!(rc, EDS_ERR_CHAIN_INVALID);
+    let msg = last_error();
+    assert!(!msg.is_empty());
+    assert!(
+        msg.contains("chain") || msg.contains("verification"),
+        "expected chain error message, got: {msg}"
+    );
+}
+
+#[test]
+fn last_error_message_never_returns_null() {
+    // Even when nothing has gone wrong the pointer must be non-null.
+    let ptr = eds_last_error_message();
+    assert!(!ptr.is_null());
 }

@@ -63,6 +63,8 @@ cc -o my_app main.c \
 | `EDS_ERR_HASH_MISMATCH` | `-7` | ペイロードハッシュが期待値と一致しない |
 | `EDS_ERR_BAD_SIGNATURE` | `-8` | Ed25519 署名が無効 |
 
+負のエラーコードを返す呼び出しの後は、`eds_last_error_message()` を呼び出すと失敗の人間が読めるメッセージを取得できます。
+
 ### レコード構造体
 
 ```c
@@ -121,6 +123,11 @@ int32_t eds_verify_update(const uint8_t *payload,
                           const uint8_t *payload_hash,
                           const uint8_t *signature,
                           const uint8_t *publisher_key);
+
+/* スレッドローカルに保存された最後のエラーメッセージを返す。
+   ポインタは同スレッドで次の eds_* 呼び出しまで有効。
+   エラーがない場合は "" を返す。NULL を返すことはない。 */
+const char *eds_last_error_message(void);
 ```
 
 ---
@@ -134,17 +141,24 @@ int32_t eds_verify_update(const uint8_t *payload,
 
 int main(void) {
     uint8_t priv_key[32], pub_key[32];
-    assert(eds_keygen(priv_key, pub_key) == EDS_OK);
+    if (eds_keygen(priv_key, pub_key) != EDS_OK) {
+        fprintf(stderr, "keygen failed: %s\n", eds_last_error_message());
+        return 1;
+    }
 
     const char *payload = "check=door,status=ok";
     EdsAuditRecord rec;
     memset(&rec, 0, sizeof(rec));
 
-    assert(eds_sign_record("lift-01", 1, 1700000000000ULL,
-                           (const uint8_t *)payload, strlen(payload),
-                           NULL,              /* zero hash — first record */
-                           "lift-01/1.bin",
-                           priv_key, &rec) == EDS_OK);
+    int rc = eds_sign_record("lift-01", 1, 1700000000000ULL,
+                             (const uint8_t *)payload, strlen(payload),
+                             NULL,              /* zero hash — first record */
+                             "lift-01/1.bin",
+                             priv_key, &rec);
+    if (rc != EDS_OK) {
+        fprintf(stderr, "sign_record failed: %s\n", eds_last_error_message());
+        return 1;
+    }
 
     assert(eds_verify_record(&rec, pub_key) == 1);
     return 0;

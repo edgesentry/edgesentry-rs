@@ -68,6 +68,8 @@ A ready-made `Makefile` is provided in
 | `EDS_ERR_HASH_MISMATCH` | `-7` | Payload hash does not match expected value |
 | `EDS_ERR_BAD_SIGNATURE` | `-8` | Ed25519 signature is invalid |
 
+After any call that returns a negative error code, call `eds_last_error_message()` to retrieve a human-readable description of the failure.
+
 ### Record struct
 
 ```c
@@ -127,6 +129,11 @@ int32_t eds_verify_update(const uint8_t *payload,
                           const uint8_t *payload_hash,
                           const uint8_t *signature,
                           const uint8_t *publisher_key);
+
+/* Return a thread-local human-readable description of the last error.
+   The pointer is valid until the next eds_* call on this thread.
+   Returns "" when no error has occurred.  Never returns NULL. */
+const char *eds_last_error_message(void);
 ```
 
 ---
@@ -140,17 +147,24 @@ int32_t eds_verify_update(const uint8_t *payload,
 
 int main(void) {
     uint8_t priv_key[32], pub_key[32];
-    assert(eds_keygen(priv_key, pub_key) == EDS_OK);
+    if (eds_keygen(priv_key, pub_key) != EDS_OK) {
+        fprintf(stderr, "keygen failed: %s\n", eds_last_error_message());
+        return 1;
+    }
 
     const char *payload = "check=door,status=ok";
     EdsAuditRecord rec;
     memset(&rec, 0, sizeof(rec));
 
-    assert(eds_sign_record("lift-01", 1, 1700000000000ULL,
-                           (const uint8_t *)payload, strlen(payload),
-                           NULL,              /* zero hash — first record */
-                           "lift-01/1.bin",
-                           priv_key, &rec) == EDS_OK);
+    int rc = eds_sign_record("lift-01", 1, 1700000000000ULL,
+                             (const uint8_t *)payload, strlen(payload),
+                             NULL,              /* zero hash — first record */
+                             "lift-01/1.bin",
+                             priv_key, &rec);
+    if (rc != EDS_OK) {
+        fprintf(stderr, "sign_record failed: %s\n", eds_last_error_message());
+        return 1;
+    }
 
     assert(eds_verify_record(&rec, pub_key) == 1);
     return 0;

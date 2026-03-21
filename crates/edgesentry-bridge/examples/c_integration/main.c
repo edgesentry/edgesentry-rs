@@ -7,6 +7,7 @@
  *   3. Signature verification (valid and tampered)
  *   4. Building and verifying a 3-record hash chain
  *   5. Tamper detection on a chain
+ *   6. eds_last_error_message() for human-readable diagnostics
  *
  * Build (after `cargo build -p edgesentry-bridge --release`):
  *
@@ -144,6 +145,9 @@ int main(void) {
     rc = eds_verify_chain(chain, 3);
     assert(rc == EDS_ERR_CHAIN_INVALID && "tampered chain must be invalid");
     printf("[5] Tampered chain    : INVALID (expected, rc=%d)\n", rc);
+
+    /* ── 6. eds_last_error_message() ───────────────────────────────────── */
+    printf("\n[6] Last error message: \"%s\"\n", eds_last_error_message());
 
     printf("\n=== All assertions passed. ===\n");
     return 0;
