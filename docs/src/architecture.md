@@ -49,3 +49,42 @@ The device-side design is intentionally lightweight so it can be adapted to Cort
 6. If any check fails, ingest is rejected; otherwise the record is accepted.
 
 In short, the edge signs facts, and the cloud enforces continuity and authenticity.
+
+## Ingest Service: Sync and Async Paths
+
+`edgesentry-rs` provides two orchestration service types for cloud-side ingest, selectable by feature flag:
+
+| Type | Feature flag | Thread model | Suitable for |
+|------|-------------|-------------|--------------|
+| `IngestService` | *(always available)* | Blocking / sync | Embedded, CLI tools, embedded runtimes |
+| `AsyncIngestService` | `async-ingest` | `async/await` (tokio) | HTTP servers, async pipelines |
+
+### Sync path (`IngestService`)
+
+The synchronous service is the default and requires no additional features.  S3 writes (when `s3` feature is active) are performed by `block_on`-ing inside an embedded `tokio::runtime::Runtime`.  This is appropriate for single-threaded tools and embedded environments.
+
+```rust
+let mut svc = IngestService::new(policy, raw_store, ledger, op_log);
+svc.register_device("lift-01", verifying_key);
+svc.ingest(record, payload, None)?;
+```
+
+### Async path (`AsyncIngestService`)
+
+Enable with `features = ["async-ingest"]`.  All storage calls use `.await` so the calling thread is never blocked, enabling high-concurrency pipelines.  The policy gate is wrapped in a `tokio::sync::Mutex` so the service can be shared across tasks via `Arc`.
+
+```rust
+let svc = Arc::new(AsyncIngestService::new(policy, raw_store, ledger, op_log));
+svc.register_device("lift-01", verifying_key).await;
+svc.ingest(record, payload, None).await?;
+```
+
+When `s3` and `async-ingest` are both active, `S3CompatibleRawDataStore` implements `AsyncRawDataStore` by calling the AWS SDK future directly — no embedded runtime needed.
+
+### Feature flag summary
+
+| Flag | What it adds |
+|------|-------------|
+| `async-ingest` | `AsyncRawDataStore`, `AsyncAuditLedger`, `AsyncOperationLogStore` traits; `AsyncIngestService`; in-memory async stores; `async-trait`, `tokio` (sync + macros) |
+| `s3` | `S3CompatibleRawDataStore` (sync); when combined with `async-ingest`, also implements `AsyncRawDataStore` |
+| `postgres` | `PostgresAuditLedger`, `PostgresOperationLog` (sync) |
