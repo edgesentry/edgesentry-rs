@@ -14,9 +14,13 @@ Singapore's CLS is directly derived from the European **ETSI EN 303 645** standa
 
 By implementing Singapore CLS compliance first, the majority of the technical work directly satisfies Japan's JC-STAR and Europe's CRA requirements. The Singapore gateway is not just a regional target — it is the fastest path to global compliance coverage.
 
-## GCLI: The Bridge to Japan and Beyond
+## GCLI and the Direct Japan-Singapore MoC
 
-Japan signed the **Global Cyber Labelling Initiative (GCLI)** in 2025, joining 10 other countries including Singapore, UK, Finland, Germany, and Korea. GCLI establishes mutual recognition between national IoT security labels — a product certified under Singapore CLS is recognised as compliant with Japan's JC-STAR without re-certification. This is the mechanism that makes the "Singapore first" strategy work as a Japan entry path.
+Japan signed the **Global Cyber Labelling Initiative (GCLI)** in 2025, joining 10 other countries including Singapore, UK, Finland, Germany, and Korea. GCLI establishes mutual recognition between national IoT security labels — a product certified under Singapore CLS is recognised as compliant with Japan's JC-STAR without re-certification. This is the structural mechanism that makes the "Singapore first" strategy work as a Japan entry path.
+
+In March 2026, Japan and Singapore reinforced this with a **direct bilateral Memorandum of Cooperation (MoC)** between METI/IPA (Japan) and CSA (Singapore), establishing direct mutual recognition of JC-STAR and CLS labels. The MoC takes **effect on 1 June 2026**. Under this arrangement a valid, current JC-STAR label is accepted as-is under CLS — no re-derivation of CLS compliance from JC-STAR data is required. Japan is the fifth country to achieve bilateral mutual recognition with Singapore CLS (after Finland, Germany, South Korea, and the UK).
+
+> **Open question:** The official level equivalence table mapping JC-STAR levels (STAR-1 through STAR-4) to CLS star levels (1–4) has not yet been published by CSA/METI. Monitor the CSA CLS page and METI/IPA JC-STAR page for this detail — it determines which JC-STAR level satisfies a given CLS target level.
 
 Additional bilateral MRAs exist between Singapore CLS and Finland, Germany, and Korea. For Japanese customers already holding German or Korean IoT certification, these MRAs provide a fast-track CLS path.
 
@@ -83,12 +87,18 @@ CLS Level 3 assessors expect recorded design artifacts, not just code. SS 711:20
 
 **Target:** CLS Level 4, JC-STAR STAR-1/2, Cyber Trust Mark / ISO 27001
 
-### Milestone 2.0: GCLI Mutual Recognition Framework 🔲 Planned
+### Milestone 2.0: Mutual Recognition Framework (GCLI + Japan-Singapore MoC) 🔲 Planned
 
-GCLI is the primary mechanism for Japan market entry without duplicate certification. Document the CLS → JC-STAR equivalence mapping under GCLI, and provide guidance for Japanese hardware vendors on leveraging existing MRAs (Finland, Germany, Korea bilateral agreements).
+Two complementary mechanisms enable Japan market entry without duplicate certification:
 
-- GCLI compliance pathway guide for Japan-based customers
-- CLS ↔ JC-STAR clause equivalence table
+1. **GCLI** — the multilateral framework (10+ countries) underpinning the overall Singapore-first strategy.
+2. **Direct Japan-Singapore MoC** (signed March 2026, effective **1 June 2026**) — bilateral mutual recognition between JC-STAR and CLS. A valid JC-STAR label is accepted as-is under CLS; no re-mapping of certification data is required.
+
+Deliverables for this milestone:
+
+- Compliance pathway guide covering both the GCLI route and the direct MoC route for Japan-based customers
+- JC-STAR label validation and attestation module (`edgesentry_rs::compliance::jcstar`) — see [#121](https://github.com/edgesentry/edgesentry-rs/issues/121)
+- CLS ↔ JC-STAR level equivalence table (pending publication by CSA/METI; monitor CSA and METI/IPA pages)
 - MRA fast-track guidance for customers holding Finnish, German, or Korean IoT certification
 - See [#94](https://github.com/edgesentry/edgesentry-rs/issues/94)
 
