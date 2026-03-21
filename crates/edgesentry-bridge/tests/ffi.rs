@@ -2,7 +2,9 @@ use std::ffi::CString;
 
 use edgesentry_bridge::{
     eds_keygen, eds_record_hash, eds_sign_record, eds_verify_chain, eds_verify_record,
-    EdsAuditRecord, EDS_ERR_NULL_PTR, EDS_ERR_STRING_TOO_LONG, EDS_ERR_CHAIN_INVALID, EDS_OK,
+    eds_verify_update,
+    EdsAuditRecord, EDS_ERR_NULL_PTR, EDS_ERR_STRING_TOO_LONG, EDS_ERR_CHAIN_INVALID,
+    EDS_ERR_HASH_MISMATCH, EDS_ERR_BAD_SIGNATURE, EDS_OK,
 };
 
 fn zeroed_record() -> EdsAuditRecord {
@@ -437,4 +439,131 @@ fn verify_chain_wrong_prev_hash_returns_chain_invalid() {
 
     let rc = unsafe { eds_verify_chain(records.as_ptr(), 2) };
     assert_eq!(rc, EDS_ERR_CHAIN_INVALID);
+}
+
+// ── eds_verify_update ─────────────────────────────────────────────────────────
+
+/// Build a valid (hash, signature, pub_key) tuple for testing.
+unsafe fn make_update_fixture(payload: &[u8]) -> ([u8; 32], [u8; 64], [u8; 32]) {
+    let (priv_key, pub_key) = make_keypair();
+    let mut rec = zeroed_record();
+    let dev = std::ffi::CString::new("fw-device").unwrap();
+    let obj = std::ffi::CString::new("fw/v1.bin").unwrap();
+    eds_sign_record(
+        dev.as_ptr(), 1, 0,
+        payload.as_ptr(), payload.len(),
+        std::ptr::null(),
+        obj.as_ptr(),
+        priv_key.as_ptr(),
+        &mut rec,
+    );
+    (rec.payload_hash, rec.signature, pub_key)
+}
+
+#[test]
+fn verify_update_valid_returns_ok() {
+    let payload = b"firmware-v2.0.0-image";
+    let (hash, sig, pub_key) = unsafe { make_update_fixture(payload) };
+    let rc = unsafe {
+        eds_verify_update(
+            payload.as_ptr(), payload.len(),
+            hash.as_ptr(), sig.as_ptr(), pub_key.as_ptr(),
+        )
+    };
+    assert_eq!(rc, EDS_OK);
+}
+
+#[test]
+fn verify_update_null_payload_returns_error() {
+    let hash = [0u8; 32];
+    let sig = [0u8; 64];
+    let key = [0u8; 32];
+    let rc = unsafe {
+        eds_verify_update(std::ptr::null(), 0, hash.as_ptr(), sig.as_ptr(), key.as_ptr())
+    };
+    assert_eq!(rc, EDS_ERR_NULL_PTR);
+}
+
+#[test]
+fn verify_update_null_hash_returns_error() {
+    let payload = b"fw";
+    let sig = [0u8; 64];
+    let key = [0u8; 32];
+    let rc = unsafe {
+        eds_verify_update(
+            payload.as_ptr(), payload.len(),
+            std::ptr::null(), sig.as_ptr(), key.as_ptr(),
+        )
+    };
+    assert_eq!(rc, EDS_ERR_NULL_PTR);
+}
+
+#[test]
+fn verify_update_null_signature_returns_error() {
+    let payload = b"fw";
+    let hash = [0u8; 32];
+    let key = [0u8; 32];
+    let rc = unsafe {
+        eds_verify_update(
+            payload.as_ptr(), payload.len(),
+            hash.as_ptr(), std::ptr::null(), key.as_ptr(),
+        )
+    };
+    assert_eq!(rc, EDS_ERR_NULL_PTR);
+}
+
+#[test]
+fn verify_update_null_publisher_key_returns_error() {
+    let payload = b"fw";
+    let hash = [0u8; 32];
+    let sig = [0u8; 64];
+    let rc = unsafe {
+        eds_verify_update(
+            payload.as_ptr(), payload.len(),
+            hash.as_ptr(), sig.as_ptr(), std::ptr::null(),
+        )
+    };
+    assert_eq!(rc, EDS_ERR_NULL_PTR);
+}
+
+#[test]
+fn verify_update_tampered_payload_returns_hash_mismatch() {
+    let payload = b"firmware-v2.0.0-image";
+    let (hash, sig, pub_key) = unsafe { make_update_fixture(payload) };
+    let tampered = b"firmware-v2.0.0-image-TAMPERED";
+    let rc = unsafe {
+        eds_verify_update(
+            tampered.as_ptr(), tampered.len(),
+            hash.as_ptr(), sig.as_ptr(), pub_key.as_ptr(),
+        )
+    };
+    assert_eq!(rc, EDS_ERR_HASH_MISMATCH);
+}
+
+#[test]
+fn verify_update_tampered_signature_returns_bad_signature() {
+    let payload = b"firmware-v2.0.0-image";
+    let (hash, mut sig, pub_key) = unsafe { make_update_fixture(payload) };
+    sig[0] ^= 0x01;
+    let rc = unsafe {
+        eds_verify_update(
+            payload.as_ptr(), payload.len(),
+            hash.as_ptr(), sig.as_ptr(), pub_key.as_ptr(),
+        )
+    };
+    assert_eq!(rc, EDS_ERR_BAD_SIGNATURE);
+}
+
+#[test]
+fn verify_update_wrong_publisher_key_returns_bad_signature() {
+    let payload = b"firmware-v2.0.0-image";
+    let (hash, sig, _) = unsafe { make_update_fixture(payload) };
+    let (_, wrong_pub_key) = unsafe { make_keypair() };
+    let rc = unsafe {
+        eds_verify_update(
+            payload.as_ptr(), payload.len(),
+            hash.as_ptr(), sig.as_ptr(), wrong_pub_key.as_ptr(),
+        )
+    };
+    assert_eq!(rc, EDS_ERR_BAD_SIGNATURE);
 }
