@@ -128,8 +128,10 @@ Singapore's national IoT standard SS 711:2025 defines four principles. See the [
 |------|--------|
 | JC-STAR | STAR-2 R3.2 |
 | Requirement | The device should remain operational and recover gracefully |
-| Status | ➖ Out of scope (partial path planned) |
-| Note | Full HA is a deployer responsibility, but the library can provide an offline buffer / store-and-forward module that accumulates signed records during connectivity loss and replays them in chain order when the link recovers. Tracked in [#74](https://github.com/edgesentry/edgesentry-rs/issues/74) |
+| Status | ⚠️ Partial |
+| Implementation | `OfflineBuffer<S>` accumulates signed records during connectivity loss and replays them in insertion order via `flush` when the link recovers. Duplicate records from replay are treated as already-accepted and do not cause failures ([`src/buffer/mod.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/buffer/mod.rs)) |
+| Implementation | Pluggable `BufferStore` trait — volatile `InMemoryBufferStore` (default) and durable `SqliteBufferStore` behind the `buffer-sqlite` feature flag |
+| Gap | Full HA (active–active failover, network-level redundancy) remains the deployer's responsibility |
 
 ---
 
@@ -185,7 +187,7 @@ Singapore's national IoT standard SS 711:2025 defines four principles. See the [
 
 | Level | Total clauses | ✅ Implemented | ⚠️ Partial | 🔲 Planned | ➖ Out of scope |
 |-------|-------------|--------------|-----------|-----------|----------------|
-| CLS Level 3 | 11 | 4 | 3 | 0 | 4 |
+| CLS Level 3 | 11 | 4 | 4 | 0 | 3 |
 | CLS Level 4 | 1 | 0 | 0 | 1 | 0 |
 | JC-STAR additions | 1 | 1 | 0 | 0 | 0 |
 

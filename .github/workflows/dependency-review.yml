@@ -29,5 +29,14 @@ jobs:
             pkg:cargo/postgres,
             pkg:cargo/unicode-properties,
             pkg:cargo/cbindgen,
-            pkg:cargo/axum
+            pkg:cargo/axum,
+            pkg:cargo/rusqlite,
+            pkg:cargo/ahash,
+            pkg:cargo/fallible-iterator,
+            pkg:cargo/fallible-streaming-iterator,
+            pkg:cargo/hashbrown,
+            pkg:cargo/hashlink,
+            pkg:cargo/libsqlite3-sys,
+            pkg:cargo/pkg-config,
+            pkg:cargo/vcpkg
           comment-summary-in-pr: always

@@ -1,4 +1,5 @@
 mod agent;
+pub mod buffer;
 pub mod identity;
 pub mod integrity;
 pub mod ingest;
@@ -8,6 +9,9 @@ pub mod update;
 pub mod transport;
 
 pub use agent::build_signed_record;
+pub use buffer::{BufferStore, BufferedEntry, FlushError, FlushReport, InMemoryBufferStore, OfflineBuffer};
+#[cfg(feature = "buffer-sqlite")]
+pub use buffer::sqlite::SqliteBufferStore;
 pub use identity::{sign_payload_hash, verify_payload_signature};
 pub use integrity::{compute_payload_hash, verify_chain, ChainError};
 pub use ingest::{
