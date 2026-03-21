@@ -30,6 +30,10 @@ tmp/
 *.tmp
 *.log
 
+# Generated SBOM files (published via GitHub Releases, not stored in repo)
+*.cdx.json
+sbom/
+
 # Local output artifacts (examples / manual runs)
 record*.json
 lift_*_record*.json
