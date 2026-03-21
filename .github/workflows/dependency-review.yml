@@ -30,4 +30,8 @@ jobs:
             pkg:cargo/unicode-properties,
             pkg:cargo/cbindgen,
             pkg:cargo/axum
+          # Warn only if OpenSSF Scorecard score drops below 2.
+          # mime 0.3.17 scores 2.1 (inactive project, not a security issue) and is a
+          # transitive dependency of axum/reqwest that cannot be updated independently.
+          warn-on-openssf-scorecard-level: 2
           comment-summary-in-pr: always
