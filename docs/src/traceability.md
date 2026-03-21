@@ -42,8 +42,9 @@ Singapore's national IoT standard SS 711:2025 defines four principles. See the [
 |------|--------|
 | JC-STAR | STAR-1 R4.1 |
 | Requirement | A published, actionable vulnerability reporting channel with defined SLAs |
-| Status | ⚠️ Partial |
-| Gap | Formal disclosure process not yet defined. See [#58](https://github.com/edgesentry/edgesentry-rs/issues/58) |
+| Status | ✅ Implemented |
+| Implementation | [`SECURITY.md`](https://github.com/edgesentry/edgesentry-rs/blob/main/SECURITY.md) — published disclosure policy with supported versions, private reporting via GitHub advisory, acknowledgement SLA (3 business days), patch SLA (30 days critical/high; 90 days medium/low), and defined in/out-of-scope |
+| Implementation | GitHub private vulnerability reporting enabled — reporters use the [Security Advisories](https://github.com/edgesentry/edgesentry-rs/security/advisories/new) form |
 
 ---
 
@@ -184,7 +185,7 @@ Singapore's national IoT standard SS 711:2025 defines four principles. See the [
 
 | Level | Total clauses | ✅ Implemented | ⚠️ Partial | 🔲 Planned | ➖ Out of scope |
 |-------|-------------|--------------|-----------|-----------|----------------|
-| CLS Level 3 | 11 | 3 | 4 | 0 | 4 |
+| CLS Level 3 | 11 | 4 | 3 | 0 | 4 |
 | CLS Level 4 | 1 | 0 | 0 | 1 | 0 |
 | JC-STAR additions | 1 | 1 | 0 | 0 | 0 |
 

@@ -21,6 +21,10 @@ An early-stage learning project building tamper-evident audit log infrastructure
 | [Contributing](docs/src/contributing.md) | Prerequisites, tests, static analysis, PR conventions |
 | [Build and Release](docs/src/release.md) | Release pipeline and version automation |
 
+## Security
+
+To report a vulnerability privately, use [GitHub's private vulnerability reporting](https://github.com/edgesentry/edgesentry-rs/security/advisories/new). See [SECURITY.md](SECURITY.md) for the full disclosure policy, supported versions, response SLAs, and scope.
+
 ## License
 
 This project is licensed under either of:

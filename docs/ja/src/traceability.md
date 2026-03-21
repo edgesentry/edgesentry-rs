@@ -42,8 +42,9 @@
 |------|--------|
 | JC-STAR | STAR-1 R4.1 |
 | 要件 | SLA が定められた、公開・実行可能な脆弱性報告チャネル |
-| ステータス | ⚠️ 部分的 |
-| ギャップ | 正式な開示プロセスが未定義。[#58](https://github.com/edgesentry/edgesentry-rs/issues/58)を参照 |
+| ステータス | ✅ 実装済み |
+| 実装 | [`SECURITY.md`](https://github.com/edgesentry/edgesentry-rs/blob/main/SECURITY.md) — 対応バージョン・プライベート報告窓口（GitHub Security Advisory）・承認 SLA（3営業日）・パッチ SLA（重大/高: 30日、中/低: 90日）・スコープ定義を含む公開開示ポリシー |
+| 実装 | GitHub プライベート脆弱性報告機能を有効化済み — 報告者は [Security Advisories](https://github.com/edgesentry/edgesentry-rs/security/advisories/new) フォームを使用 |
 
 ---
 
@@ -184,7 +185,7 @@
 
 | レベル | 総条項数 | ✅ 実装済み | ⚠️ 部分的 | 🔲 計画中 | ➖ スコープ外 |
 |-------|-------------|--------------|-----------|-----------|----------------|
-| CLS レベル 3 | 11 | 3 | 4 | 0 | 4 |
+| CLS レベル 3 | 11 | 4 | 3 | 0 | 4 |
 | CLS レベル 4 | 1 | 0 | 0 | 1 | 0 |
 | JC-STAR 追加 | 1 | 1 | 0 | 0 | 0 |
 
