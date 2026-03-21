@@ -30,6 +30,9 @@ tmp/
 *.tmp
 *.log
 
+# Generated SBOM files (published as release artifacts, not committed to source)
+*.cdx.json
+
 # Local output artifacts (examples / manual runs)
 record*.json
 lift_*_record*.json
