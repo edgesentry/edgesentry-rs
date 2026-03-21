@@ -5,7 +5,7 @@
 use ed25519_dalek::SigningKey;
 use edgesentry_rs::{
     build_lift_inspection_demo_records_with_payloads, parse_fixed_hex, AuditRecord,
-    BufferedEntry, FlushReport, InMemoryAuditLedger, InMemoryBufferStore, InMemoryOperationLog,
+    FlushReport, InMemoryAuditLedger, InMemoryBufferStore, InMemoryOperationLog,
     InMemoryRawDataStore, IngestService, IntegrityPolicyGate, OfflineBuffer,
 };
 
