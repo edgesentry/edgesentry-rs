@@ -4,7 +4,10 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Tamper-evident immutable audit trace: signing, verification, ingestion and CLI"
+description   = "Tamper-evident immutable audit trace: signing, verification, ingestion and CLI"
+keywords      = ["audit", "cryptography", "ed25519", "blake3", "iot-security"]
+categories    = ["cryptography", "embedded", "network-programming", "authentication"]
+documentation = "https://edgesentry.github.io/edgesentry-rs/"
 
 [[bin]]
 name = "eds"
