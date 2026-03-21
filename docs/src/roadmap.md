@@ -72,14 +72,15 @@ IMDA's IoT Cyber Security Guide requires a vendor disclosure checklist as CLS Le
 - Responses mapped to implementation in the traceability matrix
 - See [SBOM and Vendor Disclosure](sbom.md) and [#92](https://github.com/edgesentry/edgesentry-rs/issues/92)
 
-### Milestone 1.5: STRIDE Threat Model + Binary Analysis Evidence 🔲 Planned
+### Milestone 1.5: STRIDE Threat Model + Binary Analysis Evidence ✅ Implemented
 
 CLS Level 3 assessors expect recorded design artifacts, not just code. SS 711:2025 requires STRIDE-based threat modelling of all attack surfaces (API, communication, storage).
 
-- STRIDE threat model covering: Spoofing (device identity), Tampering (audit records), Repudiation (operation logs), Information Disclosure (payload storage), Denial of Service (network policy), Elevation of Privilege (ingest gate)
-- Binary analysis report confirming no known CVEs in shipped crates (`cargo-audit`, `cargo-deny`)
-- Link threat model mitigations to traceability matrix entries
-- See [#93](https://github.com/edgesentry/edgesentry-rs/issues/93)
+- STRIDE threat model covering: Spoofing (device identity), Tampering (audit records), Repudiation (operation logs), Information Disclosure (payload storage), Denial of Service (network policy), Elevation of Privilege (ingest gate) — see [`docs/src/threat_model.md`](threat_model.md)
+- Binary analysis evidence confirming no known CVEs in shipped crates (`cargo-audit`, `cargo-deny`)
+- Threat model mitigations linked to traceability matrix entries — see [`docs/src/traceability.md`](traceability.md) (Rigour in Defence updated ✅)
+- Japanese translation available at `docs/ja/src/threat_model.md`
+- Closed: [#93](https://github.com/edgesentry/edgesentry-rs/issues/93) via PR [#143](https://github.com/edgesentry/edgesentry-rs/pull/143)
 
 ---
 
