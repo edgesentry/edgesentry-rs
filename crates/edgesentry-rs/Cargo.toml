@@ -22,6 +22,11 @@ default = []
 async-ingest = [
     "dep:tokio",
 ]
+transport-http = [
+    "async-ingest",
+    "dep:axum",
+]
+transport-mqtt = []
 s3 = [
     "dep:aws-config",
     "dep:aws-sdk-s3",
@@ -41,10 +46,13 @@ serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+axum = { version = "0.8", optional = true }
 aws-config = { version = "1", optional = true }
 aws-sdk-s3 = { version = "1", optional = true }
 aws-credential-types = { version = "1", optional = true }
-tokio = { version = "1", features = ["rt-multi-thread", "sync", "macros"], optional = true }
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "macros", "net"], optional = true }
 postgres = { version = "0.19", optional = true }
 
 [dev-dependencies]
+reqwest = { version = "0.12", features = ["json"], default-features = false }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "net"] }

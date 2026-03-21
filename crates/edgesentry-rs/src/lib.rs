@@ -4,6 +4,8 @@ pub mod integrity;
 pub mod ingest;
 mod record;
 pub mod update;
+#[cfg(any(feature = "transport-http", feature = "transport-mqtt"))]
+pub mod transport;
 
 pub use agent::build_signed_record;
 pub use identity::{sign_payload_hash, verify_payload_signature};

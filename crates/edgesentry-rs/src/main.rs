@@ -77,6 +77,19 @@ enum Commands {
         #[arg(long)]
         out: Option<PathBuf>,
     },
+    #[cfg(feature = "transport-http")]
+    /// Start the HTTP ingest server (requires transport-http feature)
+    Serve {
+        /// Socket address to bind, e.g. 0.0.0.0:8080
+        #[arg(long, default_value = "0.0.0.0:8080")]
+        addr: std::net::SocketAddr,
+        /// Comma-separated list of allowed source CIDRs or IPs (e.g. 10.0.0.0/8,127.0.0.1)
+        #[arg(long, default_value = "127.0.0.1")]
+        allowed_sources: String,
+        /// Ed25519 public key hex for the device to accept (may be specified multiple times)
+        #[arg(long = "device", value_name = "ID=PUBKEY_HEX")]
+        devices: Vec<String>,
+    },
     #[cfg(all(feature = "s3", feature = "postgres"))]
     /// Ingest records through IngestService into PostgreSQL + MinIO (requires s3,postgres features)
     DemoIngest {
@@ -201,6 +214,48 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
             println!("DEMO_CREATED:{}", out_file.display());
             println!("CHAIN_VALID");
+        }
+        #[cfg(feature = "transport-http")]
+        Commands::Serve { addr, allowed_sources, devices } => {
+            use ed25519_dalek::VerifyingKey;
+            use edgesentry_rs::{
+                AsyncInMemoryAuditLedger, AsyncInMemoryOperationLog, AsyncInMemoryRawDataStore,
+                AsyncIngestService, IntegrityPolicyGate, NetworkPolicy,
+            };
+
+            let mut network_policy = NetworkPolicy::new();
+            for source in allowed_sources.split(',') {
+                let source = source.trim();
+                if source.contains('/') {
+                    network_policy.allow_cidr(source)
+                        .map_err(|e| format!("invalid CIDR '{source}': {e}"))?;
+                } else {
+                    let ip: std::net::IpAddr = source.parse()
+                        .map_err(|e| format!("invalid IP '{source}': {e}"))?;
+                    network_policy.allow_ip(ip);
+                }
+            }
+
+            let mut policy = IntegrityPolicyGate::new();
+            for device_spec in &devices {
+                let (device_id, pubkey_hex) = device_spec.split_once('=')
+                    .ok_or_else(|| format!("--device must be ID=PUBKEY_HEX, got: {device_spec}"))?;
+                let key_bytes = parse_fixed_hex::<32>(pubkey_hex)?;
+                let verifying_key = VerifyingKey::from_bytes(&key_bytes)
+                    .map_err(|e| format!("invalid public key for {device_id}: {e}"))?;
+                policy.register_device(device_id, verifying_key);
+            }
+
+            let service = AsyncIngestService::new(
+                policy,
+                AsyncInMemoryRawDataStore::default(),
+                AsyncInMemoryAuditLedger::default(),
+                AsyncInMemoryOperationLog::default(),
+            );
+
+            tokio::runtime::Runtime::new()?
+                .block_on(edgesentry_rs::transport::http::serve(service, network_policy, addr))
+                .map_err(|e| format!("server error: {e}"))?;
         }
         #[cfg(all(feature = "s3", feature = "postgres"))]
         Commands::DemoIngest {
