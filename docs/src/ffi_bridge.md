@@ -65,6 +65,8 @@ A ready-made `Makefile` is provided in
 | `EDS_ERR_STRING_TOO_LONG` | `-4` | String exceeds fixed buffer size |
 | `EDS_ERR_CHAIN_INVALID` | `-5` | Hash-chain verification failed |
 | `EDS_ERR_PANIC` | `-6` | Unexpected internal error |
+| `EDS_ERR_HASH_MISMATCH` | `-7` | Payload hash does not match expected value |
+| `EDS_ERR_BAD_SIGNATURE` | `-8` | Ed25519 signature is invalid |
 
 ### Record struct
 
@@ -112,6 +114,19 @@ int32_t eds_verify_record(const EdsAuditRecord *record,
 
 /* Verify the entire hash chain. Returns EDS_OK or EDS_ERR_CHAIN_INVALID. */
 int32_t eds_verify_chain(const EdsAuditRecord *records, size_t count);
+
+/* Verify a software update before installation (CLS-03 / STAR-2 R2.2).
+   Checks BLAKE3(payload) == payload_hash, then verifies the Ed25519
+   publisher signature over payload_hash.
+   payload_hash must point to 32 bytes; signature to 64 bytes;
+   publisher_key to 32 bytes.
+   Returns EDS_OK, EDS_ERR_HASH_MISMATCH, EDS_ERR_BAD_SIGNATURE, or
+   EDS_ERR_INVALID_KEY / EDS_ERR_NULL_PTR on bad inputs. */
+int32_t eds_verify_update(const uint8_t *payload,
+                          size_t         payload_len,
+                          const uint8_t *payload_hash,
+                          const uint8_t *signature,
+                          const uint8_t *publisher_key);
 ```
 
 ---

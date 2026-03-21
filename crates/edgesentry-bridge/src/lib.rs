@@ -44,6 +44,10 @@ pub const EDS_ERR_STRING_TOO_LONG: i32 = -4;
 pub const EDS_ERR_CHAIN_INVALID: i32 = -5;
 /// An unexpected Rust panic was caught at the FFI boundary.
 pub const EDS_ERR_PANIC: i32 = -6;
+/// The BLAKE3 hash of the supplied payload does not match the expected hash.
+pub const EDS_ERR_HASH_MISMATCH: i32 = -7;
+/// The Ed25519 publisher signature is invalid.
+pub const EDS_ERR_BAD_SIGNATURE: i32 = -8;
 
 // ── C-compatible record struct ────────────────────────────────────────────────
 
@@ -296,6 +300,84 @@ pub unsafe extern "C" fn eds_verify_record(
         } else {
             0
         }
+    })
+    .unwrap_or(EDS_ERR_PANIC)
+}
+
+/// Verify a software update package before installation (CLS-03 / STAR-2 R2.2).
+///
+/// Performs two checks in order:
+/// 1. `BLAKE3(payload) == payload_hash` — payload integrity.
+/// 2. Ed25519 signature over `payload_hash` is valid for `publisher_key` — authenticity.
+///
+/// This is a stateless one-shot function. The caller is responsible for
+/// supplying the trusted `publisher_key` (e.g. baked into the firmware image
+/// at manufacture time or provisioned via a secure bootstrap channel).
+///
+/// # Safety
+///
+/// - `payload` must be non-null and valid for `payload_len` bytes.
+/// - `payload_hash` must be non-null and point to exactly 32 bytes.
+/// - `signature` must be non-null and point to exactly 64 bytes.
+/// - `publisher_key` must be non-null and point to exactly 32 bytes.
+///
+/// # Parameters
+/// - `payload`:       raw firmware / update bytes.
+/// - `payload_len`:   length of `payload` in bytes.
+/// - `payload_hash`:  expected BLAKE3 hash (32 bytes).
+/// - `signature`:     Ed25519 signature over `payload_hash` (64 bytes).
+/// - `publisher_key`: trusted Ed25519 public key (32 bytes).
+///
+/// # Returns
+/// - `EDS_OK` (0) — both checks passed; update may be applied.
+/// - `EDS_ERR_NULL_PTR` — a required pointer was NULL.
+/// - `EDS_ERR_INVALID_KEY` — `publisher_key` is not a valid Ed25519 key.
+/// - `EDS_ERR_HASH_MISMATCH` — `BLAKE3(payload) != payload_hash`.
+/// - `EDS_ERR_BAD_SIGNATURE` — signature verification failed.
+/// - `EDS_ERR_PANIC` — unexpected internal error.
+#[no_mangle]
+pub unsafe extern "C" fn eds_verify_update(
+    payload: *const u8,
+    payload_len: usize,
+    payload_hash: *const u8,
+    signature: *const u8,
+    publisher_key: *const u8,
+) -> i32 {
+    std::panic::catch_unwind(|| {
+        if payload.is_null() || payload_hash.is_null() || signature.is_null() || publisher_key.is_null() {
+            return EDS_ERR_NULL_PTR;
+        }
+
+        let payload_slice = std::slice::from_raw_parts(payload, payload_len);
+
+        let expected_hash: [u8; 32] = match std::slice::from_raw_parts(payload_hash, 32).try_into() {
+            Ok(b) => b,
+            Err(_) => return EDS_ERR_NULL_PTR,
+        };
+        let sig_bytes: [u8; 64] = match std::slice::from_raw_parts(signature, 64).try_into() {
+            Ok(b) => b,
+            Err(_) => return EDS_ERR_NULL_PTR,
+        };
+        let key_bytes: [u8; 32] = match std::slice::from_raw_parts(publisher_key, 32).try_into() {
+            Ok(b) => b,
+            Err(_) => return EDS_ERR_NULL_PTR,
+        };
+
+        let verifying_key = match VerifyingKey::from_bytes(&key_bytes) {
+            Ok(k) => k,
+            Err(_) => return EDS_ERR_INVALID_KEY,
+        };
+
+        let actual_hash = compute_payload_hash(payload_slice);
+        if actual_hash != expected_hash {
+            return EDS_ERR_HASH_MISMATCH;
+        }
+
+        if !verify_payload_signature(&verifying_key, &actual_hash, &sig_bytes) {
+            return EDS_ERR_BAD_SIGNATURE;
+        }
+
+        EDS_OK
     })
     .unwrap_or(EDS_ERR_PANIC)
 }
