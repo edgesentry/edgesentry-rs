@@ -18,6 +18,11 @@ pub use ingest::{
 pub use ingest::{S3Backend, S3CompatibleRawDataStore, S3ObjectStoreConfig, S3StoreError};
 #[cfg(feature = "postgres")]
 pub use ingest::{PostgresAuditLedger, PostgresOperationLog, PostgresStoreError};
+#[cfg(feature = "async-ingest")]
+pub use ingest::{
+    AsyncAuditLedger, AsyncInMemoryAuditLedger, AsyncInMemoryOperationLog,
+    AsyncInMemoryRawDataStore, AsyncIngestService, AsyncOperationLogStore, AsyncRawDataStore,
+};
 pub use record::{AuditRecord, Hash32, Signature64};
 
 use std::{fs, path::Path};

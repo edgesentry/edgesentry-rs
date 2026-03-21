@@ -19,6 +19,10 @@ path = "src/lib.rs"
 
 [features]
 default = []
+async-ingest = [
+    "dep:async-trait",
+    "dep:tokio",
+]
 s3 = [
     "dep:aws-config",
     "dep:aws-sdk-s3",
@@ -38,10 +42,11 @@ serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+async-trait = { version = "0.1", optional = true }
 aws-config = { version = "1", optional = true }
 aws-sdk-s3 = { version = "1", optional = true }
 aws-credential-types = { version = "1", optional = true }
-tokio = { version = "1", features = ["rt-multi-thread"], optional = true }
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "macros"], optional = true }
 postgres = { version = "0.19", optional = true }
 
 [dev-dependencies]

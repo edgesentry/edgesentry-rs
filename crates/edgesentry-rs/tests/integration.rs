@@ -4,3 +4,5 @@ mod s3_integration;
 mod update_integration;
 #[path = "integration/postgres_integration.rs"]
 mod postgres_integration;
+#[path = "integration/async_ingest_integration.rs"]
+mod async_ingest_integration;

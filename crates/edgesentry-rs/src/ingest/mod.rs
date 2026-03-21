@@ -13,4 +13,9 @@ pub use storage::{
 pub use storage::{S3Backend, S3CompatibleRawDataStore, S3ObjectStoreConfig, S3StoreError};
 #[cfg(feature = "postgres")]
 pub use storage::{PostgresAuditLedger, PostgresOperationLog, PostgresStoreError};
+#[cfg(feature = "async-ingest")]
+pub use storage::{
+    AsyncAuditLedger, AsyncInMemoryAuditLedger, AsyncInMemoryOperationLog,
+    AsyncInMemoryRawDataStore, AsyncIngestService, AsyncOperationLogStore, AsyncRawDataStore,
+};
 pub use verify::{IngestError, IngestState};

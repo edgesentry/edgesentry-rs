@@ -472,3 +472,290 @@ impl RawDataStore for S3CompatibleRawDataStore {
         Ok(())
     }
 }
+
+// ── Async ingest traits and implementations ───────────────────────────────────
+
+#[cfg(feature = "async-ingest")]
+use std::sync::Arc;
+#[cfg(feature = "async-ingest")]
+use tokio::sync::Mutex as AsyncMutex;
+
+/// Async variant of [`RawDataStore`] for use in async ingest pipelines.
+///
+/// Implementations must be `Send + Sync` so they can be shared across tasks.
+#[cfg(feature = "async-ingest")]
+#[async_trait::async_trait]
+pub trait AsyncRawDataStore: Send + Sync {
+    type Error: std::error::Error + Send;
+
+    async fn put(&self, object_ref: &str, payload: &[u8]) -> Result<(), Self::Error>;
+}
+
+/// Async variant of [`AuditLedger`] for use in async ingest pipelines.
+#[cfg(feature = "async-ingest")]
+#[async_trait::async_trait]
+pub trait AsyncAuditLedger: Send + Sync {
+    type Error: std::error::Error + Send;
+
+    async fn append(&self, record: AuditRecord) -> Result<(), Self::Error>;
+}
+
+/// Async variant of [`OperationLogStore`] for use in async ingest pipelines.
+#[cfg(feature = "async-ingest")]
+#[async_trait::async_trait]
+pub trait AsyncOperationLogStore: Send + Sync {
+    type Error: std::error::Error + Send;
+
+    async fn write(&self, entry: OperationLogEntry) -> Result<(), Self::Error>;
+}
+
+// ── In-memory async implementations (for testing) ────────────────────────────
+
+/// Async in-memory raw data store backed by a `tokio::sync::Mutex`.
+#[cfg(feature = "async-ingest")]
+#[derive(Default, Clone)]
+pub struct AsyncInMemoryRawDataStore {
+    objects: Arc<AsyncMutex<HashMap<String, Vec<u8>>>>,
+}
+
+#[cfg(feature = "async-ingest")]
+impl AsyncInMemoryRawDataStore {
+    pub async fn get(&self, object_ref: &str) -> Option<Vec<u8>> {
+        self.objects.lock().await.get(object_ref).cloned()
+    }
+}
+
+#[cfg(feature = "async-ingest")]
+#[async_trait::async_trait]
+impl AsyncRawDataStore for AsyncInMemoryRawDataStore {
+    type Error = InMemoryStoreError;
+
+    async fn put(&self, object_ref: &str, payload: &[u8]) -> Result<(), Self::Error> {
+        self.objects
+            .lock()
+            .await
+            .insert(object_ref.to_string(), payload.to_vec());
+        Ok(())
+    }
+}
+
+/// Async in-memory audit ledger backed by a `tokio::sync::Mutex`.
+#[cfg(feature = "async-ingest")]
+#[derive(Default, Clone)]
+pub struct AsyncInMemoryAuditLedger {
+    records: Arc<AsyncMutex<Vec<AuditRecord>>>,
+}
+
+#[cfg(feature = "async-ingest")]
+impl AsyncInMemoryAuditLedger {
+    pub async fn records(&self) -> Vec<AuditRecord> {
+        self.records.lock().await.clone()
+    }
+}
+
+#[cfg(feature = "async-ingest")]
+#[async_trait::async_trait]
+impl AsyncAuditLedger for AsyncInMemoryAuditLedger {
+    type Error = InMemoryStoreError;
+
+    async fn append(&self, record: AuditRecord) -> Result<(), Self::Error> {
+        self.records.lock().await.push(record);
+        Ok(())
+    }
+}
+
+/// Async in-memory operation log backed by a `tokio::sync::Mutex`.
+#[cfg(feature = "async-ingest")]
+#[derive(Default, Clone)]
+pub struct AsyncInMemoryOperationLog {
+    entries: Arc<AsyncMutex<Vec<OperationLogEntry>>>,
+}
+
+#[cfg(feature = "async-ingest")]
+impl AsyncInMemoryOperationLog {
+    pub async fn entries(&self) -> Vec<OperationLogEntry> {
+        self.entries.lock().await.clone()
+    }
+}
+
+#[cfg(feature = "async-ingest")]
+#[async_trait::async_trait]
+impl AsyncOperationLogStore for AsyncInMemoryOperationLog {
+    type Error = InMemoryStoreError;
+
+    async fn write(&self, entry: OperationLogEntry) -> Result<(), Self::Error> {
+        self.entries.lock().await.push(entry);
+        Ok(())
+    }
+}
+
+// ── S3 async implementation ───────────────────────────────────────────────────
+
+/// `S3CompatibleRawDataStore` also implements `AsyncRawDataStore` when both
+/// `s3` and `async-ingest` features are active.  The async path calls `.await`
+/// directly on the SDK future, bypassing the embedded synchronous runtime.
+#[cfg(all(feature = "s3", feature = "async-ingest"))]
+#[async_trait::async_trait]
+impl AsyncRawDataStore for S3CompatibleRawDataStore {
+    type Error = S3StoreError;
+
+    async fn put(&self, object_ref: &str, payload: &[u8]) -> Result<(), Self::Error> {
+        let key = self.object_key(object_ref);
+        let stream = aws_sdk_s3::primitives::ByteStream::from(payload.to_vec());
+        self.client
+            .put_object()
+            .bucket(&self.bucket)
+            .key(key)
+            .body(stream)
+            .send()
+            .await
+            .map_err(|e| S3StoreError::Put(e.to_string()))?;
+        Ok(())
+    }
+}
+
+// ── AsyncIngestService ────────────────────────────────────────────────────────
+
+/// Async orchestration service for tamper-evident record ingestion.
+///
+/// Drop-in async counterpart to [`IngestService`].  All storage calls are
+/// `await`-ed so the calling thread is never blocked.  The policy gate is
+/// wrapped in a `tokio::sync::Mutex` to allow `&self` on `ingest`, enabling
+/// the service to be shared across tasks via `Arc`.
+#[cfg(feature = "async-ingest")]
+pub struct AsyncIngestService<R, L, O>
+where
+    R: AsyncRawDataStore,
+    L: AsyncAuditLedger,
+    O: AsyncOperationLogStore,
+{
+    policy: AsyncMutex<super::policy::IntegrityPolicyGate>,
+    raw_data_store: R,
+    audit_ledger: L,
+    operation_log: O,
+}
+
+#[cfg(feature = "async-ingest")]
+impl<R, L, O> AsyncIngestService<R, L, O>
+where
+    R: AsyncRawDataStore,
+    L: AsyncAuditLedger,
+    O: AsyncOperationLogStore,
+{
+    pub fn new(
+        policy: super::policy::IntegrityPolicyGate,
+        raw_data_store: R,
+        audit_ledger: L,
+        operation_log: O,
+    ) -> Self {
+        Self {
+            policy: AsyncMutex::new(policy),
+            raw_data_store,
+            audit_ledger,
+            operation_log,
+        }
+    }
+
+    pub async fn register_device(
+        &self,
+        device_id: impl Into<String>,
+        key: ed25519_dalek::VerifyingKey,
+    ) {
+        self.policy.lock().await.register_device(device_id, key);
+    }
+
+    #[tracing::instrument(skip(self, raw_payload), fields(
+        device_id = %record.device_id,
+        sequence  = record.sequence,
+        object_ref = %record.object_ref,
+    ))]
+    pub async fn ingest(
+        &self,
+        record: AuditRecord,
+        raw_payload: &[u8],
+        cert_identity: Option<&str>,
+    ) -> Result<(), IngestServiceError> {
+        debug!(payload_bytes = raw_payload.len(), "async ingest started");
+
+        let payload_hash = compute_payload_hash(raw_payload);
+        if payload_hash != record.payload_hash {
+            warn!("payload hash mismatch — record rejected");
+            let _ = self
+                .operation_log
+                .write(OperationLogEntry {
+                    decision: IngestDecision::Rejected,
+                    device_id: record.device_id.clone(),
+                    sequence: record.sequence,
+                    message: "payload hash mismatch".to_string(),
+                })
+                .await;
+            return Err(IngestServiceError::PayloadHashMismatch {
+                device_id: record.device_id,
+                sequence: record.sequence,
+            });
+        }
+
+        // Acquire the policy lock, run the check, then release before any I/O.
+        let policy_result = {
+            let mut policy = self.policy.lock().await;
+            policy.enforce(&record, cert_identity)
+        };
+        if let Err(error) = policy_result {
+            warn!(reason = %error, "integrity policy rejected record");
+            let _ = self
+                .operation_log
+                .write(OperationLogEntry {
+                    decision: IngestDecision::Rejected,
+                    device_id: record.device_id.clone(),
+                    sequence: record.sequence,
+                    message: error.to_string(),
+                })
+                .await;
+            return Err(IngestServiceError::Verify(error));
+        }
+
+        self.raw_data_store
+            .put(&record.object_ref, raw_payload)
+            .await
+            .map_err(|e| {
+                error!(error = %e, "raw data store write failed");
+                IngestServiceError::RawDataStore(e.to_string())
+            })?;
+
+        self.audit_ledger
+            .append(record.clone())
+            .await
+            .map_err(|e| {
+                error!(error = %e, "audit ledger append failed");
+                IngestServiceError::AuditLedger(e.to_string())
+            })?;
+
+        self.operation_log
+            .write(OperationLogEntry {
+                decision: IngestDecision::Accepted,
+                device_id: record.device_id,
+                sequence: record.sequence,
+                message: "ingest accepted".to_string(),
+            })
+            .await
+            .map_err(|e| {
+                error!(error = %e, "operation log write failed");
+                IngestServiceError::OperationLog(e.to_string())
+            })?;
+
+        info!("record accepted");
+        Ok(())
+    }
+
+    pub fn raw_data_store(&self) -> &R {
+        &self.raw_data_store
+    }
+
+    pub fn audit_ledger(&self) -> &L {
+        &self.audit_ledger
+    }
+
+    pub fn operation_log(&self) -> &O {
+        &self.operation_log
+    }
+}
