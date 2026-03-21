@@ -90,6 +90,25 @@ enum Commands {
         #[arg(long = "device", value_name = "ID=PUBKEY_HEX")]
         devices: Vec<String>,
     },
+    #[cfg(feature = "transport-mqtt")]
+    /// Start the MQTT ingest subscriber (requires transport-mqtt feature)
+    ServeMqtt {
+        /// MQTT broker host
+        #[arg(long, default_value = "localhost")]
+        broker: String,
+        /// MQTT broker port
+        #[arg(long, default_value_t = 1883)]
+        port: u16,
+        /// Topic to subscribe to for incoming audit records
+        #[arg(long, default_value = "edgesentry/ingest")]
+        topic: String,
+        /// MQTT client identifier
+        #[arg(long, default_value = "eds-server")]
+        client_id: String,
+        /// Ed25519 public key hex for the device to accept (may be specified multiple times)
+        #[arg(long = "device", value_name = "ID=PUBKEY_HEX")]
+        devices: Vec<String>,
+    },
     #[cfg(all(feature = "s3", feature = "postgres"))]
     /// Ingest records through IngestService into PostgreSQL + MinIO (requires s3,postgres features)
     DemoIngest {
@@ -256,6 +275,40 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             tokio::runtime::Runtime::new()?
                 .block_on(edgesentry_rs::transport::http::serve(service, network_policy, addr))
                 .map_err(|e| format!("server error: {e}"))?;
+        }
+        #[cfg(feature = "transport-mqtt")]
+        Commands::ServeMqtt { broker, port, topic, client_id, devices } => {
+            use ed25519_dalek::VerifyingKey;
+            use edgesentry_rs::{
+                AsyncInMemoryAuditLedger, AsyncInMemoryOperationLog, AsyncInMemoryRawDataStore,
+                AsyncIngestService, IntegrityPolicyGate,
+            };
+            use edgesentry_rs::transport::mqtt::MqttIngestConfig;
+
+            let mut policy = IntegrityPolicyGate::new();
+            for device_spec in &devices {
+                let (device_id, pubkey_hex) = device_spec.split_once('=')
+                    .ok_or_else(|| format!("--device must be ID=PUBKEY_HEX, got: {device_spec}"))?;
+                let key_bytes = parse_fixed_hex::<32>(pubkey_hex)?;
+                let verifying_key = VerifyingKey::from_bytes(&key_bytes)
+                    .map_err(|e| format!("invalid public key for {device_id}: {e}"))?;
+                policy.register_device(device_id, verifying_key);
+            }
+
+            let service = AsyncIngestService::new(
+                policy,
+                AsyncInMemoryRawDataStore::default(),
+                AsyncInMemoryAuditLedger::default(),
+                AsyncInMemoryOperationLog::default(),
+            );
+
+            let config = MqttIngestConfig::new(broker, topic, client_id);
+            let mut config = config;
+            config.broker_port = port;
+
+            tokio::runtime::Runtime::new()?
+                .block_on(edgesentry_rs::transport::mqtt::serve_mqtt(config, service))
+                .map_err(|e| format!("mqtt server error: {e}"))?;
         }
         #[cfg(all(feature = "s3", feature = "postgres"))]
         Commands::DemoIngest {
