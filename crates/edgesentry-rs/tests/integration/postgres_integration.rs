@@ -18,9 +18,9 @@
 
 use ed25519_dalek::{SigningKey, VerifyingKey};
 use edgesentry_rs::{
-    build_signed_record, AuditLedger, AuditRecord, InMemoryRawDataStore, IngestDecision,
-    IngestService, IngestServiceError, IntegrityPolicyGate, PostgresAuditLedger,
-    PostgresOperationLog, PostgresStoreError,
+    build_signed_record, AuditLedger, AuditRecord, InMemoryRawDataStore, IngestService,
+    IngestServiceError, IntegrityPolicyGate, PostgresAuditLedger, PostgresOperationLog,
+    PostgresStoreError,
 };
 
 /// Returns the Postgres URL if `TEST_POSTGRES_URL` is set.
