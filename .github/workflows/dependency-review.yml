@@ -28,5 +28,6 @@ jobs:
             pkg:github/actions/attest-build-provenance,
             pkg:cargo/postgres,
             pkg:cargo/unicode-properties,
-            pkg:cargo/cbindgen
+            pkg:cargo/cbindgen,
+            pkg:cargo/axum
           comment-summary-in-pr: always

@@ -85,6 +85,81 @@ When `s3` and `async-ingest` are both active, `S3CompatibleRawDataStore` impleme
 
 | Flag | What it adds |
 |------|-------------|
-| `async-ingest` | `AsyncRawDataStore`, `AsyncAuditLedger`, `AsyncOperationLogStore` traits; `AsyncIngestService`; in-memory async stores; `async-trait`, `tokio` (sync + macros) |
+| `async-ingest` | `AsyncRawDataStore`, `AsyncAuditLedger`, `AsyncOperationLogStore` traits; `AsyncIngestService`; in-memory async stores; `tokio` (sync + macros) |
 | `s3` | `S3CompatibleRawDataStore` (sync); when combined with `async-ingest`, also implements `AsyncRawDataStore` |
 | `postgres` | `PostgresAuditLedger`, `PostgresOperationLog` (sync) |
+| `transport-http` | `transport::http::serve()` — axum-based `POST /api/v1/ingest` server; `eds serve` CLI subcommand |
+| `transport-mqtt` | `transport::mqtt::MqttIngestConfig` scaffold (full implementation pending) |
+
+## Transport Layer
+
+The `transport` module provides network-facing ingest endpoints built on top of `AsyncIngestService`.
+
+### HTTP (`transport-http` feature)
+
+Enable with `features = ["transport-http"]`.  This brings in `axum 0.8` and exposes a single `POST /api/v1/ingest` endpoint.
+
+#### Request / Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `record` | `AuditRecord` (JSON) | The signed audit record from the device |
+| `raw_payload_hex` | `String` | Hex-encoded raw payload bytes |
+
+| Status | Meaning |
+|--------|---------|
+| `202 Accepted` | Record passed all checks and was stored |
+| `400 Bad Request` | `raw_payload_hex` is not valid hex |
+| `403 Forbidden` | Client IP is not in the `NetworkPolicy` allowlist |
+| `422 Unprocessable Entity` | Record failed signature, hash, or chain verification |
+
+#### Usage
+
+```rust
+use edgesentry_rs::{
+    AsyncIngestService, AsyncInMemoryRawDataStore, AsyncInMemoryAuditLedger,
+    AsyncInMemoryOperationLog, IntegrityPolicyGate, NetworkPolicy,
+};
+use edgesentry_rs::transport::http::serve;
+
+let mut policy = IntegrityPolicyGate::new();
+policy.register_device("lift-01", verifying_key);
+
+let mut network_policy = NetworkPolicy::new();
+network_policy.allow_cidr("10.0.0.0/8").unwrap();
+
+let service = AsyncIngestService::new(
+    policy,
+    AsyncInMemoryRawDataStore::default(),
+    AsyncInMemoryAuditLedger::default(),
+    AsyncInMemoryOperationLog::default(),
+);
+
+let addr = "0.0.0.0:8080".parse().unwrap();
+serve(service, network_policy, addr).await?;
+```
+
+#### CLI
+
+```sh
+eds serve \
+  --addr 0.0.0.0:8080 \
+  --allowed-sources 10.0.0.0/8,127.0.0.1 \
+  --device lift-01=<pubkey_hex>
+```
+
+### MQTT (`transport-mqtt` feature)
+
+The `transport-mqtt` feature currently provides `MqttIngestConfig` — a configuration struct describing the broker, topic, client ID, and QoS level.  Full protocol implementation is planned in a follow-up issue.
+
+```rust
+use edgesentry_rs::transport::mqtt::{MqttIngestConfig, MqttQos};
+
+let config = MqttIngestConfig {
+    broker_host: "mqtt.example.com".into(),
+    broker_port: 1883,
+    topic: "devices/+/ingest".into(),
+    client_id: "edgesentry-cloud".into(),
+    qos: MqttQos::AtLeastOnce,
+};
+```
