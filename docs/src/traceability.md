@@ -16,7 +16,7 @@ Singapore's national IoT standard SS 711:2025 defines four principles. See the [
 | Principle | SS 711:2025 Requirement | Status |
 |-----------|------------------------|--------|
 | Secure by Default | Unique device identity, signed OTA updates | ✅ `identity.rs`, `update.rs` |
-| Rigour in Defence | STRIDE threat model, tamper detection | ✅ Hash chain (`integrity.rs`) + [STRIDE threat model](threat_model.md) ([#93](https://github.com/edgesentry/edgesentry-rs/issues/93)) |
+| Rigour in Defence | STRIDE threat model, tamper detection | ✅ Hash chain (`integrity.rs`) + [STRIDE threat model](threat_model.md) |
 | Accountability | Audit trail, operation logs, RBAC design | ✅ `ingest/` (AuditLedger, OperationLog) |
 | Resiliency | Deny-by-default networking, DoS protection | ✅ `ingest/network_policy.rs` |
 
@@ -81,9 +81,10 @@ Singapore's national IoT standard SS 711:2025 defines four principles. See the [
 |------|--------|
 | JC-STAR | STAR-1 R1.1 |
 | Requirement | Data must be transmitted with authenticity guarantees |
-| Status | ⚠️ Partial |
-| Implementation | Every `AuditRecord` carries an Ed25519 signature over its BLAKE3 payload hash — `build_signed_record` ([`src/agent.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/agent.rs)), `sign_payload_hash` ([`src/identity.rs:12`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/identity.rs#L12)) |
-| Gap | Transport-layer encryption (TLS) is not in scope — record-level signature provides authenticity but not channel confidentiality. Tracked in [#73](https://github.com/edgesentry/edgesentry-rs/issues/73) |
+| Status | ✅ Implemented |
+| Implementation — record authenticity | Every `AuditRecord` carries an Ed25519 signature over its BLAKE3 payload hash — `build_signed_record` ([`src/agent.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/agent.rs)), `sign_payload_hash` ([`src/identity.rs:12`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/identity.rs#L12)) |
+| Implementation — channel confidentiality | `transport-tls` feature: `serve_tls()` uses rustls (TLS 1.2 minimum, TLS 1.3 preferred) via `TlsConfig::from_pem_files`; `eds serve --tls-cert / --tls-key` CLI flags ([`src/transport/tls.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/transport/tls.rs)) |
+| Closed | [#73](https://github.com/edgesentry/edgesentry-rs/issues/73) |
 
 ---
 
@@ -93,9 +94,11 @@ Singapore's national IoT standard SS 711:2025 defines four principles. See the [
 |------|--------|
 | JC-STAR | STAR-1 R3.2 |
 | Requirement | Only necessary interfaces and services should be exposed |
-| Status | ⚠️ Partial |
-| Implementation | `NetworkPolicy` provides deny-by-default IP/CIDR allowlist enforcement — callers gate each ingest request through `NetworkPolicy::check(source_ip)` before invoking `IngestService` ([`src/ingest/network_policy.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/ingest/network_policy.rs)) |
-| Gap | The library does not expose a network service directly; transport-layer controls (VPN, firewall rules) remain the deployer's responsibility |
+| Status | ✅ Implemented |
+| Implementation — IP allowlist | `NetworkPolicy` provides deny-by-default IP/CIDR allowlist enforcement ([`src/ingest/network_policy.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/ingest/network_policy.rs)) |
+| Implementation — HTTP transport | `ingest_handler` enforces `NetworkPolicy::check(source_ip)` before any crypto verification; returns `403 Forbidden` for unlisted sources ([`src/transport/http.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/transport/http.rs)) |
+| Implementation — MQTT transport | `serve_mqtt` exposes a single subscribe-only topic; no administrative interface; broker-level ACLs recommended ([`src/transport/mqtt.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/transport/mqtt.rs)) |
+| Note | Network-level controls (VPN, firewall rules) remain the deployer's responsibility |
 
 ---
 
@@ -187,7 +190,7 @@ Singapore's national IoT standard SS 711:2025 defines four principles. See the [
 
 | Level | Total clauses | ✅ Implemented | ⚠️ Partial | 🔲 Planned | ➖ Out of scope |
 |-------|-------------|--------------|-----------|-----------|----------------|
-| CLS Level 3 | 11 | 4 | 4 | 0 | 3 |
+| CLS Level 3 | 11 | 6 | 2 | 0 | 3 |
 | CLS Level 4 | 1 | 0 | 0 | 1 | 0 |
 | JC-STAR additions | 1 | 1 | 0 | 0 | 0 |
 

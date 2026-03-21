@@ -16,7 +16,7 @@
 | 原則 | SS 711:2025 要件 | ステータス |
 |-----------|------------------------|--------|
 | セキュア・バイ・デフォルト | 一意のデバイス同一性、署名付き OTA アップデート | ✅ `identity.rs`、`update.rs` |
-| 防御の厳格性 | STRIDE の脅威モデル、改ざん検知 | ⚠️ ハッシュチェーン ✅ — STRIDE アーティファクト 🔲 [#93](https://github.com/edgesentry/edgesentry-rs/issues/93) |
+| 防御の厳格性 | STRIDE の脅威モデル、改ざん検知 | ✅ ハッシュチェーン（`integrity.rs`）＋ [STRIDE 脅威モデル](threat_model.md) |
 | アカウンタビリティ | 監査証跡、操作ログ、 RBAC 設計 | ✅ `ingest/`（ AuditLedger 、 OperationLog ） |
 | 回復力 | デフォルト拒否のネットワーキング、 DoS 対策 | ✅ `ingest/network_policy.rs` |
 
@@ -81,9 +81,10 @@
 |------|--------|
 | JC-STAR | STAR-1 R1.1 |
 | 要件 | データは真正性の保証を持って送信されなければならない |
-| ステータス | ⚠️ 部分的 |
-| 実装 | すべての`AuditRecord`は BLAKE3 ペイロードハッシュに対する Ed25519 署名を持つ — `build_signed_record`（[`src/agent.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/agent.rs)）、`sign_payload_hash`（[`src/identity.rs:12`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/identity.rs#L12)） |
-| ギャップ | トランスポート層の暗号化（ TLS ）はスコープ外 — レコードレベルの署名は真正性を提供するがチャネルの機密性は提供しない。[#73](https://github.com/edgesentry/edgesentry-rs/issues/73)で追跡中 |
+| ステータス | ✅ 実装済み |
+| 実装 — レコード真正性 | すべての`AuditRecord`は BLAKE3 ペイロードハッシュに対する Ed25519 署名を持つ — `build_signed_record`（[`src/agent.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/agent.rs)）、`sign_payload_hash`（[`src/identity.rs:12`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/identity.rs#L12)） |
+| 実装 — チャネル機密性 | `transport-tls` フィーチャー：`serve_tls()` が rustls（TLS 1.2 最小、TLS 1.3 優先）を使用；`eds serve --tls-cert / --tls-key` CLI フラグ（[`src/transport/tls.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/transport/tls.rs)） |
+| クローズ | [#73](https://github.com/edgesentry/edgesentry-rs/issues/73) |
 
 ---
 
@@ -93,9 +94,11 @@
 |------|--------|
 | JC-STAR | STAR-1 R3.2 |
 | 要件 | 必要なインターフェースとサービスのみを公開すべき |
-| ステータス | ⚠️ 部分的 |
-| 実装 | `NetworkPolicy`がデフォルト拒否の IP/CIDR アローリスト強制を提供 — 呼び出し元は`IngestService`を呼び出す前に`NetworkPolicy::check(source_ip)`を通じて各インジェストリクエストをゲートする（[`src/ingest/network_policy.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/ingest/network_policy.rs)） |
-| ギャップ | ライブラリはネットワークサービスを直接公開しない。トランスポート層のコントロール（ VPN ・ファイアウォールルール）はデプロイ担当者の責任 |
+| ステータス | ✅ 実装済み |
+| 実装 — IP アローリスト | `NetworkPolicy`がデフォルト拒否の IP/CIDR アローリスト強制を提供（[`src/ingest/network_policy.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/ingest/network_policy.rs)） |
+| 実装 — HTTP トランスポート | `ingest_handler`が暗号検証の前に`NetworkPolicy::check(source_ip)`を強制；未登録ソースに`403 Forbidden`を返す（[`src/transport/http.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/transport/http.rs)） |
+| 実装 — MQTT トランスポート | `serve_mqtt`は単一のサブスクライブ専用トピックを公開；管理インターフェースなし；ブローカーレベルの ACL を推奨（[`src/transport/mqtt.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/transport/mqtt.rs)） |
+| 備考 | ネットワークレベルのコントロール（VPN・ファイアウォールルール）はデプロイ担当者の責任 |
 
 ---
 
@@ -185,7 +188,7 @@
 
 | レベル | 総条項数 | ✅ 実装済み | ⚠️ 部分的 | 🔲 計画中 | ➖ スコープ外 |
 |-------|-------------|--------------|-----------|-----------|----------------|
-| CLS レベル 3 | 11 | 4 | 3 | 0 | 4 |
+| CLS レベル 3 | 11 | 6 | 2 | 0 | 3 |
 | CLS レベル 4 | 1 | 0 | 0 | 1 | 0 |
 | JC-STAR 追加 | 1 | 1 | 0 | 0 | 0 |
 

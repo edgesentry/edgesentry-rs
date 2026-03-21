@@ -72,7 +72,15 @@ IMDA's IoT Cyber Security Guide requires a vendor disclosure checklist as CLS Le
 - Responses mapped to implementation in the traceability matrix
 - See [SBOM and Vendor Disclosure](sbom.md) and [#92](https://github.com/edgesentry/edgesentry-rs/issues/92)
 
-### Milestone 1.5: STRIDE Threat Model + Binary Analysis Evidence ✅ Implemented
+### Milestone 1.5: Transport Layer, Async Ingest & Offline Buffer ✅ Implemented
+
+- `async-ingest` feature: `AsyncIngestService<R,L,O>` with `&self` signature for safe multi-task sharing via `Arc` — closed [#115](https://github.com/edgesentry/edgesentry-rs/issues/115)
+- `transport-http` feature: axum-based `POST /api/v1/ingest` endpoint; source IP gated through `NetworkPolicy` before crypto verification; `eds serve` CLI — closed [#116](https://github.com/edgesentry/edgesentry-rs/issues/116)
+- `transport-tls` feature: `serve_tls()` with rustls TLS 1.2/1.3; `eds serve --tls-cert / --tls-key` CLI flags; satisfies CLS-05 channel confidentiality — closed [#73](https://github.com/edgesentry/edgesentry-rs/issues/73)
+- `transport-mqtt` feature: `serve_mqtt()` subscribes to a configurable topic, routes records through `AsyncIngestService`, publishes accept/reject to `<topic>/response`; `eds serve-mqtt` CLI — closed [#146](https://github.com/edgesentry/edgesentry-rs/issues/146)
+- `buffer` module: `OfflineBuffer<S>` store-and-forward with pluggable `BufferStore` trait; `InMemoryBufferStore` default; `SqliteBufferStore` behind `buffer-sqlite` feature; satisfies CLS-09 resilience — closed [#74](https://github.com/edgesentry/edgesentry-rs/issues/74)
+
+### Milestone 1.6: STRIDE Threat Model + Binary Analysis Evidence ✅ Implemented
 
 CLS Level 3 assessors expect recorded design artifacts, not just code. SS 711:2025 requires STRIDE-based threat modelling of all attack surfaces (API, communication, storage).
 
