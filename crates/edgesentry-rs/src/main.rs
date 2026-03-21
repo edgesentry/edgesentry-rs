@@ -78,9 +78,9 @@ enum Commands {
         out: Option<PathBuf>,
     },
     #[cfg(feature = "transport-http")]
-    /// Start the HTTP ingest server (requires transport-http feature)
+    /// Start the HTTP/HTTPS ingest server (requires transport-http feature; TLS requires transport-tls)
     Serve {
-        /// Socket address to bind, e.g. 0.0.0.0:8080
+        /// Socket address to bind, e.g. 0.0.0.0:8080 (plain) or 0.0.0.0:8443 (TLS)
         #[arg(long, default_value = "0.0.0.0:8080")]
         addr: std::net::SocketAddr,
         /// Comma-separated list of allowed source CIDRs or IPs (e.g. 10.0.0.0/8,127.0.0.1)
@@ -89,6 +89,12 @@ enum Commands {
         /// Ed25519 public key hex for the device to accept (may be specified multiple times)
         #[arg(long = "device", value_name = "ID=PUBKEY_HEX")]
         devices: Vec<String>,
+        /// Path to PEM certificate chain (enables TLS; requires transport-tls feature)
+        #[arg(long, value_name = "PATH")]
+        tls_cert: Option<PathBuf>,
+        /// Path to PEM private key (required when --tls-cert is set)
+        #[arg(long, value_name = "PATH")]
+        tls_key: Option<PathBuf>,
     },
     #[cfg(all(feature = "s3", feature = "postgres"))]
     /// Ingest records through IngestService into PostgreSQL + MinIO (requires s3,postgres features)
@@ -216,7 +222,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             println!("CHAIN_VALID");
         }
         #[cfg(feature = "transport-http")]
-        Commands::Serve { addr, allowed_sources, devices } => {
+        Commands::Serve { addr, allowed_sources, devices, tls_cert, tls_key } => {
             use ed25519_dalek::VerifyingKey;
             use edgesentry_rs::{
                 AsyncInMemoryAuditLedger, AsyncInMemoryOperationLog, AsyncInMemoryRawDataStore,
@@ -253,8 +259,27 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 AsyncInMemoryOperationLog::default(),
             );
 
-            tokio::runtime::Runtime::new()?
-                .block_on(edgesentry_rs::transport::http::serve(service, network_policy, addr))
+            let rt = tokio::runtime::Runtime::new()?;
+
+            #[cfg(feature = "transport-tls")]
+            if let (Some(cert_path), Some(key_path)) = (tls_cert, tls_key) {
+                let tls_config = edgesentry_rs::transport::tls::TlsConfig::from_pem_files(
+                    &cert_path, &key_path,
+                )
+                .map_err(|e| format!("TLS config error: {e}"))?;
+                rt.block_on(edgesentry_rs::transport::http::serve_tls(
+                    service, network_policy, addr, tls_config,
+                ))
+                .map_err(|e| format!("server error: {e}"))?;
+                return Ok(());
+            }
+
+            #[cfg(not(feature = "transport-tls"))]
+            if tls_cert.is_some() || tls_key.is_some() {
+                return Err("TLS requires the transport-tls feature".into());
+            }
+
+            rt.block_on(edgesentry_rs::transport::http::serve(service, network_policy, addr))
                 .map_err(|e| format!("server error: {e}"))?;
         }
         #[cfg(all(feature = "s3", feature = "postgres"))]

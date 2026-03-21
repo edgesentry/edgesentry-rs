@@ -8,3 +8,5 @@ mod postgres_integration;
 mod async_ingest_integration;
 #[path = "integration/http_integration.rs"]
 mod http_integration;
+#[path = "integration/tls_integration.rs"]
+mod tls_integration;
