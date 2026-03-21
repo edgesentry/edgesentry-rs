@@ -4,6 +4,7 @@
 
 - [ロードマップ](roadmap.md)
 - [コンプライアンス・トレーサビリティ](traceability.md)
+- [STRIDE 脅威モデル](threat_model.md)
 - [SBOM とベンダー開示](sbom.md)
 - [コンセプト](concepts.md)
 - [アーキテクチャ](architecture.md)

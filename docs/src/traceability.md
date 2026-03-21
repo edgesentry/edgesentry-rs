@@ -16,7 +16,7 @@ Singapore's national IoT standard SS 711:2025 defines four principles. See the [
 | Principle | SS 711:2025 Requirement | Status |
 |-----------|------------------------|--------|
 | Secure by Default | Unique device identity, signed OTA updates | ✅ `identity.rs`, `update.rs` |
-| Rigour in Defence | STRIDE threat model, tamper detection | ⚠️ Hash chain ✅ — STRIDE artifact 🔲 [#93](https://github.com/edgesentry/edgesentry-rs/issues/93) |
+| Rigour in Defence | STRIDE threat model, tamper detection | ✅ Hash chain (`integrity.rs`) + [STRIDE threat model](threat_model.md) ([#93](https://github.com/edgesentry/edgesentry-rs/issues/93)) |
 | Accountability | Audit trail, operation logs, RBAC design | ✅ `ingest/` (AuditLedger, OperationLog) |
 | Resiliency | Deny-by-default networking, DoS protection | ✅ `ingest/network_policy.rs` |
 
