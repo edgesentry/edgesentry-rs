@@ -28,12 +28,20 @@ cargo cyclonedx --format json --all
 #       crates/edgesentry-bridge/edgesentry-bridge.cdx.json
 ```
 
-### 現在の依存コンポーネント数（v0.1.2）
+### 依存コンポーネント数の確認方法
 
-| クレート | SBOM 内の総コンポーネント数 |
-|---------|--------------------------|
-| `edgesentry-rs` | 72 |
-| `edgesentry-bridge` | 13 |
+依存関係の更新のたびに変化するため、生成後に以下で現在の数を確認してください：
+
+```bash
+cargo cyclonedx --format json --all
+python3 -c "
+import json
+for f in ['crates/edgesentry-rs/edgesentry-rs.cdx.json',
+          'crates/edgesentry-bridge/edgesentry-bridge.cdx.json']:
+    bom = json.load(open(f))
+    print(f\"{f}: {len(bom.get('components', []))} components\")
+"
+```
 
 ### 継続的なサプライチェーン監視
 
