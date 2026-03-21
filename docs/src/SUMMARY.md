@@ -13,3 +13,4 @@
 - [C/C++ FFI Bridge](ffi_bridge.md)
 - [Contributing](contributing.md)
 - [Build and Release](release.md)
+- [Operations Runbook](operations.md)

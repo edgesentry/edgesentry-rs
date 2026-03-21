@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use thiserror::Error;
+use tracing::{debug, error, info, instrument, warn};
 
 use crate::integrity::compute_payload_hash;
 use crate::record::AuditRecord;
@@ -84,9 +85,17 @@ where
         self.policy.register_device(device_id, key);
     }
 
+    #[instrument(skip(self, raw_payload), fields(
+        device_id = %record.device_id,
+        sequence  = record.sequence,
+        object_ref = %record.object_ref,
+    ))]
     pub fn ingest(&mut self, record: AuditRecord, raw_payload: &[u8], cert_identity: Option<&str>) -> Result<(), IngestServiceError> {
+        debug!(payload_bytes = raw_payload.len(), "ingest started");
+
         let payload_hash = compute_payload_hash(raw_payload);
         if payload_hash != record.payload_hash {
+            warn!("payload hash mismatch — record rejected");
             self.log_rejection(&record, "payload hash mismatch");
             return Err(IngestServiceError::PayloadHashMismatch {
                 device_id: record.device_id,
@@ -95,17 +104,24 @@ where
         }
 
         if let Err(error) = self.policy.enforce(&record, cert_identity) {
+            warn!(reason = %error, "integrity policy rejected record");
             self.log_rejection(&record, &error.to_string());
             return Err(IngestServiceError::Verify(error));
         }
 
         self.raw_data_store
             .put(&record.object_ref, raw_payload)
-            .map_err(|e| IngestServiceError::RawDataStore(e.to_string()))?;
+            .map_err(|e| {
+                error!(error = %e, "raw data store write failed");
+                IngestServiceError::RawDataStore(e.to_string())
+            })?;
 
         self.audit_ledger
             .append(record.clone())
-            .map_err(|e| IngestServiceError::AuditLedger(e.to_string()))?;
+            .map_err(|e| {
+                error!(error = %e, "audit ledger append failed");
+                IngestServiceError::AuditLedger(e.to_string())
+            })?;
 
         self.operation_log
             .write(OperationLogEntry {
@@ -114,8 +130,12 @@ where
                 sequence: record.sequence,
                 message: "ingest accepted".to_string(),
             })
-            .map_err(|e| IngestServiceError::OperationLog(e.to_string()))?;
+            .map_err(|e| {
+                error!(error = %e, "operation log write failed");
+                IngestServiceError::OperationLog(e.to_string())
+            })?;
 
+        info!("record accepted");
         Ok(())
     }
 

@@ -13,3 +13,4 @@
 - [C/C++ FFI ブリッジ](ffi_bridge.md)
 - [プロジェクトへの貢献](contributing.md)
 - [ビルドとリリース](release.md)
+- [運用ランブック](operations.md)
