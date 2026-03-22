@@ -30,6 +30,12 @@ transport-mqtt = [
     "async-ingest",
     "dep:rumqttc",
 ]
+transport-mqtt-tls = [
+    "transport-mqtt",
+    "rumqttc/use-rustls",
+    "dep:tokio-rustls",
+    "dep:rustls-pemfile",
+]
 transport-tls = [
     "transport-http",
     "dep:tokio-rustls",

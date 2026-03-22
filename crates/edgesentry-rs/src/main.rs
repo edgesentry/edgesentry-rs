@@ -127,6 +127,10 @@ enum Commands {
         /// Ed25519 public key hex for the device to accept (may be specified multiple times)
         #[arg(long = "device", value_name = "ID=PUBKEY_HEX")]
         devices: Vec<String>,
+        /// Path to PEM-encoded CA certificate for verifying the broker (enables MQTTS, requires transport-mqtt-tls feature)
+        #[cfg(feature = "transport-mqtt-tls")]
+        #[arg(long)]
+        tls_ca_cert: Option<std::path::PathBuf>,
     },
     #[cfg(all(feature = "s3", feature = "postgres"))]
     /// Ingest records through IngestService into PostgreSQL + MinIO (requires s3,postgres features)
@@ -340,7 +344,15 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 .map_err(|e| format!("TLS server error: {e}"))?;
         }
         #[cfg(feature = "transport-mqtt")]
-        Commands::ServeMqtt { broker, port, topic, client_id, devices } => {
+        Commands::ServeMqtt {
+            broker,
+            port,
+            topic,
+            client_id,
+            devices,
+            #[cfg(feature = "transport-mqtt-tls")]
+            tls_ca_cert,
+        } => {
             use ed25519_dalek::VerifyingKey;
             use edgesentry_rs::{
                 AsyncInMemoryAuditLedger, AsyncInMemoryOperationLog, AsyncInMemoryRawDataStore,
@@ -365,9 +377,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 AsyncInMemoryOperationLog::default(),
             );
 
-            let config = MqttIngestConfig::new(broker, topic, client_id);
-            let mut config = config;
+            let mut config = MqttIngestConfig::new(broker, topic, client_id);
             config.broker_port = port;
+
+            #[cfg(feature = "transport-mqtt-tls")]
+            if let Some(ca_cert) = tls_ca_cert {
+                use edgesentry_rs::transport::mqtt::MqttTlsConfig;
+                config.tls = Some(MqttTlsConfig::from_ca_cert_file(ca_cert));
+            }
 
             tokio::runtime::Runtime::new()?
                 .block_on(edgesentry_rs::transport::mqtt::serve_mqtt(config, service))

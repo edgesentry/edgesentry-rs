@@ -124,6 +124,54 @@ fn rejected_response_contains_error() {
 }
 
 // ---------------------------------------------------------------------------
+// TLS configuration — no broker required
+// ---------------------------------------------------------------------------
+
+#[cfg(feature = "transport-mqtt-tls")]
+mod tls_config_tests {
+    use edgesentry_rs::transport::mqtt::{MqttIngestConfig, MqttTlsConfig};
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    fn unique_ca_cert_path() -> std::path::PathBuf {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let pid = std::process::id();
+        let id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        std::env::temp_dir()
+            .join(format!("edgesentry_mqtt_tls_test_{pid}_{id}_ca.pem"))
+    }
+
+    fn write_self_signed_ca() -> std::path::PathBuf {
+        let cert = rcgen::generate_simple_self_signed(vec!["localhost".to_string()])
+            .expect("rcgen must generate self-signed cert");
+        let path = unique_ca_cert_path();
+        std::fs::write(&path, cert.cert.pem()).expect("write CA PEM");
+        path
+    }
+
+    #[test]
+    fn mqtt_tls_config_stores_ca_cert_path() {
+        let path = write_self_signed_ca();
+        let tls = MqttTlsConfig::from_ca_cert_file(&path);
+        assert_eq!(tls.ca_cert_path, path);
+    }
+
+    #[test]
+    fn mqtt_ingest_config_tls_defaults_to_none() {
+        let cfg = MqttIngestConfig::new("broker.local", "edgesentry/ingest", "eds-tls-test");
+        assert!(cfg.tls.is_none(), "TLS must be disabled by default");
+    }
+
+    #[test]
+    fn mqtt_ingest_config_accepts_tls_config() {
+        let path = write_self_signed_ca();
+        let mut cfg = MqttIngestConfig::new("broker.local", "edgesentry/ingest", "eds-tls-test");
+        cfg.tls = Some(MqttTlsConfig::from_ca_cert_file(&path));
+        assert!(cfg.tls.is_some());
+        assert_eq!(cfg.tls.as_ref().unwrap().ca_cert_path, path);
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Broker round-trip — requires TEST_MQTT_BROKER env var
 // ---------------------------------------------------------------------------
 

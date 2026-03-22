@@ -42,6 +42,7 @@
 //! # }
 //! ```
 
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -79,6 +80,28 @@ impl From<MqttQos> for QoS {
     }
 }
 
+/// TLS configuration for MQTT over TLS (MQTTS, typically port 8883).
+///
+/// Provide a PEM-encoded CA certificate that signed the broker's server
+/// certificate so the client can verify the broker's identity.
+/// Mutual TLS (client certificate) is not yet supported.
+///
+/// Only available with the `transport-mqtt-tls` feature.
+#[cfg(feature = "transport-mqtt-tls")]
+#[derive(Debug, Clone)]
+pub struct MqttTlsConfig {
+    /// Path to the PEM-encoded CA certificate file used to verify the broker.
+    pub ca_cert_path: PathBuf,
+}
+
+#[cfg(feature = "transport-mqtt-tls")]
+impl MqttTlsConfig {
+    /// Create an [`MqttTlsConfig`] from a CA certificate file path.
+    pub fn from_ca_cert_file(path: impl Into<PathBuf>) -> Self {
+        Self { ca_cert_path: path.into() }
+    }
+}
+
 /// Configuration for the MQTT ingest transport.
 #[derive(Debug, Clone)]
 pub struct MqttIngestConfig {
@@ -96,6 +119,11 @@ pub struct MqttIngestConfig {
     pub keep_alive_secs: u64,
     /// Capacity of the internal MQTT event channel (number of in-flight messages).
     pub channel_capacity: usize,
+    /// Optional TLS configuration; when set, connects over MQTTS using rustls.
+    ///
+    /// Only available with the `transport-mqtt-tls` feature.
+    #[cfg(feature = "transport-mqtt-tls")]
+    pub tls: Option<MqttTlsConfig>,
 }
 
 impl MqttIngestConfig {
@@ -114,6 +142,8 @@ impl MqttIngestConfig {
             qos: MqttQos::AtLeastOnce,
             keep_alive_secs: 30,
             channel_capacity: 64,
+            #[cfg(feature = "transport-mqtt-tls")]
+            tls: None,
         }
     }
 }
@@ -169,6 +199,9 @@ pub enum MqttServeError {
     Subscribe { topic: String, reason: String },
     #[error("MQTT event loop error: {0}")]
     EventLoop(String),
+    #[cfg(feature = "transport-mqtt-tls")]
+    #[error("TLS configuration error: {0}")]
+    TlsConfig(String),
 }
 
 // ---------------------------------------------------------------------------
@@ -207,6 +240,38 @@ where
     let mut opts =
         MqttOptions::new(&config.client_id, &config.broker_host, config.broker_port);
     opts.set_keep_alive(Duration::from_secs(config.keep_alive_secs));
+
+    // Configure MQTTS when a TLS config is present.
+    #[cfg(feature = "transport-mqtt-tls")]
+    if let Some(tls) = &config.tls {
+        use std::io::BufReader;
+
+        // Install ring as the default rustls crypto provider (no-op if already set).
+        let _ = tokio_rustls::rustls::crypto::ring::default_provider().install_default();
+
+        let ca_pem = std::fs::read(&tls.ca_cert_path)
+            .map_err(|e| MqttServeError::TlsConfig(e.to_string()))?;
+
+        let mut root_store = tokio_rustls::rustls::RootCertStore::empty();
+        for cert in rustls_pemfile::certs(&mut BufReader::new(ca_pem.as_slice())) {
+            let cert = cert.map_err(|e| MqttServeError::TlsConfig(e.to_string()))?;
+            root_store.add(cert).map_err(|e| MqttServeError::TlsConfig(e.to_string()))?;
+        }
+
+        let rustls_config = tokio_rustls::rustls::ClientConfig::builder()
+            .with_root_certificates(root_store)
+            .with_no_client_auth();
+
+        opts.set_transport(rumqttc::Transport::tls_with_config(
+            rumqttc::TlsConfiguration::Rustls(Arc::new(rustls_config)),
+        ));
+
+        info!(
+            broker = %config.broker_host,
+            port   = config.broker_port,
+            "MQTT TLS (MQTTS) enabled via rustls"
+        );
+    }
 
     let (client, mut eventloop) = AsyncClient::new(opts, config.channel_capacity);
 
