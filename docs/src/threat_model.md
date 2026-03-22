@@ -198,13 +198,14 @@ Command and output captured at document generation time (advisory database commi
 cargo audit
 ```
 
-**Result:** 1 advisory detected, pre-approved in `deny.toml`:
+**Result:** All detected advisories are pre-approved in `deny.toml` (see table below):
 
 | Advisory | Crate | Version | Status | Reason |
 |----------|-------|---------|--------|--------|
-| RUSTSEC-2026-0049 | `rustls-webpki` | 0.101.7 | Ignored ([#125](https://github.com/edgesentry/edgesentry-rs/issues/125)) | Pinned by `aws-smithy-http-client` legacy `hyper-rustls 0.24` path; no 0.101.x patch exists.  The `0.103.x` instance in the tree is updated to 0.103.10. |
+| RUSTSEC-2026-0049 | `rustls-webpki` | 0.101.7 | Ignored ([#125](https://github.com/edgesentry/edgesentry-rs/issues/125)) | Pinned by `aws-smithy-http-client` legacy `hyper-rustls 0.24` → `rustls 0.21` chain; no 0.101.x patch exists. The `0.103.x` instance in the tree is updated to 0.103.10. |
+| RUSTSEC-2026-0049 | `rustls-webpki` | 0.102.8 | Ignored ([#166](https://github.com/edgesentry/edgesentry-rs/issues/166)) | Pinned by `rumqttc 0.25` → `rustls 0.22` chain; fix requires rumqttc to adopt rustls 0.23+. No CRL revocation calls in the codebase; unexploitable as-is. |
 
-All other 334 scanned crate dependencies: **no known CVEs**.
+All remaining scanned crate dependencies: **no known CVEs**.
 
 To reproduce:
 
@@ -226,7 +227,7 @@ cargo deny check
 The `deny.toml` policy enforces:
 - Advisories: all vulnerabilities denied by default except explicitly ignored entries with documented reasons
 - Bans: multiple crate versions warned; wildcard dependencies warned
-- Licenses: only MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, Unicode-3.0, CC0-1.0, Zlib permitted; exceptions documented for `postgres` (MIT/Apache-2.0, unresolvable), `cbindgen` (build-only, MIT), `unicode-properties` (Unicode-3.0)
+- Licenses: only MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, Unicode-3.0, CC0-1.0, Zlib permitted; one exception: `cbindgen` (MPL-2.0, build-only header generator — copyleft does not extend to generated artifacts or source)
 - Sources: only `crates.io` and trusted git sources
 
 To reproduce:
