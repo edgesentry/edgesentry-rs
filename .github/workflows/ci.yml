@@ -185,12 +185,12 @@ jobs:
             --lcov \
             --output-path lcov.info
 
-      - name: Upload to Codecov
-        uses: codecov/codecov-action@v4
+      - name: Upload lcov artifact
+        uses: actions/upload-artifact@v4
         with:
-          files: lcov.info
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
+          name: coverage-lcov
+          path: lcov.info
+          retention-days: 30
 
       - name: Print summary
         run: |
