@@ -83,7 +83,7 @@ Singapore's national IoT standard SS 711:2025 defines four principles. See the [
 | Requirement | Data must be transmitted with authenticity guarantees |
 | Status | ⚠️ Partial |
 | Implementation — record authenticity | Every `AuditRecord` carries an Ed25519 signature over its BLAKE3 payload hash — `build_signed_record` ([`src/agent.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/agent.rs)), `sign_payload_hash` ([`src/identity.rs:12`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/identity.rs#L12)) |
-| Gap — channel confidentiality | `transport-tls` feature (`serve_tls()`, rustls TLS 1.2/1.3, `eds serve --tls-cert / --tls-key`) is not yet in `main`; TLS termination must be handled at the deployment layer (reverse proxy / load balancer). Tracked in [#176](https://github.com/edgesentry/edgesentry-rs/issues/176) |
+| Gap — channel confidentiality | `transport-tls` feature (`serve_tls()`, rustls TLS 1.2/1.3, `eds serve-tls --tls-cert / --tls-key`) is not yet in `main`; TLS termination must be handled at the deployment layer (reverse proxy / load balancer). Tracked in [#176](https://github.com/edgesentry/edgesentry-rs/issues/176) |
 
 ---
 

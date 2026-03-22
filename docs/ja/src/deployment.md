@@ -34,10 +34,10 @@ certbot certonly --standalone \
 #   /etc/letsencrypt/live/ingest.example.com/privkey.pem    （秘密鍵）
 ```
 
-### 1.2 TLS を有効にした `eds serve` の起動
+### 1.2 TLS を有効にした `eds serve-tls` の起動
 
 ```bash
-eds serve \
+eds serve-tls \
   --addr 0.0.0.0:8443 \
   --tls-cert /etc/letsencrypt/live/ingest.example.com/fullchain.pem \
   --tls-key  /etc/letsencrypt/live/ingest.example.com/privkey.pem \
@@ -45,11 +45,11 @@ eds serve \
   --device lift-01=<PUBLIC_KEY_HEX>
 ```
 
-`eds serve` は rustls 経由で TLS 1.2 最小・TLS 1.3 優先を適用します。追加設定は不要です。
+`eds serve-tls` は rustls 経由で TLS 1.2 最小・TLS 1.3 優先を適用します。追加設定は不要です。
 
 ### 1.3 証明書のローテーション（ゼロダウンタイム）
 
-`eds serve` は起動時にのみ証明書ファイルを読み込みます。ダウンタイムなしのローテーション手順：
+`eds serve-tls` は起動時にのみ証明書ファイルを読み込みます。ダウンタイムなしのローテーション手順：
 
 ```bash
 # 1. 証明書を更新
@@ -253,7 +253,7 @@ Wants=network-online.target
 Type=exec
 User=edgesentry
 Group=edgesentry
-ExecStart=/usr/local/bin/eds serve \
+ExecStart=/usr/local/bin/eds serve-tls \
     --addr 0.0.0.0:8443 \
     --tls-cert /etc/edgesentry/server.crt \
     --tls-key  /etc/edgesentry/server.key \
@@ -395,7 +395,7 @@ server {
 }
 ```
 
-各ノードで `eds serve` を `--tls-cert / --tls-key` **なし**（プライベートポートでのプレーン HTTP）で実行し、nginx に TLS 終端を任せてください。`--allowed-sources` には nginx アップストリームの IP 範囲を指定します。
+各ノードで `eds serve`（プライベートポートでのプレーン HTTP）を実行し、nginx に TLS 終端を任せてください。`--allowed-sources` には nginx アップストリームの IP 範囲を指定します。リバースプロキシを使わずに組み込み TLS を利用する場合は `eds serve-tls` を使用してください。
 
 > **注意：** TLS がロードバランサーで終端される場合、`eds serve` はデバイスの IP ではなく LB の IP を認識します。`--allowed-sources` を LB の内部アドレス範囲に設定し、デバイスごとのソース制御は LB 側のアローリストに委ねてください。
 

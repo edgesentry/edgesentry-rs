@@ -188,6 +188,87 @@ INVALID
 
 ---
 
+## サーバーコマンド
+
+### `eds serve` — HTTP インジェストサーバー
+
+`transport-http` Cargo フィーチャーが必要です。
+
+| フラグ | デフォルト | 説明 |
+|--------|-----------|------|
+| `--addr` | `0.0.0.0:8080` | バインドするソケットアドレス |
+| `--allowed-sources` | `127.0.0.1` | 接続を許可する CIDR / IP のカンマ区切りリスト |
+| `--device ID=PUBKEY_HEX` | _（なし）_ | デバイスを登録；複数デバイスは繰り返し指定 |
+
+```bash
+eds serve \
+  --addr 0.0.0.0:8080 \
+  --allowed-sources 10.0.0.0/8 \
+  --device lift-01=<PUBLIC_KEY_HEX>
+```
+
+ポート 8080 でプレーン HTTP を提供します。TLS 終端リバースプロキシの背後で使用するか、組み込み TLS には `eds serve-tls` を使用してください。
+
+---
+
+### `eds serve-tls` — HTTPS インジェストサーバー（TLS 1.2/1.3）
+
+`transport-tls` Cargo フィーチャーが必要です。
+
+| フラグ | デフォルト | 説明 |
+|--------|-----------|------|
+| `--addr` | `0.0.0.0:8443` | バインドするソケットアドレス |
+| `--allowed-sources` | `127.0.0.1` | 接続を許可する CIDR / IP のカンマ区切りリスト |
+| `--device ID=PUBKEY_HEX` | _（なし）_ | デバイスを登録；複数デバイスは繰り返し指定 |
+| `--tls-cert` | _（必須）_ | PEM 証明書チェーンのパス（リーフ証明書を先頭に） |
+| `--tls-key` | _（必須）_ | PEM 秘密鍵のパス（PKCS #8 または PKCS #1 RSA） |
+
+```bash
+eds serve-tls \
+  --addr 0.0.0.0:8443 \
+  --allowed-sources 10.0.0.0/8 \
+  --device lift-01=<PUBLIC_KEY_HEX> \
+  --tls-cert /etc/edgesentry/server.crt \
+  --tls-key  /etc/edgesentry/server.key
+```
+
+rustls の TLS 1.2/1.3 を使用します。ネットワークポリシー（IP アローリスト）は TLS ハンドシェイク前の TCP 接続受け入れ時点で適用されます。
+
+---
+
+### `eds serve-mqtt` — MQTT インジェストサブスクライバー
+
+`transport-mqtt` Cargo フィーチャーが必要です。MQTTS には `transport-mqtt-tls` も追加してください。
+
+| フラグ | デフォルト | 説明 |
+|--------|-----------|------|
+| `--broker` | `localhost` | MQTT ブローカーホスト |
+| `--port` | `1883` | MQTT ブローカーポート（MQTTS には `8883` を使用） |
+| `--topic` | `edgesentry/ingest` | インジェストレコードを受信するトピック |
+| `--client-id` | `eds-server` | MQTT クライアント識別子 |
+| `--device ID=PUBKEY_HEX` | _（なし）_ | デバイスを登録；複数デバイスは繰り返し指定 |
+| `--tls-ca-cert` | _（なし）_ | MQTTS ブローカー検証用 PEM CA 証明書のパス（`transport-mqtt-tls` のみ） |
+
+```bash
+# プレーン MQTT（ポート 1883）
+eds serve-mqtt \
+  --broker broker.example.com \
+  --port 1883 \
+  --topic edgesentry/ingest \
+  --device lift-01=<PUBLIC_KEY_HEX>
+
+# MQTTS（ポート 8883、transport-mqtt-tls フィーチャーが必要）
+eds serve-mqtt \
+  --broker broker.example.com \
+  --port 8883 \
+  --tls-ca-cert /etc/edgesentry/ca.crt \
+  --device lift-01=<PUBLIC_KEY_HEX>
+```
+
+レスポンスは `<topic>/response` に `status: "accepted"` または `status: "rejected"` の JSON として発行されます。
+
+---
+
 ## インジェストデモ（ PostgreSQL + MinIO ）
 
 `s3`および`postgres`の Cargo フィーチャーと、実行中の PostgreSQL + MinIO インスタンスが必要です（`docker compose -f docker-compose.local.yml up -d`を使用）。

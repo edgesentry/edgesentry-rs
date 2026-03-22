@@ -349,6 +349,190 @@ fn demo_lift_inspection_writes_payloads_file_when_requested() {
     assert_eq!(payloads.len(), 3, "expected 3 payloads");
 }
 
+// ── server commands ───────────────────────────────────────────────────────────
+
+/// Bind an ephemeral port, drop the listener, and return the address string.
+/// The port is free for the next bind — there is a brief TOCTOU window but
+/// it is acceptable for test use.
+fn free_addr() -> String {
+    let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    l.local_addr().unwrap().to_string()
+}
+
+/// Poll TCP connect until the address is accepting connections or the timeout
+/// elapses.  Returns `true` if the server became ready in time.
+fn wait_for_tcp(addr: &str, timeout_secs: u64) -> bool {
+    let deadline =
+        std::time::Instant::now() + std::time::Duration::from_secs(timeout_secs);
+    while std::time::Instant::now() < deadline {
+        if std::net::TcpStream::connect(addr).is_ok() {
+            return true;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    false
+}
+
+#[cfg(feature = "transport-http")]
+#[test]
+fn serve_help_lists_expected_flags() {
+    let out = eds().args(["serve", "--help"]).output().expect("eds serve --help");
+    assert!(out.status.success(), "exit: {:?}\n{}", out.status, stderr(&out));
+    let help = stdout(&out);
+    assert!(help.contains("--addr"), "serve --help must list --addr");
+    assert!(help.contains("--allowed-sources"), "serve --help must list --allowed-sources");
+    assert!(help.contains("--device"), "serve --help must list --device");
+}
+
+#[cfg(feature = "transport-tls")]
+#[test]
+fn serve_tls_help_lists_expected_flags() {
+    let out = eds().args(["serve-tls", "--help"]).output().expect("eds serve-tls --help");
+    assert!(out.status.success(), "exit: {:?}\n{}", out.status, stderr(&out));
+    let help = stdout(&out);
+    assert!(help.contains("--tls-cert"), "serve-tls --help must list --tls-cert");
+    assert!(help.contains("--tls-key"), "serve-tls --help must list --tls-key");
+    assert!(help.contains("--addr"), "serve-tls --help must list --addr");
+}
+
+#[cfg(feature = "transport-mqtt")]
+#[test]
+fn serve_mqtt_help_lists_expected_flags() {
+    let out = eds().args(["serve-mqtt", "--help"]).output().expect("eds serve-mqtt --help");
+    assert!(out.status.success(), "exit: {:?}\n{}", out.status, stderr(&out));
+    let help = stdout(&out);
+    assert!(help.contains("--broker"), "serve-mqtt --help must list --broker");
+    assert!(help.contains("--port"), "serve-mqtt --help must list --port");
+    assert!(help.contains("--topic"), "serve-mqtt --help must list --topic");
+}
+
+#[cfg(feature = "transport-http")]
+#[test]
+fn serve_accepts_valid_record_returns_202() {
+    use edgesentry_rs::{build_signed_record, AuditRecord};
+    use ed25519_dalek::SigningKey;
+
+    let signing_key = SigningKey::from_bytes(&[1u8; 32]);
+    let pub_hex = hex::encode(signing_key.verifying_key().to_bytes());
+    let addr = free_addr();
+
+    let mut child = eds()
+        .args([
+            "serve",
+            "--addr", &addr,
+            "--allowed-sources", "127.0.0.1",
+            "--device", &format!("dev-cli={pub_hex}"),
+        ])
+        .spawn()
+        .expect("eds serve must spawn");
+
+    if !wait_for_tcp(&addr, 10) {
+        child.kill().ok();
+        panic!("eds serve did not bind within 10 s");
+    }
+
+    let payload = b"cli-test-payload";
+    let record = build_signed_record(
+        "dev-cli",
+        1,
+        1_700_000_000_000,
+        payload,
+        AuditRecord::zero_hash(),
+        "s3://bucket/dev-cli/1.bin",
+        &signing_key,
+    );
+    let body = serde_json::json!({
+        "record": record,
+        "raw_payload_hex": hex::encode(payload),
+    });
+
+    let resp = reqwest::blocking::Client::new()
+        .post(format!("http://{addr}/api/v1/ingest"))
+        .json(&body)
+        .send()
+        .expect("HTTP request to eds serve must succeed");
+
+    child.kill().ok();
+    child.wait().ok();
+
+    assert_eq!(resp.status().as_u16(), 202, "valid record must return 202");
+}
+
+#[cfg(feature = "transport-tls")]
+#[test]
+fn serve_tls_accepts_valid_record_returns_202() {
+    use edgesentry_rs::{build_signed_record, AuditRecord};
+    use ed25519_dalek::SigningKey;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let pid = std::process::id();
+    let id = COUNTER.fetch_add(1, Ordering::Relaxed);
+    let cert_path = std::env::temp_dir()
+        .join(format!("eds_cli_tls_test_{pid}_{id}_cert.pem"));
+    let key_path = std::env::temp_dir()
+        .join(format!("eds_cli_tls_test_{pid}_{id}_key.pem"));
+
+    let cert = rcgen::generate_simple_self_signed(vec!["localhost".to_string()])
+        .expect("rcgen self-signed cert");
+    std::fs::write(&cert_path, cert.cert.pem()).expect("write cert");
+    std::fs::write(&key_path, cert.key_pair.serialize_pem()).expect("write key");
+
+    let signing_key = SigningKey::from_bytes(&[2u8; 32]);
+    let pub_hex = hex::encode(signing_key.verifying_key().to_bytes());
+    let addr = free_addr();
+
+    let mut child = eds()
+        .args([
+            "serve-tls",
+            "--addr", &addr,
+            "--allowed-sources", "127.0.0.1",
+            "--device", &format!("dev-cli-tls={pub_hex}"),
+            "--tls-cert",
+        ])
+        .arg(&cert_path)
+        .arg("--tls-key")
+        .arg(&key_path)
+        .spawn()
+        .expect("eds serve-tls must spawn");
+
+    if !wait_for_tcp(&addr, 10) {
+        child.kill().ok();
+        panic!("eds serve-tls did not bind within 10 s");
+    }
+
+    let payload = b"cli-tls-test-payload";
+    let record = build_signed_record(
+        "dev-cli-tls",
+        1,
+        1_700_000_000_001,
+        payload,
+        AuditRecord::zero_hash(),
+        "s3://bucket/dev-cli-tls/1.bin",
+        &signing_key,
+    );
+    let body = serde_json::json!({
+        "record": record,
+        "raw_payload_hex": hex::encode(payload),
+    });
+
+    let resp = reqwest::blocking::Client::builder()
+        .danger_accept_invalid_certs(true)
+        .build()
+        .expect("TLS client")
+        .post(format!("https://{addr}/api/v1/ingest"))
+        .json(&body)
+        .send()
+        .expect("HTTPS request to eds serve-tls must succeed");
+
+    child.kill().ok();
+    child.wait().ok();
+    let _ = std::fs::remove_file(&cert_path);
+    let _ = std::fs::remove_file(&key_path);
+
+    assert_eq!(resp.status().as_u16(), 202, "valid record over TLS must return 202");
+}
+
 // ── argument parsing errors ───────────────────────────────────────────────────
 
 #[test]
