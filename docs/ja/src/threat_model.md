@@ -198,13 +198,14 @@
 cargo audit
 ```
 
-**結果:** 1 件のアドバイザリ検出、`deny.toml` で事前承認済み:
+**結果:** 検出されたアドバイザリはすべて `deny.toml` で事前承認済み（下表参照）:
 
 | アドバイザリ | クレート | バージョン | ステータス | 理由 |
 |------------|--------|----------|---------|------|
-| RUSTSEC-2026-0049 | `rustls-webpki` | 0.101.7 | 無視（[#125](https://github.com/edgesentry/edgesentry-rs/issues/125)） | `aws-smithy-http-client` のレガシー `hyper-rustls 0.24` パスに固定されている；0.101.x パッチは存在しない。`0.103.x` インスタンスは 0.103.10 に更新済み。 |
+| RUSTSEC-2026-0049 | `rustls-webpki` | 0.101.7 | 無視（[#125](https://github.com/edgesentry/edgesentry-rs/issues/125)） | `aws-smithy-http-client` のレガシー `hyper-rustls 0.24` → `rustls 0.21` チェーンに固定されている；0.101.x パッチは存在しない。`0.103.x` インスタンスは 0.103.10 に更新済み。 |
+| RUSTSEC-2026-0049 | `rustls-webpki` | 0.102.8 | 無視（[#166](https://github.com/edgesentry/edgesentry-rs/issues/166)） | `rumqttc 0.25` → `rustls 0.22` チェーンに固定されている；rustls 0.23+ を採用した rumqttc のリリースが必要。コードベース内に CRL 失効 API 呼び出しは存在しない。 |
 
-その他の 334 スキャン済みクレート依存関係: **既知の CVE なし**
+その他のスキャン済みクレート依存関係: **既知の CVE なし**
 
 再現手順:
 
@@ -226,7 +227,7 @@ cargo deny check
 `deny.toml` ポリシーの強制内容:
 - アドバイザリ: 文書化された理由を持つ明示的な無視エントリを除き、すべての脆弱性をデフォルトで拒否
 - バン: 複数クレートバージョンを警告；ワイルドカード依存を警告
-- ライセンス: MIT・Apache-2.0・BSD-2-Clause・BSD-3-Clause・Unicode-3.0・CC0-1.0・Zlib のみ許可；例外は `postgres`・`cbindgen`・`unicode-properties` に文書化
+- ライセンス: MIT・Apache-2.0・BSD-2-Clause・BSD-3-Clause・Unicode-3.0・CC0-1.0・Zlib のみ許可；例外 1 件: `cbindgen`（MPL-2.0、ビルド専用ヘッダー生成ツール — コピーレフトは生成物やソースコードに及ばない）
 - ソース: `crates.io` および信頼済み git ソースのみ
 
 再現手順:
