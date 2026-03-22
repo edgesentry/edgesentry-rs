@@ -103,10 +103,11 @@ jobs:
         run: cargo audit --version 2>/dev/null || cargo install cargo-audit --locked
 
       - name: Run security audit
-        # RUSTSEC-2026-0049: rustls-webpki 0.101.7 is stuck behind
-        # aws-smithy-http-client's legacy hyper-rustls 0.24 / rustls 0.21
-        # path; no 0.101.x patch exists. Remove when AWS SDK drops
-        # the rustls 0.21 dependency. Tracked in #125.
+        # RUSTSEC-2026-0049 (GHSA-pwjx-qhcg-rvj4): rustls-webpki CRL bug.
+        # Two affected instances, no patch available for either:
+        #   0.101.7 — AWS SDK → hyper-rustls 0.24 → rustls 0.21 (#125)
+        #   0.102.8 — rumqttc 0.25 → rustls 0.22 (#166)
+        # No CRL revocation calls in the codebase; unexploitable as-is.
         run: cargo audit --ignore RUSTSEC-2026-0049
 
   sast:
