@@ -10,6 +10,7 @@
 - [アーキテクチャ](architecture.md)
 - [ライブラリの使い方](quickstart.md)
 - [インタラクティブデモ](demo.md)
+- [本番デプロイガイド](deployment.md)
 - [CLI リファレンス](cli.md)
 - [鍵管理](key_management.md)
 - [C/C++ FFI ブリッジ](ffi_bridge.md)
