@@ -41,5 +41,7 @@ jobs:
             pkg:cargo/vcpkg,
             pkg:cargo/rumqttc,
             pkg:cargo/mqttbytes,
-            pkg:cargo/tokio-rustls
+            pkg:cargo/tokio-rustls,
+            pkg:github/codecov/codecov-action,
+            pkg:github/taiki-e/install-action
           comment-summary-in-pr: always
