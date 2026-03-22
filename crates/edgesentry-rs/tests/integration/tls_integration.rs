@@ -20,9 +20,12 @@ use edgesentry_rs::transport::tls::{serve_tls, TlsConfig};
 
 /// Write a self-signed cert + key to temp files and return their paths.
 ///
-/// The returned `PathBuf` pair is (cert_path, key_path).
-/// The `String` holds the raw cert PEM for adding to a reqwest trust anchor.
+/// Each call generates unique file paths via an atomic counter so concurrent
+/// tests do not overwrite each other's PEM files.
 fn generate_self_signed_cert() -> (PathBuf, PathBuf) {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+
     let subject_alt_names = vec!["localhost".to_string()];
     let cert = rcgen::generate_simple_self_signed(subject_alt_names)
         .expect("rcgen must generate self-signed cert");
@@ -31,8 +34,9 @@ fn generate_self_signed_cert() -> (PathBuf, PathBuf) {
     let key_pem = cert.key_pair.serialize_pem();
 
     let pid = std::process::id();
-    let cert_path = std::env::temp_dir().join(format!("edgesentry_tls_test_{pid}_cert.pem"));
-    let key_path = std::env::temp_dir().join(format!("edgesentry_tls_test_{pid}_key.pem"));
+    let id = COUNTER.fetch_add(1, Ordering::Relaxed);
+    let cert_path = std::env::temp_dir().join(format!("edgesentry_tls_test_{pid}_{id}_cert.pem"));
+    let key_path = std::env::temp_dir().join(format!("edgesentry_tls_test_{pid}_{id}_key.pem"));
 
     std::fs::write(&cert_path, &cert_pem).expect("write cert PEM");
     std::fs::write(&key_path, &key_pem).expect("write key PEM");
