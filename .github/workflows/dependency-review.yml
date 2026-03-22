@@ -41,5 +41,6 @@ jobs:
             pkg:cargo/vcpkg,
             pkg:cargo/rumqttc,
             pkg:cargo/mqttbytes,
-            pkg:cargo/tokio-rustls
+            pkg:cargo/tokio-rustls,
+            pkg:cargo/webpki-roots
           comment-summary-in-pr: always
