@@ -455,6 +455,20 @@ mod tests {
     mod sqlite_tests {
         use super::*;
         use crate::buffer::sqlite::SqliteBufferStore;
+        use std::{fs, path::PathBuf};
+
+        fn tmp_db_path(name: &str) -> PathBuf {
+            let mut p = std::env::temp_dir();
+            p.push(format!("edgesentry_buf_{}_{name}.db", std::process::id()));
+            p
+        }
+
+        struct TmpFile(PathBuf);
+        impl Drop for TmpFile {
+            fn drop(&mut self) {
+                let _ = fs::remove_file(&self.0);
+            }
+        }
 
         #[test]
         fn sqlite_store_roundtrip() {
@@ -481,6 +495,131 @@ mod tests {
             let report = buf.flush(&mut svc).unwrap();
             assert_eq!(report.accepted, 3);
             assert_eq!(report.remaining, 0);
+        }
+
+        /// Records written to a file-backed store survive handle drop and re-open.
+        #[test]
+        fn sqlite_records_survive_handle_drop_and_reopen() {
+            let path = tmp_db_path("reopen");
+            let _guard = TmpFile(path.clone());
+            let path_str = path.to_str().unwrap();
+
+            let pairs = demo_entries();
+
+            // Write phase: push 3 records then drop the handle.
+            {
+                let mut store = SqliteBufferStore::open(path_str).unwrap();
+                for (r, p) in &pairs {
+                    store.push(BufferedEntry { record: r.clone(), raw_payload: p.clone() }).unwrap();
+                }
+                assert_eq!(store.len().unwrap(), 3);
+                // `store` is dropped here, closing the SQLite connection.
+            }
+
+            // Read phase: re-open from the same file and verify all records are present.
+            {
+                let store = SqliteBufferStore::open(path_str).unwrap();
+                assert_eq!(store.len().unwrap(), 3, "all records must survive handle drop");
+
+                let entries = store.entries().unwrap();
+                assert_eq!(entries.len(), 3);
+                for (i, (original, entry)) in pairs.iter().zip(entries.iter()).enumerate() {
+                    assert_eq!(
+                        entry.record.sequence, original.0.sequence,
+                        "sequence mismatch at index {i}"
+                    );
+                    assert_eq!(
+                        entry.record.device_id, original.0.device_id,
+                        "device_id mismatch at index {i}"
+                    );
+                    assert_eq!(
+                        entry.raw_payload, original.1,
+                        "raw_payload mismatch at index {i}"
+                    );
+                }
+            }
+        }
+
+        /// `drop_oldest` removes rows durably — they are gone after re-open.
+        #[test]
+        fn sqlite_drop_oldest_is_durable() {
+            let path = tmp_db_path("drop_oldest");
+            let _guard = TmpFile(path.clone());
+            let path_str = path.to_str().unwrap();
+
+            let pairs = demo_entries();
+
+            // Write 3 records then drop the 2 oldest.
+            {
+                let mut store = SqliteBufferStore::open(path_str).unwrap();
+                for (r, p) in &pairs {
+                    store.push(BufferedEntry { record: r.clone(), raw_payload: p.clone() }).unwrap();
+                }
+                store.drop_oldest(2).unwrap();
+                assert_eq!(store.len().unwrap(), 1);
+            }
+
+            // Re-open: only 1 record should remain, and it must be the last one.
+            {
+                let store = SqliteBufferStore::open(path_str).unwrap();
+                assert_eq!(store.len().unwrap(), 1, "only the youngest record must remain");
+                let entries = store.entries().unwrap();
+                assert_eq!(entries[0].record.sequence, pairs[2].0.sequence);
+            }
+        }
+
+        /// `clear` removes all rows durably — the table is empty after re-open.
+        #[test]
+        fn sqlite_clear_is_durable() {
+            let path = tmp_db_path("clear");
+            let _guard = TmpFile(path.clone());
+            let path_str = path.to_str().unwrap();
+
+            let pairs = demo_entries();
+
+            // Write 3 records then clear.
+            {
+                let mut store = SqliteBufferStore::open(path_str).unwrap();
+                for (r, p) in &pairs {
+                    store.push(BufferedEntry { record: r.clone(), raw_payload: p.clone() }).unwrap();
+                }
+                store.clear().unwrap();
+                assert_eq!(store.len().unwrap(), 0);
+            }
+
+            // Re-open: buffer must still be empty.
+            {
+                let store = SqliteBufferStore::open(path_str).unwrap();
+                assert_eq!(store.len().unwrap(), 0, "clear must persist across re-open");
+            }
+        }
+
+        /// Records are replayed in insertion order (oldest-first) after re-open.
+        #[test]
+        fn sqlite_insertion_order_preserved_across_reopen() {
+            let path = tmp_db_path("order");
+            let _guard = TmpFile(path.clone());
+            let path_str = path.to_str().unwrap();
+
+            let pairs = demo_entries();
+
+            {
+                let mut store = SqliteBufferStore::open(path_str).unwrap();
+                // Push in reverse order to confirm ordering is by insertion, not by sequence.
+                for (r, p) in pairs.iter().rev() {
+                    store.push(BufferedEntry { record: r.clone(), raw_payload: p.clone() }).unwrap();
+                }
+            }
+
+            {
+                let store = SqliteBufferStore::open(path_str).unwrap();
+                let entries = store.entries().unwrap();
+                assert_eq!(entries.len(), 3);
+                // Insertion was 3, 2, 1 — entries must come back in that same order.
+                assert_eq!(entries[0].record.sequence, pairs[2].0.sequence);
+                assert_eq!(entries[1].record.sequence, pairs[1].0.sequence);
+                assert_eq!(entries[2].record.sequence, pairs[0].0.sequence);
+            }
         }
     }
 }
