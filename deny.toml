@@ -8,13 +8,23 @@ db-urls = ["https://github.com/rustsec/advisory-db"]
 # Vulnerabilities are denied by default in v2.
 # yanked crates and unmaintained warnings surface automatically.
 ignore = [
-  # rustls-webpki 0.101.7 is pinned by aws-smithy-http-client's legacy
-  # hyper-rustls 0.24 TLS backend (rustls 0.21 era). No 0.101.x patch
-  # exists; the fix requires rustls-webpki >=0.103.10, which is only
-  # reachable once the AWS SDK fully drops the rustls 0.21 path.
-  # The 0.103.x instance in the tree is already updated to 0.103.10.
-  # Track: https://github.com/edgesentry/edgesentry-rs/issues/125
-  { id = "RUSTSEC-2026-0049", reason = "rustls-webpki 0.101.7 is stuck behind aws-smithy-http-client legacy hyper-rustls 0.24; no 0.101.x patch exists. 0.103.x instance is fixed." },
+  # RUSTSEC-2026-0049 / GHSA-pwjx-qhcg-rvj4: rustls-webpki CRL revocation
+  # authority-matching bug. Two instances are stuck in the dependency tree:
+  #
+  #   0.101.7 — aws-smithy-http-client → hyper-rustls 0.24 → rustls 0.21
+  #              No 0.101.x patch exists. Tracked in #125.
+  #
+  #   0.102.8 — rumqttc 0.25 → rustls 0.22
+  #              No 0.102.x patch exists; fix requires rumqttc to adopt
+  #              rustls 0.23+. Tracked in #166.
+  #
+  # Exposure: we make no CRL revocation API calls anywhere in the codebase;
+  # the vulnerable code path cannot be reached. Re-evaluate if CRL revocation
+  # is ever added to the TLS configuration.
+  #
+  # The 0.103.x instance (tokio-rustls / hyper-rustls 0.27) is already on
+  # the patched version 0.103.10.
+  { id = "RUSTSEC-2026-0049", reason = "0.101.7 stuck behind AWS SDK rustls 0.21 chain (#125); 0.102.8 stuck behind rumqttc rustls 0.22 chain (#166). No CRL revocation calls in codebase. 0.103.x is patched." },
 ]
 
 [bans]
