@@ -171,10 +171,6 @@ mod tls_config_tests {
     }
 }
 
-// Import rcgen for tls_config_tests
-#[cfg(feature = "transport-mqtt-tls")]
-use rcgen;
-
 // ---------------------------------------------------------------------------
 // Broker round-trip — requires TEST_MQTT_BROKER env var
 // ---------------------------------------------------------------------------
