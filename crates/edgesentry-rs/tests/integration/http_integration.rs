@@ -371,7 +371,7 @@ async fn http_empty_body_returns_4xx() {
 
     let status = resp.status().as_u16();
     assert!(
-        status >= 400 && status < 500,
+        (400..500).contains(&status),
         "empty body must return 4xx, got {status}"
     );
 }
