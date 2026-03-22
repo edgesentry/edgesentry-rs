@@ -89,7 +89,7 @@ When `s3` and `async-ingest` are both active, `S3CompatibleRawDataStore` impleme
 | `s3` | `S3CompatibleRawDataStore` (sync); when combined with `async-ingest`, also implements `AsyncRawDataStore` |
 | `postgres` | `PostgresAuditLedger`, `PostgresOperationLog` (sync) |
 | `transport-http` | `transport::http::serve()` — axum-based `POST /api/v1/ingest` server; `eds serve` CLI subcommand |
-| `transport-mqtt` | `transport::mqtt::MqttIngestConfig` scaffold (full implementation pending) |
+| `transport-mqtt` | `transport::mqtt::serve_mqtt()` — async rumqttc event loop; subscribes to a topic, routes records through `AsyncIngestService`, publishes accept/reject responses |
 
 ## Transport Layer
 
@@ -150,16 +150,48 @@ eds serve \
 
 ### MQTT (`transport-mqtt` feature)
 
-The `transport-mqtt` feature currently provides `MqttIngestConfig` — a configuration struct describing the broker, topic, client ID, and QoS level.  Full protocol implementation is planned in a follow-up issue.
+Enable with `features = ["transport-mqtt"]`.  This brings in `rumqttc` and exposes `serve_mqtt()` — a fully async event loop that connects to an MQTT broker, subscribes to a configurable ingest topic, and routes every incoming message through `AsyncIngestService`.
+
+The message format is the same JSON envelope used by the HTTP transport:
+
+```json
+{ "record": { "device_id": "...", "sequence": 1, ... }, "raw_payload_hex": "deadbeef..." }
+```
+
+Accept / reject outcomes are published on `<topic>/response`:
+
+```json
+{ "device_id": "...", "sequence": 1, "status": "accepted" }
+{ "device_id": "...", "sequence": 1, "status": "rejected", "error": "..." }
+```
+
+#### Usage
 
 ```rust
-use edgesentry_rs::transport::mqtt::{MqttIngestConfig, MqttQos};
-
-let config = MqttIngestConfig {
-    broker_host: "mqtt.example.com".into(),
-    broker_port: 1883,
-    topic: "devices/+/ingest".into(),
-    client_id: "edgesentry-cloud".into(),
-    qos: MqttQos::AtLeastOnce,
+use edgesentry_rs::transport::mqtt::{MqttIngestConfig, serve_mqtt};
+use edgesentry_rs::{
+    AsyncIngestService, AsyncInMemoryRawDataStore, AsyncInMemoryAuditLedger,
+    AsyncInMemoryOperationLog, IntegrityPolicyGate,
 };
+
+let service = AsyncIngestService::new(
+    IntegrityPolicyGate::new(),
+    AsyncInMemoryRawDataStore::default(),
+    AsyncInMemoryAuditLedger::default(),
+    AsyncInMemoryOperationLog::default(),
+);
+
+let config = MqttIngestConfig::new("mqtt.example.com", "devices/+/ingest", "edgesentry-cloud");
+serve_mqtt(config, service).await?;
 ```
+
+`serve_mqtt` runs until the broker connection is lost, returning `MqttServeError::EventLoop`.  Wrap the call in a retry loop for automatic reconnection.
+
+#### Key behaviors
+
+| Behavior | Detail |
+|-----------|--------|
+| Malformed JSON | Message is logged and discarded; event loop continues |
+| Invalid hex payload | Message is logged and discarded; event loop continues |
+| Ingest rejection | Response published on `<topic>/response` with `"status": "rejected"` |
+| Response publish failure | Logged as a warning; does not stop the event loop |
