@@ -172,7 +172,7 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
+        run: cargo llvm-cov --version 2>/dev/null || cargo install cargo-llvm-cov --locked
 
       - name: Generate coverage report
         # Exclude external-service tests (Postgres, S3, MQTT broker) via --exclude-from-test.
