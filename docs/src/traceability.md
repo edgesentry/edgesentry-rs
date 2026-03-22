@@ -5,9 +5,9 @@ This page maps each Singapore CLS / iM8 clause and corresponding ETSI EN 303 645
 Legend:
 
 - ✅ Implemented
-— ⚠️ Partial
-— 🔲 Planned
-— ➖ Not in scope
+- ⚠️ Partial
+- 🔲 Planned
+- ➖ Not in scope
 
 ## SS 711:2025 Design Principles Coverage
 
@@ -81,9 +81,10 @@ Singapore's national IoT standard SS 711:2025 defines four principles. See the [
 |------|--------|
 | JC-STAR | STAR-1 R1.1 |
 | Requirement | Data must be transmitted with authenticity guarantees |
-| Status | ⚠️ Partial |
+| Status | ✅ Implemented |
 | Implementation — record authenticity | Every `AuditRecord` carries an Ed25519 signature over its BLAKE3 payload hash — `build_signed_record` ([`src/agent.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/agent.rs)), `sign_payload_hash` ([`src/identity.rs:12`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/identity.rs#L12)) |
-| Gap — channel confidentiality | `transport-tls` feature (`serve_tls()`, rustls TLS 1.2/1.3, `eds serve-tls --tls-cert / --tls-key`) is not yet in `main`; TLS termination must be handled at the deployment layer (reverse proxy / load balancer). Tracked in [#176](https://github.com/edgesentry/edgesentry-rs/issues/176) |
+| Implementation — channel confidentiality (HTTP) | `transport-tls` feature: `serve_tls()` with rustls TLS 1.2/1.3, IP allowlist enforced before handshake, `eds serve-tls --tls-cert / --tls-key` CLI — closed [#176](https://github.com/edgesentry/edgesentry-rs/issues/176) ([`src/transport/tls.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/transport/tls.rs)) |
+| Implementation — channel confidentiality (MQTT) | `transport-mqtt-tls` feature: `MqttTlsConfig` with CA cert path, rustls `ClientConfig` via `rumqttc::TlsConfiguration::Rustls`, `eds serve-mqtt --tls-ca-cert` CLI — closed [#180](https://github.com/edgesentry/edgesentry-rs/issues/180) ([`src/transport/mqtt.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/transport/mqtt.rs)) |
 
 ---
 
@@ -189,7 +190,7 @@ Singapore's national IoT standard SS 711:2025 defines four principles. See the [
 
 | Level | Total clauses | ✅ Implemented | ⚠️ Partial | 🔲 Planned | ➖ Out of scope |
 |-------|-------------|--------------|-----------|-----------|----------------|
-| CLS Level 3 | 11 | 5 | 3 | 0 | 3 |
+| CLS Level 3 | 11 | 6 | 2 | 0 | 3 |
 | CLS Level 4 | 1 | 0 | 0 | 1 | 0 |
 | JC-STAR additions | 1 | 1 | 0 | 0 | 0 |
 
