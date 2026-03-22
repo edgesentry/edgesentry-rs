@@ -30,6 +30,12 @@ transport-mqtt = [
     "async-ingest",
     "dep:rumqttc",
 ]
+transport-tls = [
+    "transport-http",
+    "dep:tokio-rustls",
+    "dep:rustls-pemfile",
+    "dep:hyper-util",
+]
 s3 = [
     "dep:aws-config",
     "dep:aws-sdk-s3",
@@ -52,6 +58,9 @@ thiserror.workspace = true
 tracing.workspace = true
 axum = { version = "0.8", optional = true }
 rumqttc = { version = "0.25", optional = true }
+tokio-rustls = { version = "0.26", features = ["ring"], optional = true }
+rustls-pemfile = { version = "2", optional = true }
+hyper-util = { version = "0.1", features = ["tokio", "server", "http1", "http2"], optional = true }
 aws-config = { version = "1", optional = true }
 aws-sdk-s3 = { version = "1", optional = true }
 aws-credential-types = { version = "1", optional = true }
@@ -60,5 +69,6 @@ postgres = { version = "0.19", optional = true }
 rusqlite = { version = "0.31", optional = true }
 
 [dev-dependencies]
-reqwest = { version = "0.12", features = ["json"], default-features = false }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+rcgen = "0.13"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "net"] }

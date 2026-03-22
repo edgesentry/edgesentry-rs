@@ -12,3 +12,5 @@ mod http_integration;
 mod buffer_integration;
 #[path = "integration/mqtt_integration.rs"]
 mod mqtt_integration;
+#[path = "integration/tls_integration.rs"]
+mod tls_integration;
