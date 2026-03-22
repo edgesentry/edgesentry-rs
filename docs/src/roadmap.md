@@ -72,11 +72,11 @@ IMDA's IoT Cyber Security Guide requires a vendor disclosure checklist as CLS Le
 - Responses mapped to implementation in the traceability matrix
 - See [SBOM and Vendor Disclosure](sbom.md) and [#92](https://github.com/edgesentry/edgesentry-rs/issues/92)
 
-### Milestone 1.5: Transport Layer, Async Ingest & Offline Buffer ✅ Implemented
+### Milestone 1.5: Transport Layer, Async Ingest & Offline Buffer ⚠️ Mostly Implemented
 
 - `async-ingest` feature: `AsyncIngestService<R,L,O>` with `&self` signature for safe multi-task sharing via `Arc` — closed [#115](https://github.com/edgesentry/edgesentry-rs/issues/115)
 - `transport-http` feature: axum-based `POST /api/v1/ingest` endpoint; source IP gated through `NetworkPolicy` before crypto verification; `eds serve` CLI — closed [#116](https://github.com/edgesentry/edgesentry-rs/issues/116)
-- `transport-tls` feature: `serve_tls()` with rustls TLS 1.2/1.3; `eds serve --tls-cert / --tls-key` CLI flags; satisfies CLS-05 channel confidentiality — closed [#73](https://github.com/edgesentry/edgesentry-rs/issues/73)
+- `transport-tls` feature: `serve_tls()` with rustls TLS 1.2/1.3; `eds serve --tls-cert / --tls-key` CLI flags; satisfies CLS-05 channel confidentiality — pending restoration in [#176](https://github.com/edgesentry/edgesentry-rs/issues/176)
 - `transport-mqtt` feature: `serve_mqtt()` subscribes to a configurable topic, routes records through `AsyncIngestService`, publishes accept/reject to `<topic>/response`; `eds serve-mqtt` CLI — closed [#146](https://github.com/edgesentry/edgesentry-rs/issues/146)
 - `buffer` module: `OfflineBuffer<S>` store-and-forward with pluggable `BufferStore` trait; `InMemoryBufferStore` default; `SqliteBufferStore` behind `buffer-sqlite` feature; satisfies CLS-09 resilience — closed [#74](https://github.com/edgesentry/edgesentry-rs/issues/74)
 

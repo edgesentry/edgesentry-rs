@@ -81,10 +81,9 @@
 |------|--------|
 | JC-STAR | STAR-1 R1.1 |
 | 要件 | データは真正性の保証を持って送信されなければならない |
-| ステータス | ✅ 実装済み |
+| ステータス | ⚠️ 部分的 |
 | 実装 — レコード真正性 | すべての`AuditRecord`は BLAKE3 ペイロードハッシュに対する Ed25519 署名を持つ — `build_signed_record`（[`src/agent.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/agent.rs)）、`sign_payload_hash`（[`src/identity.rs:12`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/identity.rs#L12)） |
-| 実装 — チャネル機密性 | `transport-tls` フィーチャー：`serve_tls()` が rustls（TLS 1.2 最小、TLS 1.3 優先）を使用；`eds serve --tls-cert / --tls-key` CLI フラグ（[`src/transport/tls.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/transport/tls.rs)） |
-| クローズ | [#73](https://github.com/edgesentry/edgesentry-rs/issues/73) |
+| ギャップ — チャネル機密性 | `transport-tls` フィーチャー（`serve_tls()`、rustls TLS 1.2/1.3、`eds serve --tls-cert / --tls-key`）は`main`に未実装；TLS はデプロイ層（リバースプロキシ / ロードバランサー）で対応。[#176](https://github.com/edgesentry/edgesentry-rs/issues/176) で追跡 |
 
 ---
 
@@ -188,7 +187,7 @@
 
 | レベル | 総条項数 | ✅ 実装済み | ⚠️ 部分的 | 🔲 計画中 | ➖ スコープ外 |
 |-------|-------------|--------------|-----------|-----------|----------------|
-| CLS レベル 3 | 11 | 6 | 2 | 0 | 3 |
+| CLS レベル 3 | 11 | 5 | 3 | 0 | 3 |
 | CLS レベル 4 | 1 | 0 | 0 | 1 | 0 |
 | JC-STAR 追加 | 1 | 1 | 0 | 0 | 0 |
 
