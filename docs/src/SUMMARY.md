@@ -10,6 +10,7 @@
 - [Architecture](architecture.md)
 - [Library Usage](quickstart.md)
 - [Interactive Demo](demo.md)
+- [Production Deployment](deployment.md)
 - [CLI Reference](cli.md)
 - [Key Management](key_management.md)
 - [C/C++ FFI Bridge](ffi_bridge.md)

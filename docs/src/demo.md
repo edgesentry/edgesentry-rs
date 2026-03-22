@@ -86,3 +86,9 @@ Manual stop local backend (only if you abort the script midway):
 ```bash
 docker compose -f docker-compose.local.yml down
 ```
+
+---
+
+## Next steps
+
+Ready to move beyond the local demo? See the [Production Deployment Guide](deployment.md) for TLS certificate management, PostgreSQL tuning, S3/MinIO lifecycle rules, systemd service units, and horizontal scaling.
