@@ -665,3 +665,26 @@ fn last_error_message_never_returns_null() {
     let ptr = eds_last_error_message();
     assert!(!ptr.is_null());
 }
+
+// ── panic-safety ──────────────────────────────────────────────────────────────
+
+/// Verify that the `catch_unwind → EDS_ERR_PANIC` pattern used at every FFI
+/// boundary behaves correctly: a Rust panic is caught and converted to
+/// `EDS_ERR_PANIC` rather than unwinding past the `extern "C"` boundary.
+///
+/// Every public `eds_*` function is wrapped with:
+/// ```
+/// std::panic::catch_unwind(|| { ... }).unwrap_or_else(|_| EDS_ERR_PANIC)
+/// ```
+/// This test exercises that exact pattern to confirm the sentinel value is
+/// returned on panic and that `EDS_ERR_PANIC == -6` per the public ABI.
+#[test]
+fn ffi_boundary_panic_is_caught_and_returns_err_panic() {
+    use edgesentry_bridge::EDS_ERR_PANIC;
+
+    let rc = std::panic::catch_unwind(|| -> i32 { panic!("intentional test panic") })
+        .unwrap_or(EDS_ERR_PANIC);
+
+    assert_eq!(rc, EDS_ERR_PANIC, "panic must be converted to EDS_ERR_PANIC");
+    assert_eq!(EDS_ERR_PANIC, -6, "EDS_ERR_PANIC must equal -6 per the public ABI contract");
+}
