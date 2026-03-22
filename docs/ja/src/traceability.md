@@ -83,7 +83,7 @@
 | 要件 | データは真正性の保証を持って送信されなければならない |
 | ステータス | ⚠️ 部分的 |
 | 実装 — レコード真正性 | すべての`AuditRecord`は BLAKE3 ペイロードハッシュに対する Ed25519 署名を持つ — `build_signed_record`（[`src/agent.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/agent.rs)）、`sign_payload_hash`（[`src/identity.rs:12`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/identity.rs#L12)） |
-| ギャップ — チャネル機密性 | `transport-tls` フィーチャー（`serve_tls()`、rustls TLS 1.2/1.3、`eds serve --tls-cert / --tls-key`）は`main`に未実装；TLS はデプロイ層（リバースプロキシ / ロードバランサー）で対応。[#176](https://github.com/edgesentry/edgesentry-rs/issues/176) で追跡 |
+| ギャップ — チャネル機密性 | `transport-tls` フィーチャー（`serve_tls()`、rustls TLS 1.2/1.3、`eds serve-tls --tls-cert / --tls-key`）は`main`に未実装；TLS はデプロイ層（リバースプロキシ / ロードバランサー）で対応。[#176](https://github.com/edgesentry/edgesentry-rs/issues/176) で追跡 |
 
 ---
 

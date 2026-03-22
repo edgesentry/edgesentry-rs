@@ -42,6 +42,7 @@
 //! # }
 //! ```
 
+#[cfg(feature = "transport-mqtt-tls")]
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;

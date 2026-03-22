@@ -61,6 +61,9 @@ jobs:
       - name: Unit tests (edgesentry-rs with transport-mqtt-tls)
         run: cargo test -p edgesentry-rs --features transport-mqtt-tls
 
+      - name: CLI integration tests (serve + serve-tls)
+        run: cargo test -p edgesentry-rs --features transport-http,transport-tls --test cli_integration
+
   license_check:
     name: OSS License Check
     runs-on: ubuntu-latest

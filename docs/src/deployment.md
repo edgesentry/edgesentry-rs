@@ -34,10 +34,10 @@ certbot certonly --standalone \
 #   /etc/letsencrypt/live/ingest.example.com/privkey.pem    (private key)
 ```
 
-### 1.2 Starting `eds serve` with TLS
+### 1.2 Starting `eds serve-tls` with TLS
 
 ```bash
-eds serve \
+eds serve-tls \
   --addr 0.0.0.0:8443 \
   --tls-cert /etc/letsencrypt/live/ingest.example.com/fullchain.pem \
   --tls-key  /etc/letsencrypt/live/ingest.example.com/privkey.pem \
@@ -45,11 +45,11 @@ eds serve \
   --device lift-01=<PUBLIC_KEY_HEX>
 ```
 
-`eds serve` enforces TLS 1.2 minimum and TLS 1.3 preferred via rustls. No extra configuration is needed.
+`eds serve-tls` enforces TLS 1.2 minimum and TLS 1.3 preferred via rustls. No extra configuration is needed.
 
 ### 1.3 Certificate rotation (zero-downtime)
 
-`eds serve` reads the certificate files at startup only. For rotation without downtime:
+`eds serve-tls` reads the certificate files at startup only. For rotation without downtime:
 
 ```bash
 # 1. Renew the certificate
@@ -253,7 +253,7 @@ Wants=network-online.target
 Type=exec
 User=edgesentry
 Group=edgesentry
-ExecStart=/usr/local/bin/eds serve \
+ExecStart=/usr/local/bin/eds serve-tls \
     --addr 0.0.0.0:8443 \
     --tls-cert /etc/edgesentry/server.crt \
     --tls-key  /etc/edgesentry/server.key \
@@ -395,7 +395,7 @@ server {
 }
 ```
 
-Run `eds serve` on each node **without** `--tls-cert / --tls-key` (plain HTTP on a private port) and let nginx handle TLS termination. Pass `--allowed-sources` with the nginx upstream IP range.
+Run `eds serve` on each node (plain HTTP on a private port) and let nginx handle TLS termination. Pass `--allowed-sources` with the nginx upstream IP range. Use `eds serve-tls` instead if you prefer built-in TLS without a reverse proxy.
 
 > **Note:** When TLS is terminated at the load balancer, `eds serve` sees the LB's IP rather than the device's IP. Set `--allowed-sources` to the LB's internal address range, and rely on the LB's own allowlist for per-device source control.
 
