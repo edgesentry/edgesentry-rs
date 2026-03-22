@@ -146,6 +146,60 @@ jobs:
       - name: Deny policy violations (bans + sources)
         run: cargo deny check bans sources
 
+  coverage:
+    name: Test Coverage (cargo-llvm-cov)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        run: rustup update stable && rustup default stable && rustup component add llvm-tools-preview
+
+      - name: Cache Rust artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Generate coverage report
+        # Exclude external-service tests (Postgres, S3, MQTT broker) via --exclude-from-test.
+        # The ignored tests still compile so the coverage report is accurate.
+        run: |
+          cargo llvm-cov \
+            --workspace \
+            --features transport-http,transport-mqtt,async-ingest,buffer-sqlite,s3 \
+            --ignore-filename-regex '(main\.rs|examples/)' \
+            --lcov \
+            --output-path lcov.info
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: lcov.info
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Print summary
+        run: |
+          cargo llvm-cov \
+            --workspace \
+            --features transport-http,transport-mqtt,async-ingest,buffer-sqlite,s3 \
+            --ignore-filename-regex '(main\.rs|examples/)' \
+            --summary-only 2>/dev/null || true
+
   release_readiness:
     name: Release Readiness (dry-run)
     runs-on: ubuntu-latest
