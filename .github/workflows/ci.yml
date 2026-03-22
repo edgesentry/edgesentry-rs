@@ -58,6 +58,9 @@ jobs:
       - name: Unit tests (edgesentry-rs with transport-tls)
         run: cargo test -p edgesentry-rs --features transport-tls
 
+      - name: Unit tests (edgesentry-rs with transport-mqtt-tls)
+        run: cargo test -p edgesentry-rs --features transport-mqtt-tls
+
   license_check:
     name: OSS License Check
     runs-on: ubuntu-latest
@@ -184,7 +187,7 @@ jobs:
         run: |
           cargo llvm-cov \
             --workspace \
-            --features transport-http,transport-mqtt,transport-tls,async-ingest,buffer-sqlite,s3 \
+            --features transport-http,transport-mqtt,transport-mqtt-tls,transport-tls,async-ingest,buffer-sqlite,s3 \
             --ignore-filename-regex '(main\.rs|examples/)' \
             --lcov \
             --output-path lcov.info
@@ -200,7 +203,7 @@ jobs:
         run: |
           cargo llvm-cov \
             --workspace \
-            --features transport-http,transport-mqtt,transport-tls,async-ingest,buffer-sqlite,s3 \
+            --features transport-http,transport-mqtt,transport-mqtt-tls,transport-tls,async-ingest,buffer-sqlite,s3 \
             --ignore-filename-regex '(main\.rs|examples/)' \
             --summary-only 2>/dev/null || true
 
