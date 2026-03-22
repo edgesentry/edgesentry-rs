@@ -49,6 +49,29 @@ async fn spawn_server(
     addr
 }
 
+/// Spawn a server with an *empty* network policy (denies every source IP).
+async fn spawn_server_no_allowlist(signing_key: &SigningKey, device_id: &str) -> SocketAddr {
+    let verifying_key = VerifyingKey::from(signing_key);
+    let addr = bind_ephemeral().await;
+
+    let mut policy = IntegrityPolicyGate::new();
+    policy.register_device(device_id, verifying_key);
+
+    // Empty NetworkPolicy — no IP is allowed.
+    let network_policy = NetworkPolicy::new();
+
+    let service = AsyncIngestService::new(
+        policy,
+        AsyncInMemoryRawDataStore::default(),
+        AsyncInMemoryAuditLedger::default(),
+        AsyncInMemoryOperationLog::default(),
+    );
+
+    tokio::spawn(edgesentry_rs::transport::http::serve(service, network_policy, addr));
+    tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    addr
+}
+
 fn ingest_url(addr: SocketAddr) -> String {
     format!("http://{addr}/api/v1/ingest")
 }
@@ -230,4 +253,177 @@ async fn http_sequential_records_all_accepted() {
             "record {seq} must be accepted"
         );
     }
+}
+
+// ── malformed / half-valid JSON rejection tests (#158) ────────────────────────
+
+#[tokio::test]
+async fn http_missing_record_field_returns_4xx() {
+    let signing_key = SigningKey::from_bytes(&[20u8; 32]);
+    let addr = spawn_server(&signing_key, "http-dev-20").await;
+
+    // Valid JSON but missing the required `record` field.
+    let body = serde_json::json!({ "raw_payload_hex": "deadbeef" });
+
+    let resp = reqwest::Client::new()
+        .post(ingest_url(addr))
+        .json(&body)
+        .send()
+        .await
+        .expect("request");
+
+    let status = resp.status().as_u16();
+    assert!(
+        status == 400 || status == 422,
+        "missing `record` field must return 400 or 422, got {status}"
+    );
+}
+
+#[tokio::test]
+async fn http_missing_payload_field_returns_4xx() {
+    let signing_key = SigningKey::from_bytes(&[21u8; 32]);
+    let addr = spawn_server(&signing_key, "http-dev-21").await;
+
+    let record = build_signed_record(
+        "http-dev-21", 1, 1_700_000_000_000, b"data",
+        AuditRecord::zero_hash(), "http-dev-21/1.bin", &signing_key,
+    );
+    // Missing `raw_payload_hex`.
+    let body = serde_json::json!({ "record": record });
+
+    let resp = reqwest::Client::new()
+        .post(ingest_url(addr))
+        .json(&body)
+        .send()
+        .await
+        .expect("request");
+
+    let status = resp.status().as_u16();
+    assert!(
+        status == 400 || status == 422,
+        "missing `raw_payload_hex` must return 400 or 422, got {status}"
+    );
+}
+
+#[tokio::test]
+async fn http_record_field_as_string_returns_4xx() {
+    let signing_key = SigningKey::from_bytes(&[22u8; 32]);
+    let addr = spawn_server(&signing_key, "http-dev-22").await;
+
+    // `record` is a string instead of an object — wrong type.
+    let body = serde_json::json!({
+        "record": "this-should-be-an-object",
+        "raw_payload_hex": "deadbeef",
+    });
+
+    let resp = reqwest::Client::new()
+        .post(ingest_url(addr))
+        .json(&body)
+        .send()
+        .await
+        .expect("request");
+
+    let status = resp.status().as_u16();
+    assert!(
+        status == 400 || status == 422,
+        "`record` as string must return 400 or 422, got {status}"
+    );
+}
+
+#[tokio::test]
+async fn http_payload_hex_as_integer_returns_4xx() {
+    let signing_key = SigningKey::from_bytes(&[23u8; 32]);
+    let addr = spawn_server(&signing_key, "http-dev-23").await;
+
+    let record = build_signed_record(
+        "http-dev-23", 1, 1_700_000_000_000, b"data",
+        AuditRecord::zero_hash(), "http-dev-23/1.bin", &signing_key,
+    );
+    // `raw_payload_hex` is an integer instead of a string.
+    let body = serde_json::json!({ "record": record, "raw_payload_hex": 42 });
+
+    let resp = reqwest::Client::new()
+        .post(ingest_url(addr))
+        .json(&body)
+        .send()
+        .await
+        .expect("request");
+
+    let status = resp.status().as_u16();
+    assert!(
+        status == 400 || status == 422,
+        "`raw_payload_hex` as integer must return 400 or 422, got {status}"
+    );
+}
+
+#[tokio::test]
+async fn http_empty_body_returns_4xx() {
+    let signing_key = SigningKey::from_bytes(&[24u8; 32]);
+    let addr = spawn_server(&signing_key, "http-dev-24").await;
+
+    let resp = reqwest::Client::new()
+        .post(ingest_url(addr))
+        .header(reqwest::header::CONTENT_TYPE, "application/json")
+        .body("")
+        .send()
+        .await
+        .expect("request");
+
+    let status = resp.status().as_u16();
+    assert!(
+        (400..500).contains(&status),
+        "empty body must return 4xx, got {status}"
+    );
+}
+
+#[tokio::test]
+async fn http_json_array_body_returns_4xx() {
+    let signing_key = SigningKey::from_bytes(&[25u8; 32]);
+    let addr = spawn_server(&signing_key, "http-dev-25").await;
+
+    // Top-level JSON array instead of an object.
+    let resp = reqwest::Client::new()
+        .post(ingest_url(addr))
+        .json(&serde_json::json!([1, 2, 3]))
+        .send()
+        .await
+        .expect("request");
+
+    let status = resp.status().as_u16();
+    assert!(
+        status == 400 || status == 422,
+        "JSON array body must return 400 or 422, got {status}"
+    );
+}
+
+#[tokio::test]
+async fn http_blocked_source_ip_returns_403() {
+    // Server with empty NetworkPolicy — loopback is not in the allowlist.
+    let signing_key = SigningKey::from_bytes(&[26u8; 32]);
+    let addr = spawn_server_no_allowlist(&signing_key, "http-dev-26").await;
+
+    // The NetworkPolicy check runs inside the handler after JSON extraction,
+    // so the body must be structurally valid (both fields present) for the
+    // 403 branch to be reached.
+    let payload = b"blocked-test";
+    let record = build_signed_record(
+        "http-dev-26", 1, 1_700_000_000_000, payload,
+        AuditRecord::zero_hash(), "http-dev-26/1.bin", &signing_key,
+    );
+    let body = serde_json::json!({
+        "record": record,
+        "raw_payload_hex": hex::encode(payload),
+    });
+
+    let resp = reqwest::Client::new()
+        .post(ingest_url(addr))
+        .json(&body)
+        .send()
+        .await
+        .expect("request");
+
+    assert_eq!(resp.status(), 403, "blocked IP must return 403 Forbidden");
+
+    let json: serde_json::Value = resp.json().await.unwrap();
+    assert_eq!(json["status"], "rejected");
 }
