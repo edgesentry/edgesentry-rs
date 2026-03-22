@@ -90,6 +90,25 @@ enum Commands {
         #[arg(long = "device", value_name = "ID=PUBKEY_HEX")]
         devices: Vec<String>,
     },
+    #[cfg(feature = "transport-tls")]
+    /// Start the HTTPS ingest server with TLS 1.2/1.3 (requires transport-tls feature)
+    ServeTls {
+        /// Socket address to bind, e.g. 0.0.0.0:8443
+        #[arg(long, default_value = "0.0.0.0:8443")]
+        addr: std::net::SocketAddr,
+        /// Comma-separated list of allowed source CIDRs or IPs (e.g. 10.0.0.0/8,127.0.0.1)
+        #[arg(long, default_value = "127.0.0.1")]
+        allowed_sources: String,
+        /// Ed25519 public key hex for the device to accept (may be specified multiple times)
+        #[arg(long = "device", value_name = "ID=PUBKEY_HEX")]
+        devices: Vec<String>,
+        /// Path to PEM-encoded certificate chain file
+        #[arg(long)]
+        tls_cert: std::path::PathBuf,
+        /// Path to PEM-encoded private key file
+        #[arg(long)]
+        tls_key: std::path::PathBuf,
+    },
     #[cfg(feature = "transport-mqtt")]
     /// Start the MQTT ingest subscriber (requires transport-mqtt feature)
     ServeMqtt {
@@ -275,6 +294,50 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             tokio::runtime::Runtime::new()?
                 .block_on(edgesentry_rs::transport::http::serve(service, network_policy, addr))
                 .map_err(|e| format!("server error: {e}"))?;
+        }
+        #[cfg(feature = "transport-tls")]
+        Commands::ServeTls { addr, allowed_sources, devices, tls_cert, tls_key } => {
+            use ed25519_dalek::VerifyingKey;
+            use edgesentry_rs::{
+                AsyncInMemoryAuditLedger, AsyncInMemoryOperationLog, AsyncInMemoryRawDataStore,
+                AsyncIngestService, IntegrityPolicyGate, NetworkPolicy,
+            };
+            use edgesentry_rs::transport::tls::{TlsConfig, serve_tls};
+
+            let mut network_policy = NetworkPolicy::new();
+            for source in allowed_sources.split(',') {
+                let source = source.trim();
+                if source.contains('/') {
+                    network_policy.allow_cidr(source)
+                        .map_err(|e| format!("invalid CIDR '{source}': {e}"))?;
+                } else {
+                    let ip: std::net::IpAddr = source.parse()
+                        .map_err(|e| format!("invalid IP '{source}': {e}"))?;
+                    network_policy.allow_ip(ip);
+                }
+            }
+
+            let mut policy = IntegrityPolicyGate::new();
+            for device_spec in &devices {
+                let (device_id, pubkey_hex) = device_spec.split_once('=')
+                    .ok_or_else(|| format!("--device must be ID=PUBKEY_HEX, got: {device_spec}"))?;
+                let key_bytes = parse_fixed_hex::<32>(pubkey_hex)?;
+                let verifying_key = VerifyingKey::from_bytes(&key_bytes)
+                    .map_err(|e| format!("invalid public key for {device_id}: {e}"))?;
+                policy.register_device(device_id, verifying_key);
+            }
+
+            let service = AsyncIngestService::new(
+                policy,
+                AsyncInMemoryRawDataStore::default(),
+                AsyncInMemoryAuditLedger::default(),
+                AsyncInMemoryOperationLog::default(),
+            );
+
+            let tls = TlsConfig::from_pem_files(tls_cert, tls_key);
+            tokio::runtime::Runtime::new()?
+                .block_on(serve_tls(service, network_policy, addr, tls))
+                .map_err(|e| format!("TLS server error: {e}"))?;
         }
         #[cfg(feature = "transport-mqtt")]
         Commands::ServeMqtt { broker, port, topic, client_id, devices } => {
