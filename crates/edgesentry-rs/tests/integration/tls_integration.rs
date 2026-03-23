@@ -8,6 +8,7 @@
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
+use std::fs;
 
 use ed25519_dalek::{SigningKey, VerifyingKey};
 use edgesentry_rs::{
@@ -82,9 +83,13 @@ async fn spawn_tls_server(
     addr
 }
 
-fn tls_client() -> reqwest::Client {
+fn tls_client(cert_path: &PathBuf) -> reqwest::Client {
+    let cert_pem = fs::read(cert_path).expect("must read test TLS certificate");
+    let cert = reqwest::Certificate::from_pem(&cert_pem).expect("must parse test TLS certificate");
+
     reqwest::Client::builder()
-        .danger_accept_invalid_certs(true)
+        .add_root_certificate(cert)
+        .danger_accept_invalid_certs(false)
         .build()
         .expect("TLS client must build")
 }
@@ -99,7 +104,7 @@ fn ingest_url(addr: SocketAddr) -> String {
 async fn tls_accepted_record_returns_202() {
     let (cert_path, key_path) = generate_self_signed_cert();
     let signing_key = SigningKey::from_bytes(&[40u8; 32]);
-    let addr = spawn_tls_server(&signing_key, "tls-dev-01", cert_path, key_path).await;
+    let addr = spawn_tls_server(&signing_key, "tls-dev-01", cert_path.clone(), key_path).await;
 
     let payload = b"tls-test-payload";
     let record = build_signed_record(
@@ -117,7 +122,7 @@ async fn tls_accepted_record_returns_202() {
         "raw_payload_hex": hex::encode(payload),
     });
 
-    let resp = tls_client()
+    let resp = tls_client(&cert_path)
         .post(ingest_url(addr))
         .json(&body)
         .send()
