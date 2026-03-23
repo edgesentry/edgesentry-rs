@@ -70,7 +70,7 @@ The IMDA IoT Cyber Security Guide requires responses across five categories. The
 | Algorithms used | Ed25519 (signing), BLAKE3 (hashing) |
 | Key length | Ed25519: 256-bit; BLAKE3 output: 256-bit |
 | Random number generation | OS CSPRNG via `rand::OsRng` — no custom RNG |
-| Transport encryption | Record-level: Ed25519 signature over payload hash. Transport-layer TLS is the deployer's responsibility (planned: [#73](https://github.com/edgesentry/edgesentry-rs/issues/73)) |
+| Transport encryption | Record-level: Ed25519 signature over payload hash. Native TLS transport is provided: `eds serve-tls --tls-cert / --tls-key` (rustls TLS 1.2/1.3, HTTP) and `eds serve-mqtt --tls-ca-cert` (MQTT over TLS). See [CLS-05 in the Traceability Matrix](traceability.md). |
 | Key storage | Public-key registry in memory (`IntegrityPolicyGate`); private key files managed by the deployer. HSM-backed storage planned: [#54](https://github.com/edgesentry/edgesentry-rs/issues/54) |
 | Implementation | `crates/edgesentry-rs/src/identity.rs`, `crates/edgesentry-rs/src/integrity.rs` |
 
