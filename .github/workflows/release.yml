@@ -14,6 +14,7 @@ jobs:
   create_tag:
     name: Bump version and create tag
     uses: ./.github/workflows/auto-version-tag.yml
+    secrets: inherit
     permissions:
       contents: write
 
