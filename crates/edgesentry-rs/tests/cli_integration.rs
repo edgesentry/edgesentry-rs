@@ -516,11 +516,14 @@ fn serve_tls_accepts_valid_record_returns_202() {
         "raw_payload_hex": hex::encode(payload),
     });
 
+    let cert_bytes = std::fs::read(&cert_path).expect("read test TLS certificate");
+    let cert = reqwest::tls::Certificate::from_pem(&cert_bytes).expect("parse test TLS certificate");
+
     let resp = reqwest::blocking::Client::builder()
-        .danger_accept_invalid_certs(true)
+        .add_root_certificate(cert)
         .build()
         .expect("TLS client")
-        .post(format!("https://{addr}/api/v1/ingest"))
+        .post(format!("https://localhost:{}/api/v1/ingest", addr.split(':').nth(1).unwrap()))
         .json(&body)
         .send()
         .expect("HTTPS request to eds serve-tls must succeed");
