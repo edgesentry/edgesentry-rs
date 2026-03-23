@@ -2,7 +2,7 @@
 //!
 //! Generates a self-signed certificate with `rcgen`, spins up an ephemeral
 //! HTTPS server backed by in-memory stores, and exercises `POST /api/v1/ingest`
-//! via `reqwest` with TLS certificate validation disabled (self-signed cert).
+//! via `reqwest` with the self-signed cert added as a trusted root CA.
 
 #![cfg(feature = "transport-tls")]
 
@@ -95,7 +95,7 @@ fn tls_client(cert_path: &PathBuf) -> reqwest::Client {
 }
 
 fn ingest_url(addr: SocketAddr) -> String {
-    format!("https://{addr}/api/v1/ingest")
+    format!("https://localhost:{}/api/v1/ingest", addr.port())
 }
 
 // ── tests ─────────────────────────────────────────────────────────────────────
@@ -139,7 +139,7 @@ async fn tls_accepted_record_returns_202() {
 async fn tls_tampered_payload_returns_422() {
     let (cert_path, key_path) = generate_self_signed_cert();
     let signing_key = SigningKey::from_bytes(&[41u8; 32]);
-    let addr = spawn_tls_server(&signing_key, "tls-dev-02", cert_path, key_path).await;
+    let addr = spawn_tls_server(&signing_key, "tls-dev-02", cert_path.clone(), key_path).await;
 
     let record = build_signed_record(
         "tls-dev-02",
@@ -156,7 +156,7 @@ async fn tls_tampered_payload_returns_422() {
         "raw_payload_hex": hex::encode(b"tampered"),
     });
 
-    let resp = tls_client()
+    let resp = tls_client(&cert_path)
         .post(ingest_url(addr))
         .json(&body)
         .send()
@@ -172,7 +172,7 @@ async fn tls_tampered_payload_returns_422() {
 async fn tls_invalid_hex_returns_400() {
     let (cert_path, key_path) = generate_self_signed_cert();
     let signing_key = SigningKey::from_bytes(&[42u8; 32]);
-    let addr = spawn_tls_server(&signing_key, "tls-dev-03", cert_path, key_path).await;
+    let addr = spawn_tls_server(&signing_key, "tls-dev-03", cert_path.clone(), key_path).await;
 
     let record = build_signed_record(
         "tls-dev-03",
@@ -189,7 +189,7 @@ async fn tls_invalid_hex_returns_400() {
         "raw_payload_hex": "not-valid-hex!!",
     });
 
-    let resp = tls_client()
+    let resp = tls_client(&cert_path)
         .post(ingest_url(addr))
         .json(&body)
         .send()
