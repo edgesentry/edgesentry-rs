@@ -523,7 +523,7 @@ fn serve_tls_accepts_valid_record_returns_202() {
         .add_root_certificate(cert)
         .build()
         .expect("TLS client")
-        .post(format!("https://{addr}/api/v1/ingest"))
+        .post(format!("https://localhost:{}/api/v1/ingest", addr.split(':').nth(1).unwrap()))
         .json(&body)
         .send()
         .expect("HTTPS request to eds serve-tls must succeed");
