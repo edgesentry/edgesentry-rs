@@ -20,11 +20,11 @@
 |---|---|---|
 | [#30](https://github.com/edgesentry/trilink-core/issues/30) | `PointCloud`・`DepthMap`・`HeightMap` 型定義 | 完了 |
 | [#31](https://github.com/edgesentry/trilink-core/issues/31) | `project_to_depth_map`（3D → 深度マップ） | 完了 |
-| [#32](https://github.com/edgesentry/trilink-core/issues/32) | `project_to_height_map`（3D → 高さマップ） | Todo |
-| [#33](https://github.com/edgesentry/trilink-core/issues/33) | `docs/math.md` 順投影セクションの追記 | Todo |
-| [#34](https://github.com/edgesentry/trilink-core/issues/34) | 投影 → 逆投影ラウンドトリップテスト | Todo |
+| [#32](https://github.com/edgesentry/trilink-core/issues/32) | `project_to_height_map`（3D → 高さマップ） | 完了 |
+| [#33](https://github.com/edgesentry/trilink-core/issues/33) | `docs/math.md` 順投影セクションの追記 | 完了 |
+| [#34](https://github.com/edgesentry/trilink-core/issues/34) | 投影 → 逆投影ラウンドトリップテスト | 完了 |
 
-`#30`、`#31`、`#32`、`#34` がマージされるまで M2 を開始しないこと。
+基盤の全イシューがマージ済みです。M2 の実装を開始できます。
 
 ---
 
@@ -137,7 +137,7 @@
 ## 依存グラフ
 
 ```
-trilink-core #30, #31, #32, #34（基盤 — 最初に完了させること）
+trilink-core #30, #31, #32, #33, #34（基盤 — 完了）
     └── M2（IFC ローダー + 偏差エンジン）          [OSS]
          └── M3（ヒートマップ生成）                 [OSS]
               └── M4（現場 PC パイプライン CLI）     [OSS]
