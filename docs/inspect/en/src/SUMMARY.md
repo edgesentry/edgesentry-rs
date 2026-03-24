@@ -7,3 +7,4 @@
 - [Scenarios](scenarios.md)
 - [Architecture](architecture.md)
 - [Roadmap](roadmap.md)
+- [Demo Pipeline](demo.md)

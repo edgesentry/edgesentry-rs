@@ -7,3 +7,4 @@
 - [シナリオ分析](scenarios.md)
 - [アーキテクチャ](architecture.md)
 - [ロードマップ](roadmap.md)
+- [デモパイプライン](demo.md)
