@@ -22,10 +22,14 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install mdBook
         run: cargo install mdbook --locked
-      - name: Build English docs
+      - name: Build audit docs (EN)
         run: mdbook build docs/
-      - name: Build Japanese docs
+      - name: Build audit docs (JA)
         run: mdbook build docs/ja/
+      - name: Build inspect docs (EN)
+        run: mdbook build docs/inspect/en/
+      - name: Build inspect docs (JA)
+        run: mdbook build docs/inspect/ja/
       - name: Add root redirect
         run: |
           cat > docs/book/index.html <<'EOF'

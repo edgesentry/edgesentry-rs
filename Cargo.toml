@@ -2,6 +2,7 @@
 members = [
   "crates/edgesentry-audit",
   "crates/edgesentry-bridge",
+  "crates/edgesentry-inspect",
 ]
 resolver = "2"
 

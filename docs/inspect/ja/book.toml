@@ -1,0 +1,14 @@
+[book]
+title = "EdgeSentry-Inspect"
+description = "インフラ点検向けリアルタイム・デジタルツイン監査プラットフォーム"
+authors = ["edgesentry contributors"]
+language = "ja"
+src = "src"
+
+[build]
+build-dir = "../../book/inspect/ja"
+
+[output.html]
+git-repository-url = "https://github.com/edgesentry/edgesentry-rs"
+edit-url-template = "https://github.com/edgesentry/edgesentry-rs/edit/main/docs/inspect/ja/src/{path}"
+additional-js = ["theme/lang-switcher.js"]
