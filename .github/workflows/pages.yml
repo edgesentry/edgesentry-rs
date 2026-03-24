@@ -68,7 +68,7 @@ jobs:
             </head>
             <body>
               <h1>EdgeSentry</h1>
-              <p class="tagline">Mathematically provable integrity at the edge.</p>
+              <p class="tagline">Trust and verification for edge infrastructure.</p>
               <ul>
                 <li>
                   <a class="card" href="/edgesentry-rs/audit/en/">
@@ -109,7 +109,7 @@ jobs:
             </head>
             <body>
               <h1>EdgeSentry</h1>
-              <p class="tagline">エッジにおける数学的に証明可能な完全性</p>
+              <p class="tagline">エッジインフラへの信頼と検証</p>
               <ul>
                 <li>
                   <a class="card" href="/edgesentry-rs/audit/ja/">
