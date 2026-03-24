@@ -19,6 +19,7 @@ jobs:
 
       - name: Submit dependency snapshot
         uses: advanced-security/component-detection-dependency-submission-action@v0.1.1
+        continue-on-error: true
 
       - name: Dependency Review
         uses: actions/dependency-review-action@v4
