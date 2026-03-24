@@ -25,9 +25,9 @@
 | [#34](https://github.com/edgesentry/trilink-core/issues/34) | 投影 → 逆投影ラウンドトリップテスト | 完了 |
 | [#39](https://github.com/edgesentry/trilink-core/issues/39) | `HeightMap` の次元命名統一（`cols/rows` → `width/height`） | 完了 |
 | [#40](https://github.com/edgesentry/trilink-core/issues/40) | 座標精度の設計決定（`Point3D` は `f32` を維持） | 完了 |
-| [#38](https://github.com/edgesentry/trilink-core/issues/38) | `Transform4x4` / `Point3D` への glam 採用（SIMD・行列逆変換） | レビュー中 |
+| [#38](https://github.com/edgesentry/trilink-core/issues/38) | `Transform4x4` / `Point3D` への glam 採用（SIMD・行列逆変換） | 完了 |
 
-#38 がマージされるまで M2 を開始しないこと。
+基盤の全イシューがマージ済みです。M2 の実装を開始できます。
 
 ---
 
