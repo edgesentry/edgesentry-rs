@@ -1,10 +1,10 @@
 //! Deviation engine — compute per-point nearest-neighbour distances between a
 //! scan point cloud and a design reference cloud.
 //!
-//! Uses a k-d tree (via the `kiddo` crate) for O(log n) nearest-neighbour
+//! Uses a k-d tree (via the `kd-tree` crate) for O(log n) nearest-neighbour
 //! queries. Distances are in metres internally and reported in millimetres.
 
-use kiddo::{KdTree, SquaredEuclidean};
+use kd_tree::KdTree;
 use serde::{Deserialize, Serialize};
 use trilink_core::Point3D;
 
@@ -38,12 +38,6 @@ pub fn compute_deviation(
 ) -> DeviationReport {
     assert!(!reference.is_empty(), "reference cloud must not be empty");
 
-    // Build k-d tree from reference cloud.
-    let mut tree: KdTree<f32, 3> = KdTree::with_capacity(reference.len());
-    for (idx, pt) in reference.iter().enumerate() {
-        tree.add(&[pt.x, pt.y, pt.z], idx as u64);
-    }
-
     if scan.is_empty() {
         return DeviationReport {
             compliant_pct: 100.0,
@@ -53,15 +47,18 @@ pub fn compute_deviation(
         };
     }
 
-    let mut max_dist_sq: f32 = 0.0;
+    // Build k-d tree from reference cloud.
+    let ref_pts: Vec<[f32; 3]> = reference.iter().map(|p| [p.x, p.y, p.z]).collect();
+    let tree = KdTree::build_by_ordered_float(ref_pts);
+
+    let mut max_dist_sq: f64 = 0.0;
     let mut sum_dist_mm: f64 = 0.0;
     let mut compliant_count: usize = 0;
 
     for pt in scan {
-        let nearest = tree.nearest_one::<SquaredEuclidean>(&[pt.x, pt.y, pt.z]);
-        let dist_sq = nearest.distance; // squared Euclidean in metres²
-        let dist_m = dist_sq.sqrt() as f64;
-        let dist_mm = dist_m * 1000.0;
+        let nearest = tree.nearest(&[pt.x, pt.y, pt.z]).unwrap();
+        let dist_sq = nearest.squared_distance as f64; // metres²
+        let dist_mm = dist_sq.sqrt() * 1000.0;
 
         if dist_sq > max_dist_sq {
             max_dist_sq = dist_sq;
@@ -73,11 +70,12 @@ pub fn compute_deviation(
     }
 
     let n = scan.len();
-    let max_deviation_mm = (max_dist_sq as f64).sqrt() * 1000.0;
-    let mean_deviation_mm = sum_dist_mm / n as f64;
-    let compliant_pct = compliant_count as f64 / n as f64 * 100.0;
-
-    DeviationReport { compliant_pct, max_deviation_mm, mean_deviation_mm, point_count: n }
+    DeviationReport {
+        compliant_pct: compliant_count as f64 / n as f64 * 100.0,
+        max_deviation_mm: max_dist_sq.sqrt() * 1000.0,
+        mean_deviation_mm: sum_dist_mm / n as f64,
+        point_count: n,
+    }
 }
 
 #[cfg(test)]
