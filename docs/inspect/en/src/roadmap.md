@@ -23,8 +23,11 @@ They are tracked and implemented in the [`trilink-core`](https://github.com/edge
 | [#32](https://github.com/edgesentry/trilink-core/issues/32) | `project_to_height_map` (3D → height map) | Done |
 | [#33](https://github.com/edgesentry/trilink-core/issues/33) | `docs/math.md` forward projection sections | Done |
 | [#34](https://github.com/edgesentry/trilink-core/issues/34) | Project → unproject round-trip tests | Done |
+| [#39](https://github.com/edgesentry/trilink-core/issues/39) | `HeightMap` dimension naming (`cols/rows` → `width/height`) | Done |
+| [#40](https://github.com/edgesentry/trilink-core/issues/40) | Coordinate precision decision (`Point3D` stays `f32`) | Done |
+| [#38](https://github.com/edgesentry/trilink-core/issues/38) | Adopt glam for `Transform4x4` / `Point3D` (SIMD, inversion) | In Review |
 
-All foundation items are merged. M2 is unblocked.
+Do not start M2 until #38 merges.
 
 ---
 
