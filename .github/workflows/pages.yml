@@ -23,9 +23,9 @@ jobs:
       - name: Install mdBook
         run: cargo install mdbook --locked
       - name: Build audit docs (EN)
-        run: mdbook build docs/
+        run: mdbook build docs/audit/en/
       - name: Build audit docs (JA)
-        run: mdbook build docs/ja/
+        run: mdbook build docs/audit/ja/
       - name: Build inspect docs (EN)
         run: mdbook build docs/inspect/en/
       - name: Build inspect docs (JA)
@@ -37,11 +37,11 @@ jobs:
           <html>
             <head>
               <meta charset="utf-8">
-              <meta http-equiv="refresh" content="0; url=/edgesentry-rs/en/">
-              <link rel="canonical" href="/edgesentry-rs/en/">
+              <meta http-equiv="refresh" content="0; url=/edgesentry-rs/audit/en/">
+              <link rel="canonical" href="/edgesentry-rs/audit/en/">
             </head>
             <body>
-              <p>Redirecting to <a href="/edgesentry-rs/en/">English documentation</a>...</p>
+              <p>Redirecting to <a href="/edgesentry-rs/audit/en/">English documentation</a>...</p>
             </body>
           </html>
           EOF

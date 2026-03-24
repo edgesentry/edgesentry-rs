@@ -6,9 +6,9 @@ language = "en"
 src = "src"
 
 [build]
-build-dir = "book/en"
+build-dir = "../../book/audit/en"
 
 [output.html]
 git-repository-url = "https://github.com/edgesentry/edgesentry-rs"
-edit-url-template = "https://github.com/edgesentry/edgesentry-rs/edit/main/docs/src/{path}"
+edit-url-template = "https://github.com/edgesentry/edgesentry-rs/edit/main/docs/audit/en/src/{path}"
 additional-js = ["theme/lang-switcher.js"]
