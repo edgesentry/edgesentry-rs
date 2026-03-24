@@ -10,16 +10,23 @@ jobs:
     name: Dependency Review
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Rust
+        run: rustup update stable && rustup default stable
+
+      - name: Submit dependency snapshot
+        uses: actions/rust-dependency-submission@v1
+
       - name: Dependency Review
         uses: actions/dependency-review-action@v4
         with:
+          retry-on-snapshot-warnings: true
           fail-on-severity: high
           allow-licenses: MIT, Apache-2.0, ISC, BSD-2-Clause, BSD-3-Clause, Unicode-3.0, CC0-1.0, Zlib
           allow-dependencies-licenses: >-
