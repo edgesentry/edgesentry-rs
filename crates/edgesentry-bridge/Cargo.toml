@@ -13,7 +13,7 @@ documentation = "https://edgesentry.github.io/edgesentry-rs/ffi_bridge.html"
 crate-type = ["cdylib", "staticlib", "rlib"]
 
 [dependencies]
-edgesentry-rs = { path = "../edgesentry-rs" }
+edgesentry-audit = { path = "../edgesentry-audit" }
 ed25519-dalek.workspace = true
 rand.workspace = true
 

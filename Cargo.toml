@@ -1,6 +1,6 @@
 [workspace]
 members = [
-  "crates/edgesentry-rs",
+  "crates/edgesentry-audit",
   "crates/edgesentry-bridge",
 ]
 resolver = "2"

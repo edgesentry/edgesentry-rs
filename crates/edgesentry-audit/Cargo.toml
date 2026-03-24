@@ -1,0 +1,80 @@
+[package]
+name = "edgesentry-audit"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description   = "Tamper-evident immutable audit trace: signing, verification, ingestion and CLI"
+keywords      = ["audit", "cryptography", "ed25519", "blake3", "iot-security"]
+categories    = ["cryptography", "embedded", "network-programming", "authentication"]
+documentation = "https://edgesentry.github.io/edgesentry-rs/"
+
+[[bin]]
+name = "eds"
+path = "src/main.rs"
+
+[lib]
+name = "edgesentry_audit"
+path = "src/lib.rs"
+
+[features]
+default = []
+async-ingest = [
+    "dep:tokio",
+]
+transport-http = [
+    "async-ingest",
+    "dep:axum",
+]
+transport-mqtt = [
+    "async-ingest",
+    "dep:rumqttc",
+]
+transport-mqtt-tls = [
+    "transport-mqtt",
+    "rumqttc/use-rustls",
+    "dep:tokio-rustls",
+    "dep:rustls-pemfile",
+]
+transport-tls = [
+    "transport-http",
+    "dep:tokio-rustls",
+    "dep:rustls-pemfile",
+    "dep:hyper-util",
+]
+s3 = [
+    "dep:aws-config",
+    "dep:aws-sdk-s3",
+    "dep:aws-credential-types",
+    "dep:tokio",
+]
+postgres = ["dep:postgres"]
+buffer-sqlite = ["dep:rusqlite"]
+
+[dependencies]
+blake3.workspace = true
+clap.workspace = true
+ed25519-dalek.workspace = true
+hex.workspace = true
+postcard.workspace = true
+rand.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+axum = { version = "0.8", optional = true }
+rumqttc = { version = "0.25", optional = true }
+tokio-rustls = { version = "0.26", features = ["ring"], optional = true }
+rustls-pemfile = { version = "2", optional = true }
+hyper-util = { version = "0.1", features = ["tokio", "server", "http1", "http2"], optional = true }
+aws-config = { version = "1", optional = true }
+aws-sdk-s3 = { version = "1", optional = true }
+aws-credential-types = { version = "1", optional = true }
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "macros", "net"], optional = true }
+postgres = { version = "0.19", optional = true }
+rusqlite = { version = "0.31", optional = true }
+
+[dev-dependencies]
+reqwest = { version = "0.12", features = ["json", "blocking", "rustls-tls"], default-features = false }
+rcgen = "0.13"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "net"] }
