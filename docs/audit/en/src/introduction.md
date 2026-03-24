@@ -1,6 +1,6 @@
 # edgesentry-audit
 
-**"Paving the Way for a New Global Standard: Mathematically Provable Integrity at the Edge."**
+**"Trust and verification for edge infrastructure."**
 
 - **Repository:** [github.com/edgesentry/edgesentry-rs](https://github.com/edgesentry/edgesentry-rs)
 - **Documentation:** [edgesentry.github.io/edgesentry-rs/audit/en/](https://edgesentry.github.io/edgesentry-rs/audit/en/)

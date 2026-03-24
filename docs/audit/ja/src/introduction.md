@@ -1,6 +1,6 @@
 # edgesentry-audit
 
-**新たなグローバル標準への道を拓く：エッジにおける数学的に証明可能な完全性**
+**エッジインフラへの信頼と検証**
 
 - **リポジトリ:** [github.com/edgesentry/edgesentry-rs](https://github.com/edgesentry/edgesentry-rs)
 - **ドキュメント:** [edgesentry.github.io/edgesentry-rs/audit/ja/](https://edgesentry.github.io/edgesentry-rs/audit/ja/)
