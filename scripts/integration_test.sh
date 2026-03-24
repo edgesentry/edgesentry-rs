@@ -49,7 +49,7 @@ echo "MinIO: ready"
 # ── 4. Build CLI ─────────────────────────────────────────────────────────────
 echo "[4/8] Building CLI (s3,postgres features)..."
 cd "$ROOT_DIR"
-cargo build -p edgesentry-rs --features s3,postgres --release >/dev/null
+cargo build -p edgesentry-audit --features s3,postgres --release >/dev/null
 
 EDS="$ROOT_DIR/target/release/eds"
 
@@ -117,7 +117,7 @@ echo "[8/8] Running Rust S3 integration tests..."
   TEST_S3_ACCESS_KEY="$MINIO_ACCESS_KEY" \
   TEST_S3_SECRET_KEY="$MINIO_SECRET_KEY" \
   TEST_S3_BUCKET="$MINIO_BUCKET" \
-  cargo test -p edgesentry-rs --features s3 --test integration -- --nocapture
+  cargo test -p edgesentry-audit --features s3 --test integration -- --nocapture
 )
 
 echo ""
