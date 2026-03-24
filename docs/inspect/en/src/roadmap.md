@@ -108,6 +108,24 @@ Do not start M2 until #30, #31, #32, and #34 are merged.
 
 ---
 
+## Demo Pipeline
+
+**Goal:** Run a fully self-contained end-to-end demonstration of the Inspect CLI using open datasets — no production hardware or data required.
+
+**Prerequisites:** M2, M3, M4 (CLI must be built and on PATH).
+
+**Steps:**
+
+1. Download a public IFC file (buildingSMART BIMNet gallery) and an indoor LiDAR scan (S3DIS dataset).
+2. Use IfcOpenShell to sample the IFC surface into a reference point cloud.
+3. Use Open3D to introduce a controlled 15 mm deformation, producing a simulated scan with a known defect.
+4. Run `edgesentry-inspect scan --config config.toml` — the CLI loads the IFC, computes deviation, projects to a depth map, calls the HTTP inference server, back-projects detections, renders a heatmap, and writes the JSON report.
+5. Inspect `report.json` (`compliant_pct`, `max_deviation_mm`, `mean_deviation_mm`) and the PNG heatmap to verify the simulated defect is detected and quantified.
+
+See [Demo Pipeline](demo.md) for the full walkthrough.
+
+---
+
 ## Audit layer — ISO 19650 \[planned\]
 
 The current audit layer records a hash chain over inspection events. A planned extension will reframe each record as an **information container** in the sense of ISO 19650, adding structured BIM status transitions (WIP → Shared → Published) and a conformant payload schema. This enables interoperability with third-party BIM tools and positions the audit chain as a de-facto standard for construction inspection traceability.
@@ -125,5 +143,6 @@ trilink-core #30, #31, #32, #34  (foundation — must be done first)
               └── M4 (field PC pipeline CLI)         [OSS]
                    ├── M4.5 (visualisation)          [Commercial, parallel]
                    ├── M5 (cloud sync)               [OSS]
-                   └── M6 (built-in inference model) [OSS]
+                   ├── M6 (built-in inference model) [OSS]
+                   └── Demo Pipeline (open datasets + CLI)
 ```

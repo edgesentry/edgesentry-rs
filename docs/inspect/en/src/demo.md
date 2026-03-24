@@ -1,6 +1,6 @@
 # Demo Pipeline
 
-This page describes how to build a self-contained proof-of-concept demonstration using open datasets and the Inspect pipeline. It is intended for use in technical evaluations and field demos before production data is available.
+This page describes how to build a self-contained proof-of-concept demonstration using open datasets and the Inspect CLI. It is intended for use in technical evaluations and field demos before production data is available.
 
 ---
 
@@ -19,87 +19,27 @@ This page describes how to build a self-contained proof-of-concept demonstration
 
 ### Step 1 — Generate design point cloud from IFC
 
-Use [IfcOpenShell](https://ifcopenshell.org/) to sample the IFC surface geometry into a reference point cloud (the "ground truth" design):
-
-```python
-import ifcopenshell
-import ifcopenshell.geom
-import numpy as np
-
-settings = ifcopenshell.geom.settings()
-model = ifcopenshell.open("design.ifc")
-
-points = []
-for product in model.by_type("IfcProduct"):
-    try:
-        shape = ifcopenshell.geom.create_shape(settings, product)
-        verts = np.array(shape.geometry.verts).reshape(-1, 3)
-        points.append(verts)
-    except Exception:
-        pass
-
-design_cloud = np.vstack(points)  # shape: (N, 3)
-```
+Use [IfcOpenShell](https://ifcopenshell.org/) to sample the IFC surface geometry into a reference point cloud (the "ground truth" design). Each `IfcProduct` element is triangulated and its vertices collected into a flat `(N, 3)` array representing the design surface.
 
 ### Step 2 — Simulate a damaged scan
 
-Use [Open3D](https://www.open3d.org/) to introduce controlled deformations into a copy of the design cloud, producing a simulated "as-built" scan with known defects:
-
-```python
-import open3d as o3d
-import numpy as np
-
-pcd = o3d.geometry.PointCloud()
-pcd.points = o3d.utility.Vector3dVector(design_cloud)
-
-# Deform a region: push points inward by 15 mm
-points = np.asarray(pcd.points)
-mask = (points[:, 0] > 1.0) & (points[:, 0] < 1.5)
-points[mask, 2] -= 0.015  # 15 mm depression
-
-pcd.points = o3d.utility.Vector3dVector(points)
-o3d.io.write_point_cloud("scan.ply", pcd)
-```
+Use [Open3D](https://www.open3d.org/) to introduce controlled deformations into a copy of the design cloud, producing a simulated "as-built" scan with known defects. A representative demo deforms a localised region by 15 mm to simulate a surface depression, then saves the result as a PLY file.
 
 ### Step 3 — Compute deviation (M2)
 
-The IFC deviation engine compares the simulated scan against the design cloud and produces a JSON report with per-point deviation in millimetres:
-
-```
-edgesentry-inspect scan \
-  --ifc design.ifc \
-  --scan scan.ply \
-  --threshold-mm 5.0 \
-  --out report.json
-```
+Run the `edgesentry-inspect scan` CLI command, pointing it at the IFC design file and the simulated scan PLY. The CLI calls `src/ifc.rs` to load the design reference cloud, then `src/deviation.rs` to compute per-point nearest-neighbour deviation and emit a JSON report containing `compliant_pct`, `max_deviation_mm`, and `mean_deviation_mm`.
 
 This step exercises `src/ifc.rs` and `src/deviation.rs` (M2).
 
 ### Step 4 — Project 3D → 2D (trilink-core)
 
-`trilink-core::project_to_depth_map` converts the scan point cloud into a depth map image for AI inference input:
-
-```
-# Handled internally by the pipeline — no manual step required.
-# The CLI calls project_to_depth_map with the configured camera intrinsics.
-```
+`trilink-core::project_to_depth_map` converts the scan point cloud into a depth map image for AI inference input. This is handled automatically by the CLI using the camera intrinsics in `config.toml` — no manual step is required.
 
 This step exercises `trilink-core::project_to_depth_map` (foundation #31).
 
 ### Step 5 — AI defect detection
 
-Run a detection model over the depth map. For demos, use YOLOv8 via the HTTP inference path (`inference.mode = "http"`):
-
-```python
-from ultralytics import YOLO
-import requests
-
-model = YOLO("yolov8n.pt")  # or a fine-tuned defect model
-results = model("depth_map.png")
-# Forward detections to the Inspect HTTP inference endpoint
-```
-
-The CLI is pre-configured to receive detections from an HTTP server (`inference.mode = "http"`), so YOLOv8 running in Python connects without any Rust changes (M4).
+A detection model runs over the depth map via the HTTP inference path (`inference.mode = "http"`). For demos, YOLOv8 can be used as the external inference server. The CLI sends the depth map image to the configured HTTP endpoint and receives bounding-box detections in return (M4).
 
 ### Step 6 — Back-project 2D → 3D
 
@@ -119,7 +59,7 @@ The deviation engine (M2) is the quantitative centrepiece of the demo. It answer
 |---|---|---|
 | IFC surface sampling | Python / IfcOpenShell | Demo setup (pre-M2) |
 | Damage simulation | Python / Open3D | Demo setup only |
-| IFC deviation engine | Rust / `src/ifc.rs`, `src/deviation.rs` | M2 |
+| IFC deviation engine | Rust CLI / `src/ifc.rs`, `src/deviation.rs` | M2 |
 | 3D ↔ 2D projection | Rust / trilink-core | Foundation #31–#32 |
-| AI defect detection | Python / YOLOv8 (HTTP) | M4 `inference.mode = "http"` |
-| Report + heatmap | Rust / `src/report.rs`, `src/heatmap.rs` | M2–M3 |
+| AI defect detection | External HTTP server (e.g. YOLOv8) | M4 `inference.mode = "http"` |
+| Report + heatmap | Rust CLI / `src/report.rs`, `src/heatmap.rs` | M2–M3 |
