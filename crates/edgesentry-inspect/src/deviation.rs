@@ -1,10 +1,10 @@
 //! Deviation engine — compute per-point nearest-neighbour distances between a
 //! scan point cloud and a design reference cloud.
 //!
-//! Uses a k-d tree (via the `kd-tree` crate) for O(log n) nearest-neighbour
+//! Uses an R*-tree (via the `rstar` crate) for O(log n) nearest-neighbour
 //! queries. Distances are in metres internally and reported in millimetres.
 
-use kd_tree::KdTree;
+use rstar::RTree;
 use serde::{Deserialize, Serialize};
 use trilink_core::Point3D;
 
@@ -47,17 +47,17 @@ pub fn compute_deviation(
         };
     }
 
-    // Build k-d tree from reference cloud.
+    // Build R*-tree from reference cloud.
     let ref_pts: Vec<[f32; 3]> = reference.iter().map(|p| [p.x, p.y, p.z]).collect();
-    let tree = KdTree::build_by_ordered_float(ref_pts);
+    let tree = RTree::bulk_load(ref_pts);
 
     let mut max_dist_sq: f64 = 0.0;
     let mut sum_dist_mm: f64 = 0.0;
     let mut compliant_count: usize = 0;
 
     for pt in scan {
-        let nearest = tree.nearest(&[pt.x, pt.y, pt.z]).unwrap();
-        let dist_sq = nearest.squared_distance as f64; // metres²
+        let nearest = tree.nearest_neighbor(&[pt.x, pt.y, pt.z]).unwrap();
+        let dist_sq = nearest.iter().zip([pt.x, pt.y, pt.z]).map(|(&a, b)| (a - b).powi(2)).sum::<f32>() as f64;
         let dist_mm = dist_sq.sqrt() * 1000.0;
 
         if dist_sq > max_dist_sq {

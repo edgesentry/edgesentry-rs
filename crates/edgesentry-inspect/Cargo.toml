@@ -18,7 +18,7 @@ trilink-core = { git = "https://github.com/edgesentry/trilink-core", branch = "m
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
-kd-tree = "0.6"
+rstar = "0.12"
 
 [dev-dependencies]
 tempfile = "3"
