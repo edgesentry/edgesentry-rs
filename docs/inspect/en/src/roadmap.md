@@ -20,11 +20,11 @@ They are tracked and implemented in the [`trilink-core`](https://github.com/edge
 |---|---|---|
 | [#30](https://github.com/edgesentry/trilink-core/issues/30) | `PointCloud`, `DepthMap`, `HeightMap` types | Done |
 | [#31](https://github.com/edgesentry/trilink-core/issues/31) | `project_to_depth_map` (3D → depth map) | Done |
-| [#32](https://github.com/edgesentry/trilink-core/issues/32) | `project_to_height_map` (3D → height map) | Todo |
-| [#33](https://github.com/edgesentry/trilink-core/issues/33) | `docs/math.md` forward projection sections | Todo |
-| [#34](https://github.com/edgesentry/trilink-core/issues/34) | Project → unproject round-trip tests | Todo |
+| [#32](https://github.com/edgesentry/trilink-core/issues/32) | `project_to_height_map` (3D → height map) | Done |
+| [#33](https://github.com/edgesentry/trilink-core/issues/33) | `docs/math.md` forward projection sections | Done |
+| [#34](https://github.com/edgesentry/trilink-core/issues/34) | Project → unproject round-trip tests | Done |
 
-Do not start M2 until #30, #31, #32, and #34 are merged.
+All foundation items are merged. M2 is unblocked.
 
 ---
 
@@ -137,7 +137,7 @@ This extension is tracked separately from the Inspect milestones above.
 ## Dependency graph
 
 ```
-trilink-core #30, #31, #32, #34  (foundation — must be done first)
+trilink-core #30, #31, #32, #33, #34  (foundation — complete)
     └── M2 (IFC loader + deviation engine)          [OSS]
          └── M3 (heatmap rendering)                 [OSS]
               └── M4 (field PC pipeline CLI)         [OSS]
