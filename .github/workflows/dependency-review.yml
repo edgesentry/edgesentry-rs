@@ -17,11 +17,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Rust
-        run: rustup update stable && rustup default stable
-
       - name: Submit dependency snapshot
-        uses: actions/rust-dependency-submission@v1
+        uses: advanced-security/component-detection-dependency-submission-action@v0.1.1
 
       - name: Dependency Review
         uses: actions/dependency-review-action@v4
