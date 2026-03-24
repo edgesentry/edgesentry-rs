@@ -24,7 +24,7 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 
 use ed25519_dalek::{SigningKey, VerifyingKey};
-use edgesentry_rs::{
+use edgesentry_audit::{
     compute_payload_hash, sign_payload_hash, verify_chain, verify_payload_signature, AuditRecord,
 };
 use rand::rngs::OsRng;

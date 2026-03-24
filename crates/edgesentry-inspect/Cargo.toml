@@ -1,0 +1,16 @@
+[package]
+name = "edgesentry-inspect"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description   = "Edge-first 3D scan vs. reference deviation detection for construction and maritime inspection"
+keywords      = ["inspection", "point-cloud", "deviation", "ifc", "digital-twin"]
+categories    = ["science", "computer-vision", "embedded"]
+documentation = "https://edgesentry.github.io/edgesentry-rs/inspect/en/"
+
+[lib]
+name = "edgesentry_inspect"
+path = "src/lib.rs"
+
+[dependencies]

@@ -52,17 +52,17 @@ jobs:
       - name: Unit tests (workspace)
         run: cargo test --workspace
 
-      - name: Unit tests (edgesentry-rs with s3)
-        run: cargo test -p edgesentry-rs --features s3
+      - name: Unit tests (edgesentry-audit with s3)
+        run: cargo test -p edgesentry-audit --features s3
 
-      - name: Unit tests (edgesentry-rs with transport-tls)
-        run: cargo test -p edgesentry-rs --features transport-tls
+      - name: Unit tests (edgesentry-audit with transport-tls)
+        run: cargo test -p edgesentry-audit --features transport-tls
 
-      - name: Unit tests (edgesentry-rs with transport-mqtt-tls)
-        run: cargo test -p edgesentry-rs --features transport-mqtt-tls
+      - name: Unit tests (edgesentry-audit with transport-mqtt-tls)
+        run: cargo test -p edgesentry-audit --features transport-mqtt-tls
 
       - name: CLI integration tests (serve + serve-tls)
-        run: cargo test -p edgesentry-rs --features transport-http,transport-tls --test cli_integration
+        run: cargo test -p edgesentry-audit --features transport-http,transport-tls --test cli_integration
 
   license_check:
     name: OSS License Check
@@ -238,4 +238,4 @@ jobs:
 
       - name: Publish dry-run (edgesentry-rs)
         run: |
-          cargo publish --dry-run --locked -p edgesentry-rs
+          cargo publish --dry-run --locked -p edgesentry-audit

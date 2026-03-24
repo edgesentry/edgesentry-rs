@@ -21,6 +21,9 @@
 # mdBook build output
 docs/book/
 
+# Local docs preview site (scripts/preview_docs.sh)
+_site/
+
 # Python
 scripts/__pycache__/
 *.pyc

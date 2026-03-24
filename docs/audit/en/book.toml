@@ -1,0 +1,14 @@
+[book]
+title = "edgesentry-rs"
+description = "Tamper-evident audit log PoC built in Rust from IoT devices to cloud services."
+authors = ["edgesentry-rs contributors"]
+language = "en"
+src = "src"
+
+[build]
+build-dir = "../../book/audit/en"
+
+[output.html]
+git-repository-url = "https://github.com/edgesentry/edgesentry-rs"
+edit-url-template = "https://github.com/edgesentry/edgesentry-rs/edit/main/docs/audit/en/src/{path}"
+additional-js = ["theme/lang-switcher.js"]

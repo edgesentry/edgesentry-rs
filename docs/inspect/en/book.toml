@@ -1,0 +1,14 @@
+[book]
+title = "EdgeSentry-Inspect"
+description = "Real-time digital twin audit platform for infrastructure inspection."
+authors = ["edgesentry contributors"]
+language = "en"
+src = "src"
+
+[build]
+build-dir = "../../book/inspect/en"
+
+[output.html]
+git-repository-url = "https://github.com/edgesentry/edgesentry-rs"
+edit-url-template = "https://github.com/edgesentry/edgesentry-rs/edit/main/docs/inspect/en/src/{path}"
+additional-js = ["theme/lang-switcher.js"]
