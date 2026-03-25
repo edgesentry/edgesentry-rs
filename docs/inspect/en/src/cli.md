@@ -4,6 +4,46 @@
 
 ---
 
+## Installation
+
+### For end users — pre-built binary
+
+Download the latest release from the [GitHub Releases page](https://github.com/edgesentry/edgesentry-rs/releases).
+
+| Platform | File |
+|----------|------|
+| Linux (x86-64) | `eds-{version}-x86_64-unknown-linux-gnu.tar.gz` |
+| macOS (Apple Silicon) | `eds-{version}-aarch64-apple-darwin.tar.gz` |
+| Windows (x86-64) | `eds-{version}-x86_64-pc-windows-msvc.zip` |
+
+Extract and place the `eds` binary on your `PATH`:
+
+```bash
+# Linux / macOS
+tar -xzf eds-{version}-{target}.tar.gz
+sudo mv eds /usr/local/bin/
+eds --help
+```
+
+```powershell
+# Windows (PowerShell)
+Expand-Archive eds-{version}-x86_64-pc-windows-msvc.zip
+# Move eds.exe to a directory in your PATH
+eds --help
+```
+
+### For developers — install from source
+
+Requires [Rust](https://rustup.rs) (stable toolchain).
+
+```bash
+cargo install --git https://github.com/edgesentry/edgesentry-rs --bin eds
+```
+
+---
+
+---
+
 ## `eds inspect scan`
 
 Run a full scan pipeline from a TOML config file:

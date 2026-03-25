@@ -7,6 +7,60 @@ eds audit <command>    — 改ざん検知付き監査レコード操作
 eds inspect <command>  — 3D スキャン vs. IFC 偏差・AI 検出パイプライン
 ```
 
+---
+
+## インストール
+
+### エンドユーザー向け — ビルド済みバイナリ
+
+最新リリースを [GitHub Releases ページ](https://github.com/edgesentry/edgesentry-rs/releases) からダウンロードしてください。
+
+| プラットフォーム | ファイル |
+|----------------|---------|
+| Linux (x86-64) | `eds-{version}-x86_64-unknown-linux-gnu.tar.gz` |
+| macOS (Apple Silicon) | `eds-{version}-aarch64-apple-darwin.tar.gz` |
+| Windows (x86-64) | `eds-{version}-x86_64-pc-windows-msvc.zip` |
+
+展開して `eds` バイナリを `PATH` に追加してください：
+
+```bash
+# Linux / macOS
+tar -xzf eds-{version}-{target}.tar.gz
+sudo mv eds /usr/local/bin/
+eds --help
+```
+
+```powershell
+# Windows（PowerShell）
+Expand-Archive eds-{version}-x86_64-pc-windows-msvc.zip
+# eds.exe を PATH が通ったディレクトリに移動してください
+eds --help
+```
+
+### 開発者向け — ソースからインストール
+
+[Rust](https://rustup.rs)（stable ツールチェーン）が必要です。
+
+```bash
+cargo install --git https://github.com/edgesentry/edgesentry-rs --bin eds
+```
+
+オプションのトランスポートフィーチャーを含めてインストールする場合：
+
+```bash
+cargo install --git https://github.com/edgesentry/edgesentry-rs --bin eds \
+  --features transport-http,transport-tls
+```
+
+インストールの確認：
+
+```bash
+eds --version
+eds --help
+```
+
+---
+
 ## デバイスプロビジョニング
 
 新しいデバイス用に Ed25519 キーペアを生成：
