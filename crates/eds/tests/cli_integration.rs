@@ -51,7 +51,7 @@ const PRIV_HEX: &str = "01010101010101010101010101010101010101010101010101010101
 
 #[test]
 fn keygen_exits_zero_and_outputs_valid_json() {
-    let out = eds().arg("keygen").output().expect("eds keygen");
+    let out = eds().args(["audit", "keygen"]).output().expect("eds keygen");
     assert!(out.status.success(), "exit code: {:?}\n{}", out.status, stderr(&out));
 
     let json: serde_json::Value = serde_json::from_str(&stdout(&out)).expect("stdout is JSON");
@@ -64,7 +64,7 @@ fn keygen_exits_zero_and_outputs_valid_json() {
 #[test]
 fn keygen_out_flag_writes_file() {
     let tmp = TmpFile::new("keygen.json");
-    let out = eds().args(["keygen", "--out"]).arg(tmp.path()).output().expect("eds keygen --out");
+    let out = eds().args(["audit", "keygen", "--out"]).arg(tmp.path()).output().expect("eds keygen --out");
     assert!(out.status.success(), "{}", stderr(&out));
     assert!(tmp.path().exists(), "output file not created");
 
@@ -76,7 +76,7 @@ fn keygen_out_flag_writes_file() {
 #[test]
 fn keygen_produces_unique_pairs() {
     let run = |_| {
-        let o = eds().arg("keygen").output().expect("eds keygen");
+        let o = eds().args(["audit", "keygen"]).output().expect("eds keygen");
         let j: serde_json::Value = serde_json::from_str(&stdout(&o)).unwrap();
         j["public_key_hex"].as_str().unwrap().to_string()
     };
@@ -91,7 +91,7 @@ fn keygen_produces_unique_pairs() {
 fn inspect_key_derives_expected_public_key() {
     // Derive what the public key should be from the same private key.
     let keygen_out = eds()
-        .args(["inspect-key", "--private-key-hex", PRIV_HEX])
+        .args(["audit", "inspect-key", "--private-key-hex", PRIV_HEX])
         .output()
         .expect("eds inspect-key");
     assert!(keygen_out.status.success(), "{}", stderr(&keygen_out));
@@ -104,7 +104,7 @@ fn inspect_key_derives_expected_public_key() {
 #[test]
 fn inspect_key_rejects_invalid_hex() {
     let out = eds()
-        .args(["inspect-key", "--private-key-hex", "not-valid-hex"])
+        .args(["audit", "inspect-key", "--private-key-hex", "not-valid-hex"])
         .output()
         .expect("eds inspect-key");
     assert!(!out.status.success(), "should exit non-zero for invalid hex");
@@ -113,13 +113,13 @@ fn inspect_key_rejects_invalid_hex() {
 #[test]
 fn inspect_key_roundtrips_with_keygen() {
     // Generate a fresh keypair, then inspect-key must return the same public key.
-    let kg = eds().arg("keygen").output().expect("keygen");
+    let kg = eds().args(["audit", "keygen"]).output().expect("keygen");
     let kj: serde_json::Value = serde_json::from_str(&stdout(&kg)).unwrap();
     let priv_hex = kj["private_key_hex"].as_str().unwrap();
     let expected_pub = kj["public_key_hex"].as_str().unwrap();
 
     let ik = eds()
-        .args(["inspect-key", "--private-key-hex", priv_hex])
+        .args(["audit", "inspect-key", "--private-key-hex", priv_hex])
         .output()
         .expect("inspect-key");
     assert!(ik.status.success(), "{}", stderr(&ik));
@@ -132,7 +132,7 @@ fn inspect_key_roundtrips_with_keygen() {
 fn sign_record_to_file(priv_hex: &str, out: &TmpFile) -> Output {
     eds()
         .args([
-            "sign-record",
+            "audit", "sign-record",
             "--device-id", "lift-01",
             "--sequence", "1",
             "--timestamp-ms", "1700000000000",
@@ -164,7 +164,7 @@ fn sign_record_rejects_invalid_private_key() {
     let tmp = TmpFile::new("record_bad.json");
     let out = eds()
         .args([
-            "sign-record",
+            "audit", "sign-record",
             "--device-id", "lift-01",
             "--sequence", "1",
             "--timestamp-ms", "1700000000000",
@@ -185,7 +185,7 @@ fn sign_record_rejects_invalid_private_key() {
 fn verify_record_prints_valid_for_correct_key() {
     // First: get the matching public key.
     let ik = eds()
-        .args(["inspect-key", "--private-key-hex", PRIV_HEX])
+        .args(["audit", "inspect-key", "--private-key-hex", PRIV_HEX])
         .output()
         .unwrap();
     let ij: serde_json::Value = serde_json::from_str(&stdout(&ik)).unwrap();
@@ -198,7 +198,7 @@ fn verify_record_prints_valid_for_correct_key() {
 
     // Verify with the correct key.
     let out = eds()
-        .args(["verify-record", "--record-file"])
+        .args(["audit", "verify-record", "--record-file"])
         .arg(rec.path())
         .args(["--public-key-hex", &pub_hex])
         .output()
@@ -218,7 +218,7 @@ fn verify_record_exits_2_for_wrong_key() {
     let wrong_key = "0202020202020202020202020202020202020202020202020202020202020202";
     let wrong_pub = {
         let o = eds()
-            .args(["inspect-key", "--private-key-hex", wrong_key])
+            .args(["audit", "inspect-key", "--private-key-hex", wrong_key])
             .output()
             .unwrap();
         let j: serde_json::Value = serde_json::from_str(&stdout(&o)).unwrap();
@@ -226,7 +226,7 @@ fn verify_record_exits_2_for_wrong_key() {
     };
 
     let out = eds()
-        .args(["verify-record", "--record-file"])
+        .args(["audit", "verify-record", "--record-file"])
         .arg(rec.path())
         .args(["--public-key-hex", &wrong_pub])
         .output()
@@ -244,7 +244,7 @@ fn verify_chain_exits_zero_for_valid_chain() {
     // Use demo-lift-inspection to produce a valid chain file.
     let out = eds()
         .args([
-            "demo-lift-inspection",
+            "audit", "demo-lift-inspection",
             "--private-key-hex", PRIV_HEX,
             "--out-file",
         ])
@@ -254,7 +254,7 @@ fn verify_chain_exits_zero_for_valid_chain() {
     assert!(out.status.success(), "{}", stderr(&out));
 
     let verify = eds()
-        .args(["verify-chain", "--records-file"])
+        .args(["audit", "verify-chain", "--records-file"])
         .arg(chain_file.path())
         .output()
         .expect("eds verify-chain");
@@ -268,7 +268,7 @@ fn verify_chain_exits_nonzero_for_tampered_chain() {
     let chain_file = TmpFile::new("tampered_chain.json");
     let out = eds()
         .args([
-            "demo-lift-inspection",
+            "audit", "demo-lift-inspection",
             "--private-key-hex", PRIV_HEX,
             "--out-file",
         ])
@@ -285,7 +285,7 @@ fn verify_chain_exits_nonzero_for_tampered_chain() {
     fs::write(chain_file.path(), serde_json::to_string_pretty(&records).unwrap()).unwrap();
 
     let verify = eds()
-        .args(["verify-chain", "--records-file"])
+        .args(["audit", "verify-chain", "--records-file"])
         .arg(chain_file.path())
         .output()
         .expect("eds verify-chain tampered");
@@ -296,7 +296,7 @@ fn verify_chain_exits_nonzero_for_tampered_chain() {
 #[test]
 fn verify_chain_exits_nonzero_for_missing_file() {
     let out = eds()
-        .args(["verify-chain", "--records-file", "/nonexistent/path/chain.json"])
+        .args(["audit", "verify-chain", "--records-file", "/nonexistent/path/chain.json"])
         .output()
         .expect("eds verify-chain missing");
     assert!(!out.status.success());
@@ -309,7 +309,7 @@ fn demo_lift_inspection_creates_output_and_validates_chain() {
     let out_file = TmpFile::new("demo_out.json");
     let out = eds()
         .args([
-            "demo-lift-inspection",
+            "audit", "demo-lift-inspection",
             "--private-key-hex", PRIV_HEX,
             "--out-file",
         ])
@@ -331,7 +331,7 @@ fn demo_lift_inspection_writes_payloads_file_when_requested() {
     let payloads_file = TmpFile::new("demo_payloads.json");
     let out = eds()
         .args([
-            "demo-lift-inspection",
+            "audit", "demo-lift-inspection",
             "--private-key-hex", PRIV_HEX,
             "--out-file",
         ])
@@ -376,7 +376,7 @@ fn wait_for_tcp(addr: &str, timeout_secs: u64) -> bool {
 #[cfg(feature = "transport-http")]
 #[test]
 fn serve_help_lists_expected_flags() {
-    let out = eds().args(["serve", "--help"]).output().expect("eds serve --help");
+    let out = eds().args(["audit", "serve", "--help"]).output().expect("eds serve --help");
     assert!(out.status.success(), "exit: {:?}\n{}", out.status, stderr(&out));
     let help = stdout(&out);
     assert!(help.contains("--addr"), "serve --help must list --addr");
@@ -387,7 +387,7 @@ fn serve_help_lists_expected_flags() {
 #[cfg(feature = "transport-tls")]
 #[test]
 fn serve_tls_help_lists_expected_flags() {
-    let out = eds().args(["serve-tls", "--help"]).output().expect("eds serve-tls --help");
+    let out = eds().args(["audit", "serve-tls", "--help"]).output().expect("eds serve-tls --help");
     assert!(out.status.success(), "exit: {:?}\n{}", out.status, stderr(&out));
     let help = stdout(&out);
     assert!(help.contains("--tls-cert"), "serve-tls --help must list --tls-cert");
@@ -398,7 +398,7 @@ fn serve_tls_help_lists_expected_flags() {
 #[cfg(feature = "transport-mqtt")]
 #[test]
 fn serve_mqtt_help_lists_expected_flags() {
-    let out = eds().args(["serve-mqtt", "--help"]).output().expect("eds serve-mqtt --help");
+    let out = eds().args(["audit", "serve-mqtt", "--help"]).output().expect("eds serve-mqtt --help");
     assert!(out.status.success(), "exit: {:?}\n{}", out.status, stderr(&out));
     let help = stdout(&out);
     assert!(help.contains("--broker"), "serve-mqtt --help must list --broker");
@@ -555,7 +555,7 @@ fn help_flag_exits_zero() {
 fn missing_required_arg_exits_nonzero() {
     // sign-record requires --device-id; omitting it should fail at arg parsing.
     let out = eds()
-        .args(["sign-record", "--sequence", "1", "--timestamp-ms", "1", "--payload", "x",
+        .args(["audit", "sign-record", "--sequence", "1", "--timestamp-ms", "1", "--payload", "x",
                "--object-ref", "s3://b/1", "--private-key-hex", PRIV_HEX])
         .output()
         .expect("sign-record missing --device-id");

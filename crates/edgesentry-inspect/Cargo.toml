@@ -13,16 +13,11 @@ documentation = "https://edgesentry.github.io/edgesentry-rs/inspect/en/"
 name = "edgesentry_inspect"
 path = "src/lib.rs"
 
-[[bin]]
-name = "edgesentry-inspect"
-path = "src/main.rs"
-
 [dependencies]
 trilink-core = { git = "https://github.com/edgesentry/trilink-core", branch = "main" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
-clap = { workspace = true }
 rstar = "0.12"
 glam = "0.32.1"
 image = { version = "0.25", default-features = false, features = ["png"] }

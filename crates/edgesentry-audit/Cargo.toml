@@ -9,10 +9,6 @@ keywords      = ["audit", "cryptography", "ed25519", "blake3", "iot-security"]
 categories    = ["cryptography", "embedded", "network-programming", "authentication"]
 documentation = "https://edgesentry.github.io/edgesentry-rs/"
 
-[[bin]]
-name = "eds"
-path = "src/main.rs"
-
 [lib]
 name = "edgesentry_audit"
 path = "src/lib.rs"

@@ -1112,7 +1112,6 @@ dependencies = [
 name = "edgesentry-inspect"
 version = "0.1.3"
 dependencies = [
- "clap",
  "glam",
  "image",
  "mockito",
@@ -1124,6 +1123,20 @@ dependencies = [
  "toml",
  "trilink-core",
  "ureq",
+]
+
+[[package]]
+name = "eds"
+version = "0.1.3"
+dependencies = [
+ "clap",
+ "edgesentry-audit",
+ "edgesentry-inspect",
+ "hex",
+ "rcgen",
+ "reqwest",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
@@ -3429,7 +3442,7 @@ dependencies = [
 [[package]]
 name = "trilink-core"
 version = "0.1.0"
-source = "git+https://github.com/edgesentry/trilink-core?branch=main#889bdc21a600003cf9efd4b0edb519f4f31c34c2"
+source = "git+https://github.com/edgesentry/trilink-core?branch=main#2e449df58ada8f9a1ee7d060c6f7ee3fb5e0cf0f"
 dependencies = [
  "glam",
  "serde",
