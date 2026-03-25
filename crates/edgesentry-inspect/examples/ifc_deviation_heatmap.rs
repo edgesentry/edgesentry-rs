@@ -1,8 +1,8 @@
-//! Manual end-to-end demo for M2 (IFC loader + deviation engine) and
-//! M3 (heatmap rendering).
+//! End-to-end demo: load an IFC design file, compute scan deviation, and
+//! render a colour heatmap PNG.
 //!
 //! Run with:
-//!   cargo run -p edgesentry-inspect --example m2_m3_demo
+//!   cargo run -p edgesentry-inspect --example ifc_deviation_heatmap
 //!
 //! Output:
 //!   - deviation report printed to stdout
