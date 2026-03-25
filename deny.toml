@@ -44,6 +44,10 @@ allow = [
   "Unicode-3.0",
   "CC0-1.0",
   "Zlib",
+  # webpki-roots (via ureq → edgesentry-inspect) uses the Community Data
+  # License Agreement Permissive 2.0.  It is a permissive, attribution-only
+  # license with no copyleft restrictions — safe for commercial use.
+  "CDLA-Permissive-2.0",
 ]
 
 [[licenses.exceptions]]
@@ -56,4 +60,4 @@ name = "cbindgen"
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-allow-git = ["https://github.com/edgesentry/trilink-core"]
+allow-git = []
