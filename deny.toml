@@ -8,23 +8,12 @@ db-urls = ["https://github.com/rustsec/advisory-db"]
 # Vulnerabilities are denied by default in v2.
 # yanked crates and unmaintained warnings surface automatically.
 ignore = [
-  # RUSTSEC-2026-0049 / GHSA-pwjx-qhcg-rvj4: rustls-webpki CRL revocation
-  # authority-matching bug. Two instances are stuck in the dependency tree:
-  #
-  #   0.101.7 — aws-smithy-http-client → hyper-rustls 0.24 → rustls 0.21
-  #              No 0.101.x patch exists. Tracked in #125.
-  #
-  #   0.102.8 — rumqttc 0.25 → rustls 0.22
-  #              No 0.102.x patch exists; fix requires rumqttc to adopt
-  #              rustls 0.23+. Tracked in #166.
-  #
-  # Exposure: we make no CRL revocation API calls anywhere in the codebase;
-  # the vulnerable code path cannot be reached. Re-evaluate if CRL revocation
-  # is ever added to the TLS configuration.
-  #
-  # The 0.103.x instance (tokio-rustls / hyper-rustls 0.27) is already on
-  # the patched version 0.103.10.
-  { id = "RUSTSEC-2026-0049", reason = "0.101.7 stuck behind AWS SDK rustls 0.21 chain (#125); 0.102.8 stuck behind rumqttc rustls 0.22 chain (#166). No CRL revocation calls in codebase. 0.103.x is patched." },
+  # RUSTSEC-2025-0134: rustls-pemfile v2 is unmaintained; functionality merged
+  # into rustls-pki-types.  rustls-pemfile is pulled in transitively by rustls
+  # 0.23 → tokio-rustls / hyper-rustls (transport-tls feature).  No patch
+  # available via upstream; upgrading requires rustls to drop the dep.
+  # No direct call-site exposure in our code.
+  { id = "RUSTSEC-2025-0134", reason = "rustls-pemfile pulled in transitively by rustls 0.23 chain; no patch available. Functionality superseded by rustls-pki-types but not yet adopted by rustls." },
 ]
 
 [bans]
@@ -44,6 +33,12 @@ allow = [
   "Unicode-3.0",
   "CC0-1.0",
   "Zlib",
+  # ISC: permissive, OSI/FSF-approved, functionally equivalent to MIT.
+  # Used by: aws-lc-rs, aws-lc-sys, ring, rustls-webpki, untrusted.
+  "ISC",
+  # MIT-0: MIT with the attribution clause removed; more permissive than MIT.
+  # Used by: aws-lc-sys (one sub-component).
+  "MIT-0",
   # webpki-roots (via ureq → edgesentry-inspect) uses the Community Data
   # License Agreement Permissive 2.0.  It is a permissive, attribution-only
   # license with no copyleft restrictions — safe for commercial use.
