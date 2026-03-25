@@ -119,12 +119,14 @@ jobs:
             cargo publish --locked -p "$crate"
           }
 
-          # edgesentry-audit: all deps are on crates.io — publish immediately.
+          # Publish in dependency order.
+          # edgesentry-audit has no git deps — publishes unconditionally.
           publish_if_missing edgesentry-audit
 
-          # edgesentry-inspect and eds are blocked from crates.io because
-          # edgesentry-inspect depends on trilink-core via a private git URL.
-          # Publish them here once trilink-core is available on crates.io.
+          # edgesentry-inspect requires trilink-core to be published on
+          # crates.io first, and edgesentry-inspect/Cargo.toml must reference
+          # it as a crates.io dep (not a git dep) before this step can succeed.
+          publish_if_missing edgesentry-inspect
 
   build_cli_binaries:
     name: Build eds (${{ matrix.target }})
