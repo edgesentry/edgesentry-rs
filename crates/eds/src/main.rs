@@ -35,7 +35,7 @@ enum Commands {
     /// Tamper-evident audit trail: sign, verify, and ingest records
     Audit {
         #[command(subcommand)]
-        command: audit::AuditCommand,
+        command: Box<audit::AuditCommand>,
     },
 }
 
@@ -44,7 +44,7 @@ fn main() {
 
     let result = match cli.command {
         Commands::Inspect { command } => inspect::run(command),
-        Commands::Audit { command } => audit::run(command),
+        Commands::Audit { command } => audit::run(*command),
     };
 
     if let Err(e) = result {
