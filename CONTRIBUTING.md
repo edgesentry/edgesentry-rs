@@ -18,11 +18,11 @@ cargo deny check licenses
 Every new issue must:
 
 1. **Carry proper labels** — one type label (`bug`, `enhancement`, `documentation`), one priority label, and one or more category labels (see the per-project contributing guides for the full label reference)
-2. **Be added to the project board** — [edgesentry/projects/7](https://github.com/orgs/edgesentry/projects/7/views/1) with a priority set
+2. **Be added to the relevant [edgesentry project board](https://github.com/orgs/edgesentry/projects)** with a priority set
 
 ```bash
-# Add to project board after creating the issue
-gh project item-add 7 --owner edgesentry --url <issue-url>
+# Add to the relevant project board after creating the issue
+gh project item-add <project-number> --owner edgesentry --url <issue-url>
 ```
 
 ## Issue priorities
