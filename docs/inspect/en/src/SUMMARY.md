@@ -9,3 +9,4 @@
 - [Roadmap](roadmap.md)
 - [Demo Pipeline](demo.md)
 - [CLI Reference](cli.md)
+- [Contributing](contributing.md)

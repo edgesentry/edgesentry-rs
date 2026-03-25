@@ -39,7 +39,9 @@ All tests must pass before any commit. No clippy warnings allowed.
 - **[CLI Reference](docs/audit/en/src/cli.md)** — `sign-record`, `verify-record`, `verify-chain` commands with examples; lift inspection end-to-end scenario; tampering detection walkthrough
 
 ### Development workflow
-- **[Contributing](docs/audit/en/src/contributing.md)** — macOS prerequisites, run `cargo test --workspace` after every change, static analysis (`clippy`, `cargo-audit`, `cargo-deny`), PR conventions, avoiding conflicts with main
+- **[Contributing](CONTRIBUTING.md)** — issue priorities, quick-start commands, links to full per-project guides
+- **[Audit Contributing](docs/audit/en/src/contributing.md)** — macOS prerequisites, run `cargo test --workspace` after every change, static analysis (`clippy`, `cargo-audit`, `cargo-deny`), PR conventions, avoiding conflicts with main
+- **[Inspect Contributing](docs/inspect/en/src/contributing.md)** — crate layout, inspect-specific issue labels, running inspect unit and CLI integration tests
 
 ### Release
 - **[Build and Release](docs/audit/en/src/release.md)** — build artifacts, publish to crates.io, GitHub Actions CI/release pipeline, automatic version increment (Conventional Commits)
