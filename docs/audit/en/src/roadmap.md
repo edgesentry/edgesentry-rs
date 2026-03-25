@@ -41,6 +41,18 @@ For the detailed clause-by-clause mapping of CLS / ETSI EN 303 645 / JC-STAR req
 
 ---
 
+## OSS Core vs Commercial
+
+| Track | Scope | Audience |
+|-------|-------|----------|
+| **OSS** | Ed25519 signing, BLAKE3 hash chain, ISO 19650 schema, verification CLI (`eds`) | Developers, researchers, integrators |
+| **Commercial — Security** | CLS integration module, JC-STAR compliance connector | Enterprise IoT vendors, regulated industries |
+| **Commercial — Infrastructure** | immugate WORM storage direct connector, HSM key storage | Government agencies, critical infrastructure operators |
+
+**Business model:** The signing logic and verification algorithms are open — enabling ecosystem adoption and de facto standardisation. Revenue comes from the "container of trust": where audit records ultimately rest (immugate WORM) and the hardware security backing them (HSM). *"Methods are free, proof is paid."*
+
+---
+
 ## Phase 1: The Singapore Gateway (Current – 6 Months)
 
 **Target:** CLS Level 2 → Level 3, SS 711:2025, iM8
@@ -134,6 +146,29 @@ Singapore's Cyber Trust Mark becomes mandatory for Critical Information Infrastr
 - Map EdgeSentry-RS implementation evidence to Cyber Trust Mark assessment categories
 - ISO 27001 control alignment documentation
 - See [#95](https://github.com/edgesentry/edgesentry-rs/issues/95)
+
+### Milestone 2.6: immugate WORM Storage Connector 🔲 Planned
+
+The OSS core writes standard, verifiable audit records. immugate provides the tamper-proof storage layer — Object Lock (WORM) with immutability guarantees required by government and enterprise audit mandates. This is the primary commercial infrastructure revenue milestone.
+
+- `edgesentry_rs::connectors::immugate` — direct write connector to immugate WORM storage
+- Object Lock lifecycle policies aligned with CLS, ISO 19650, and MLIT retention requirements
+- Official audit trail issuance via immugate API (replacing the manual export flow)
+- HSM key storage integration for hardware-bound signing (foundation for CLS Level 4)
+
+---
+
+### Milestone 2.7: ISO 19650 Information Container Schema 🔲 Planned
+
+ISO 19650 defines the framework for managing information over the whole life cycle of a built asset using BIM. This milestone reframes each audit record as an ISO 19650 **information container**, enabling interoperability with third-party BIM tools and positioning the edgesentry-rs audit chain as a de facto standard for construction inspection traceability.
+
+- `edgesentry_rs::audit::iso19650` — information container payload schema (OSS)
+- Structured BIM status transitions: WIP → Shared → Published, with signed state change records
+- Conformant metadata fields (revision, suitability, classification) mapped to the existing hash-chain record format
+- Interoperability documentation for third-party BIM tool integration
+- This milestone is the audit-crate implementation of the ISO 19650 layer described in the [Inspect roadmap](../../inspect/en/src/roadmap.md)
+
+---
 
 ### Milestone 2.5: CLS(MD) — Medical Device Variant 🔲 Planned
 
