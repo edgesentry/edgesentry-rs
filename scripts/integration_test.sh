@@ -49,20 +49,20 @@ echo "MinIO: ready"
 # ── 4. Build CLI ─────────────────────────────────────────────────────────────
 echo "[4/8] Building CLI (s3,postgres features)..."
 cd "$ROOT_DIR"
-cargo build -p edgesentry-audit --features s3,postgres --release >/dev/null
+cargo build -p eds --features s3,postgres --release >/dev/null
 
 EDS="$ROOT_DIR/target/release/eds"
 
 # ── 5. Generate chain, verify, and tamper detection ──────────────────────────
 echo "[5/8] Generating and verifying chain..."
-"$EDS" demo-lift-inspection \
+"$EDS" audit demo-lift-inspection \
   --device-id lift-01 \
   --private-key-hex "$PRIVATE_KEY_HEX" \
   --out-file "$RECORDS_FILE" \
   --payloads-file "$PAYLOADS_FILE" \
   >/dev/null
 
-"$EDS" verify-chain --records-file "$RECORDS_FILE"
+"$EDS" audit verify-chain --records-file "$RECORDS_FILE"
 
 # Tamper and confirm detection
 python3 - <<'PY'
@@ -75,7 +75,7 @@ dst.write_text(json.dumps(records, indent=2), encoding='utf-8')
 PY
 
 set +e
-"$EDS" verify-chain --records-file "$TAMPERED_FILE"
+"$EDS" audit verify-chain --records-file "$TAMPERED_FILE"
 TAMPER_EXIT=$?
 set -e
 [[ "$TAMPER_EXIT" -ne 0 ]] || { echo "FAIL: tampered chain was accepted"; exit 1; }
@@ -85,7 +85,7 @@ echo "Tamper detection: PASSED"
 echo "[6/8] Ingesting records via IngestService (PostgreSQL + MinIO)..."
 (
   cd "$ROOT_DIR"
-  "$EDS" demo-ingest \
+  "$EDS" audit demo-ingest \
     --records-file "$RECORDS_FILE" \
     --payloads-file "$PAYLOADS_FILE" \
     --device-id lift-01 \
