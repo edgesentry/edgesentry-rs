@@ -1,6 +1,24 @@
 # デモパイプライン
 
-このページでは、オープンデータセットと Inspect CLI を使って、自己完結した概念実証（PoC）デモを構築する手順を説明します。本番データが用意できる前の技術評価・現場デモでの利用を想定しています。
+## 今すぐ試す — CLI 不要
+
+M2（IFC ローダー・偏差エンジン）と M3（ヒートマップ生成）はすでに実装済みです。外部データも外部ツールも不要で、バンドル済みのサンプル IFC フィクスチャを使ったエンドツーエンドデモをコマンド一発で実行できます。
+
+```sh
+cargo run -p edgesentry-inspect --example ifc_deviation_heatmap
+```
+
+**処理内容:**
+
+1. `crates/edgesentry-inspect/tests/fixtures/sample.ifc` を読み込む（参照点 7 点）
+2. 最後の 1 点を Z 方向に 15 mm ずらしてスキャンをシミュレート
+3. 偏差を計算し、`compliant_pct`・`max_deviation_mm`・`mean_deviation_mm` を表示
+4. 点群を 2D に投影してカラーヒートマップ PNG を生成
+5. PNG を `/tmp/edgesentry_heatmap.png` に出力 — 任意の画像ビューアで確認可能
+
+**ソース:** [`crates/edgesentry-inspect/examples/ifc_deviation_heatmap.rs`](../../../../crates/edgesentry-inspect/examples/ifc_deviation_heatmap.rs)
+
+> 以下のフルパイプライン（ステップ 1〜6）は M4 CLI（`edgesentry-inspect scan`）が必要ですが、まだ未実装です。現時点で M2・M3 をローカルでテストする方法として、上記の例を使用してください。
 
 ---
 

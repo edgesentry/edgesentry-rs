@@ -1,6 +1,24 @@
 # Demo Pipeline
 
-This page describes how to build a self-contained proof-of-concept demonstration using open datasets and the Inspect CLI. It is intended for use in technical evaluations and field demos before production data is available.
+## Try it now — no CLI required
+
+M2 (IFC loader + deviation engine) and M3 (heatmap rendering) are already implemented. You can run a self-contained end-to-end demo against the bundled sample IFC fixture with a single command — no external data, no external tools needed:
+
+```sh
+cargo run -p edgesentry-inspect --example ifc_deviation_heatmap
+```
+
+**What it does:**
+
+1. Loads `crates/edgesentry-inspect/tests/fixtures/sample.ifc` (7 reference points)
+2. Simulates a scan by displacing one point by 15 mm along Z
+3. Computes deviation — prints `compliant_pct`, `max_deviation_mm`, `mean_deviation_mm`
+4. Projects points to 2D and renders a colour heatmap PNG
+5. Writes the PNG to `/tmp/edgesentry_heatmap.png` — open it in any image viewer
+
+**Source:** [`crates/edgesentry-inspect/examples/ifc_deviation_heatmap.rs`](../../../../crates/edgesentry-inspect/examples/ifc_deviation_heatmap.rs)
+
+> The full pipeline below (Steps 1–6) requires the M4 CLI (`edgesentry-inspect scan`) which is not yet implemented. The example above is the recommended way to test M2 and M3 locally today.
 
 ---
 
