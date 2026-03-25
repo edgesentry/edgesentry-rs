@@ -9,3 +9,4 @@
 - [ロードマップ](roadmap.md)
 - [デモパイプライン](demo.md)
 - [CLI リファレンス](cli.md)
+- [貢献ガイド](contributing.md)
