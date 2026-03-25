@@ -1,23 +1,84 @@
 # CLI リファレンス
 
+`eds` は EdgeSentry の統合 CLI です。監査コマンドはすべて `eds audit` サブコマンド配下にあり、スキャン点検コマンドは `eds inspect` 配下にあります。
+
+```
+eds audit <command>    — 改ざん検知付き監査レコード操作
+eds inspect <command>  — 3D スキャン vs. IFC 偏差・AI 検出パイプライン
+```
+
+---
+
+## インストール
+
+### エンドユーザー向け — ビルド済みバイナリ
+
+最新リリースを [GitHub Releases ページ](https://github.com/edgesentry/edgesentry-rs/releases) からダウンロードしてください。
+
+| プラットフォーム | ファイル |
+|----------------|---------|
+| Linux (x86-64) | `eds-{version}-x86_64-unknown-linux-gnu.tar.gz` |
+| macOS (Apple Silicon) | `eds-{version}-aarch64-apple-darwin.tar.gz` |
+| Windows (x86-64) | `eds-{version}-x86_64-pc-windows-msvc.zip` |
+
+展開して `eds` バイナリを `PATH` に追加してください：
+
+```bash
+# Linux / macOS
+tar -xzf eds-{version}-{target}.tar.gz
+sudo mv eds /usr/local/bin/
+eds --help
+```
+
+```powershell
+# Windows（PowerShell）
+Expand-Archive eds-{version}-x86_64-pc-windows-msvc.zip
+# eds.exe を PATH が通ったディレクトリに移動してください
+eds --help
+```
+
+### 開発者向け — ソースからインストール
+
+[Rust](https://rustup.rs)（stable ツールチェーン）が必要です。
+
+```bash
+cargo install --git https://github.com/edgesentry/edgesentry-rs --locked --bin eds
+```
+
+オプションのトランスポートフィーチャーを含めてインストールする場合：
+
+```bash
+cargo install --git https://github.com/edgesentry/edgesentry-rs --locked --bin eds \
+  --features transport-http,transport-tls
+```
+
+インストールの確認：
+
+```bash
+eds --version
+eds --help
+```
+
+---
+
 ## デバイスプロビジョニング
 
 新しいデバイス用に Ed25519 キーペアを生成：
 
 ```bash
-cargo run -p edgesentry-rs -- keygen
+eds audit keygen
 ```
 
 ファイルに直接保存：
 
 ```bash
-cargo run -p edgesentry-rs -- keygen --out device-lift-01.key.json
+eds audit keygen --out device-lift-01.key.json
 ```
 
 既存の秘密鍵から公開鍵を導出：
 
 ```bash
-cargo run -p edgesentry-rs -- inspect-key \
+eds audit inspect-key \
   --private-key-hex 0101010101010101010101010101010101010101010101010101010101010101
 ```
 
@@ -27,16 +88,17 @@ cargo run -p edgesentry-rs -- inspect-key \
 
 ## CLI の使い方
 
-ビルドしてヘルプを表示：
+ヘルプを表示：
 
 ```bash
-cargo run -p edgesentry-rs -- --help
+eds --help
+eds audit --help
 ```
 
 署名済みレコードを作成して`record1.json`に保存：
 
 ```bash
-cargo run -p edgesentry-rs -- sign-record \
+eds audit sign-record \
   --device-id lift-01 \
   --sequence 1 \
   --timestamp-ms 1700000000000 \
@@ -49,7 +111,7 @@ cargo run -p edgesentry-rs -- sign-record \
 1 件のレコードの署名を検証：
 
 ```bash
-cargo run -p edgesentry-rs -- verify-record \
+eds audit verify-record \
   --record-file record1.json \
   --public-key-hex 8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
 ```
@@ -57,7 +119,7 @@ cargo run -p edgesentry-rs -- verify-record \
 JSON 配列ファイルからチェーン全体を検証：
 
 ```bash
-cargo run -p edgesentry-rs -- verify-chain --records-file records.json
+eds audit verify-chain --records-file records.json
 ```
 
 ## エレベーター点検シナリオ（ CLI エンドツーエンド）
@@ -71,7 +133,7 @@ cargo run -p edgesentry-rs -- verify-chain --records-file records.json
 ### 1) 1 回の点検セッション用の署名済みチェーン全体を生成する
 
 ```bash
-cargo run -p edgesentry-rs -- demo-lift-inspection \
+eds audit demo-lift-inspection \
   --device-id lift-01 \
   --out-file lift_inspection_records.json
 ```
@@ -86,7 +148,7 @@ CHAIN_VALID
 ### 2) ファイルからチェーンの完全性を検証する
 
 ```bash
-cargo run -p edgesentry-rs -- verify-chain --records-file lift_inspection_records.json
+eds audit verify-chain --records-file lift_inspection_records.json
 ```
 
 期待される出力：
@@ -118,7 +180,7 @@ PY
 再度チェーン検証を実行：
 
 ```bash
-cargo run -p edgesentry-rs -- verify-chain --records-file lift_inspection_records.json
+eds audit verify-chain --records-file lift_inspection_records.json
 ```
 
 期待される結果：コマンドが非ゼロコードで終了し、`chain verification failed: invalid previous hash ...`のようなエラーを出力します。
@@ -128,7 +190,7 @@ cargo run -p edgesentry-rs -- verify-chain --records-file lift_inspection_record
 1 件の署名済みイベントを生成：
 
 ```bash
-cargo run -p edgesentry-rs -- sign-record \
+eds audit sign-record \
   --device-id lift-01 \
   --sequence 1 \
   --timestamp-ms 1700000000000 \
@@ -141,7 +203,7 @@ cargo run -p edgesentry-rs -- sign-record \
 署名を検証：
 
 ```bash
-cargo run -p edgesentry-rs -- verify-record \
+eds audit verify-record \
   --record-file lift_single_record.json \
   --public-key-hex 8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
 ```
@@ -175,7 +237,7 @@ PY
 再度署名を検証：
 
 ```bash
-cargo run -p edgesentry-rs -- verify-record \
+eds audit verify-record \
   --record-file lift_single_record.json \
   --public-key-hex 8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
 ```
@@ -190,7 +252,7 @@ INVALID
 
 ## サーバーコマンド
 
-### `eds serve` — HTTP インジェストサーバー
+### `eds audit serve` — HTTP インジェストサーバー
 
 `transport-http` Cargo フィーチャーが必要です。
 
@@ -201,17 +263,17 @@ INVALID
 | `--device ID=PUBKEY_HEX` | _（なし）_ | デバイスを登録；複数デバイスは繰り返し指定 |
 
 ```bash
-eds serve \
+eds audit serve \
   --addr 0.0.0.0:8080 \
   --allowed-sources 10.0.0.0/8 \
   --device lift-01=<PUBLIC_KEY_HEX>
 ```
 
-ポート 8080 でプレーン HTTP を提供します。TLS 終端リバースプロキシの背後で使用するか、組み込み TLS には `eds serve-tls` を使用してください。
+ポート 8080 でプレーン HTTP を提供します。TLS 終端リバースプロキシの背後で使用するか、組み込み TLS には `eds audit serve-tls` を使用してください。
 
 ---
 
-### `eds serve-tls` — HTTPS インジェストサーバー（TLS 1.2/1.3）
+### `eds audit serve-tls` — HTTPS インジェストサーバー（TLS 1.2/1.3）
 
 `transport-tls` Cargo フィーチャーが必要です。
 
@@ -224,7 +286,7 @@ eds serve \
 | `--tls-key` | _（必須）_ | PEM 秘密鍵のパス（PKCS #8 または PKCS #1 RSA） |
 
 ```bash
-eds serve-tls \
+eds audit serve-tls \
   --addr 0.0.0.0:8443 \
   --allowed-sources 10.0.0.0/8 \
   --device lift-01=<PUBLIC_KEY_HEX> \
@@ -236,7 +298,7 @@ rustls の TLS 1.2/1.3 を使用します。ネットワークポリシー（IP 
 
 ---
 
-### `eds serve-mqtt` — MQTT インジェストサブスクライバー
+### `eds audit serve-mqtt` — MQTT インジェストサブスクライバー
 
 `transport-mqtt` Cargo フィーチャーが必要です。MQTTS には `transport-mqtt-tls` も追加してください。
 
@@ -251,14 +313,14 @@ rustls の TLS 1.2/1.3 を使用します。ネットワークポリシー（IP 
 
 ```bash
 # プレーン MQTT（ポート 1883）
-eds serve-mqtt \
+eds audit serve-mqtt \
   --broker broker.example.com \
   --port 1883 \
   --topic edgesentry/ingest \
   --device lift-01=<PUBLIC_KEY_HEX>
 
 # MQTTS（ポート 8883、transport-mqtt-tls フィーチャーが必要）
-eds serve-mqtt \
+eds audit serve-mqtt \
   --broker broker.example.com \
   --port 8883 \
   --tls-ca-cert /etc/edgesentry/ca.crt \
@@ -276,7 +338,7 @@ eds serve-mqtt \
 ### 1) ペイロードファイル付きのチェーンを生成する
 
 ```bash
-cargo run -p edgesentry-rs --features s3,postgres -- demo-lift-inspection \
+eds audit demo-lift-inspection \
   --device-id lift-01 \
   --out-file lift_inspection_records.json \
   --payloads-file lift_inspection_payloads.json
@@ -285,7 +347,7 @@ cargo run -p edgesentry-rs --features s3,postgres -- demo-lift-inspection \
 ### 2) IngestService 経由でレコードをインジェストする
 
 ```bash
-cargo run -p edgesentry-rs --features s3,postgres -- demo-ingest \
+eds audit demo-ingest \
   --records-file lift_inspection_records.json \
   --payloads-file lift_inspection_payloads.json \
   --device-id lift-01 \

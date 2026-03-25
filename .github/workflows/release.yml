@@ -119,7 +119,14 @@ jobs:
             cargo publish --locked -p "$crate"
           }
 
-          publish_if_missing edgesentry-rs
+          # Publish in dependency order.
+          # edgesentry-audit has no git deps — publishes unconditionally.
+          publish_if_missing edgesentry-audit
+
+          # edgesentry-inspect requires trilink-core to be published on
+          # crates.io first, and edgesentry-inspect/Cargo.toml must reference
+          # it as a crates.io dep (not a git dep) before this step can succeed.
+          publish_if_missing edgesentry-inspect
 
   build_cli_binaries:
     name: Build eds (${{ matrix.target }})
@@ -168,7 +175,7 @@ jobs:
           restore-keys: ${{ runner.os }}-${{ matrix.target }}-cargo-
 
       - name: Build eds release binary
-        run: cargo build --release --locked -p edgesentry-rs --target ${{ matrix.target }}
+        run: cargo build --release --locked -p eds --target ${{ matrix.target }}
 
       - name: Package binary (unix)
         if: runner.os != 'Windows'

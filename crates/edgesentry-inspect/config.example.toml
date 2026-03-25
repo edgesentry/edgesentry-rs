@@ -1,0 +1,33 @@
+# edgesentry-inspect — example configuration
+#
+# Copy to config.toml and adjust paths before running:
+#   edgesentry-inspect scan --config config.toml
+
+# Path to the IFC design file (reference model).
+ifc_path = "design.ifc"
+
+# Path to the as-built scan in ASCII PLY format.
+scan_path = "scan.ply"
+
+# Pinhole camera calibration.
+# Use CameraIntrinsics::from_fov to derive fx/fy/cx/cy from field-of-view if needed.
+[camera]
+fx     = 800.0   # horizontal focal length (pixels)
+fy     = 800.0   # vertical focal length (pixels)
+cx     = 960.0   # principal point X (pixels) — typically width / 2
+cy     = 540.0   # principal point Y (pixels) — typically height / 2
+width  = 1920    # image width (pixels)
+height = 1080    # image height (pixels)
+
+# AI inference settings.
+# mode = "off"  — skip AI detection; deviation report and heatmap still produced.
+# mode = "http" — POST depth-map PNG to `endpoint` and back-project detections.
+[inference]
+mode             = "off"
+# endpoint       = "http://localhost:8000/detect"   # required when mode = "http"
+fallback_depth_m = 2.0   # depth used when ToF reading is unavailable (metres)
+
+# Output settings.
+[output]
+dir          = "./output"   # directory for report.json and heatmap.png
+threshold_mm = 10.0         # scan points within this distance are considered compliant

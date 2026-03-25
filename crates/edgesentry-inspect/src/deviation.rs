@@ -22,6 +22,33 @@ pub struct DeviationReport {
     pub point_count: usize,
 }
 
+/// Compute per-point nearest-neighbour distances (in mm) between `scan` and `reference`.
+///
+/// Returns a `Vec` parallel to `scan`; each entry is the distance in millimetres
+/// to the closest point in `reference`.
+///
+/// # Panics
+///
+/// Panics if `reference` is empty.
+pub fn per_point_deviations_mm(scan: &[Point3D], reference: &[Point3D]) -> Vec<f64> {
+    assert!(!reference.is_empty(), "reference cloud must not be empty");
+
+    let ref_pts: Vec<[f32; 3]> = reference.iter().map(|p| [p.x, p.y, p.z]).collect();
+    let tree = RTree::bulk_load(ref_pts);
+
+    scan.iter()
+        .map(|pt| {
+            let nearest = tree.nearest_neighbor(&[pt.x, pt.y, pt.z]).unwrap();
+            let dist_sq: f32 = nearest
+                .iter()
+                .zip([pt.x, pt.y, pt.z])
+                .map(|(&a, b)| (a - b).powi(2))
+                .sum();
+            (dist_sq as f64).sqrt() * 1000.0
+        })
+        .collect()
+}
+
 /// Compute nearest-neighbour deviation between `scan` and `reference` clouds.
 ///
 /// For each point in `scan` the closest point in `reference` is found via a
@@ -47,33 +74,26 @@ pub fn compute_deviation(
         };
     }
 
-    // Build R*-tree from reference cloud.
-    let ref_pts: Vec<[f32; 3]> = reference.iter().map(|p| [p.x, p.y, p.z]).collect();
-    let tree = RTree::bulk_load(ref_pts);
-
-    let mut max_dist_sq: f64 = 0.0;
-    let mut sum_dist_mm: f64 = 0.0;
+    let deviations = per_point_deviations_mm(scan, reference);
+    let n = deviations.len();
+    let mut max_mm: f64 = 0.0;
+    let mut sum_mm: f64 = 0.0;
     let mut compliant_count: usize = 0;
 
-    for pt in scan {
-        let nearest = tree.nearest_neighbor(&[pt.x, pt.y, pt.z]).unwrap();
-        let dist_sq = nearest.iter().zip([pt.x, pt.y, pt.z]).map(|(&a, b)| (a - b).powi(2)).sum::<f32>() as f64;
-        let dist_mm = dist_sq.sqrt() * 1000.0;
-
-        if dist_sq > max_dist_sq {
-            max_dist_sq = dist_sq;
+    for &d in &deviations {
+        if d > max_mm {
+            max_mm = d;
         }
-        sum_dist_mm += dist_mm;
-        if dist_mm <= threshold_mm {
+        sum_mm += d;
+        if d <= threshold_mm {
             compliant_count += 1;
         }
     }
 
-    let n = scan.len();
     DeviationReport {
         compliant_pct: compliant_count as f64 / n as f64 * 100.0,
-        max_deviation_mm: max_dist_sq.sqrt() * 1000.0,
-        mean_deviation_mm: sum_dist_mm / n as f64,
+        max_deviation_mm: max_mm,
+        mean_deviation_mm: sum_mm / n as f64,
         point_count: n,
     }
 }

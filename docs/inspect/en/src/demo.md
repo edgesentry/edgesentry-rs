@@ -27,7 +27,7 @@ Use [Open3D](https://www.open3d.org/) to introduce controlled deformations into 
 
 ### Step 3 — Compute deviation (M2)
 
-Run the `edgesentry-inspect scan` CLI command, pointing it at the IFC design file and the simulated scan PLY. The CLI calls `src/ifc.rs` to load the design reference cloud, then `src/deviation.rs` to compute per-point nearest-neighbour deviation and emit a JSON report containing `compliant_pct`, `max_deviation_mm`, and `mean_deviation_mm`.
+Run the `eds inspect scan` CLI command, pointing it at the IFC design file and the simulated scan PLY. The CLI calls `src/ifc.rs` to load the design reference cloud, then `src/deviation.rs` to compute per-point nearest-neighbour deviation and emit a JSON report containing `compliant_pct`, `max_deviation_mm`, and `mean_deviation_mm`.
 
 This step exercises `src/ifc.rs` and `src/deviation.rs` (M2).
 

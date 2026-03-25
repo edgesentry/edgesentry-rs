@@ -1,0 +1,21 @@
+name: Dependency Submission
+
+on:
+  push:
+    branches: ["main"]
+
+permissions: {}
+
+jobs:
+  dependency-submission:
+    name: Submit dependency snapshot
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Submit dependency snapshot
+        uses: advanced-security/component-detection-dependency-submission-action@v0.1.1

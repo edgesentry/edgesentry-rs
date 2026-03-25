@@ -1,23 +1,84 @@
 # CLI Reference
 
+`eds` is the unified EdgeSentry CLI. All audit commands live under the `eds audit` subcommand; scan inspection commands live under `eds inspect`.
+
+```
+eds audit <command>    — tamper-evident audit record operations
+eds inspect <command>  — 3D scan vs. IFC deviation and AI detection pipeline
+```
+
+---
+
+## Installation
+
+### For end users — pre-built binary
+
+Download the latest release from the [GitHub Releases page](https://github.com/edgesentry/edgesentry-rs/releases).
+
+| Platform | File |
+|----------|------|
+| Linux (x86-64) | `eds-{version}-x86_64-unknown-linux-gnu.tar.gz` |
+| macOS (Apple Silicon) | `eds-{version}-aarch64-apple-darwin.tar.gz` |
+| Windows (x86-64) | `eds-{version}-x86_64-pc-windows-msvc.zip` |
+
+Extract and place the `eds` binary on your `PATH`:
+
+```bash
+# Linux / macOS
+tar -xzf eds-{version}-{target}.tar.gz
+sudo mv eds /usr/local/bin/
+eds --help
+```
+
+```powershell
+# Windows (PowerShell)
+Expand-Archive eds-{version}-x86_64-pc-windows-msvc.zip
+# Move eds.exe to a directory in your PATH
+eds --help
+```
+
+### For developers — install from source
+
+Requires [Rust](https://rustup.rs) (stable toolchain).
+
+```bash
+cargo install --git https://github.com/edgesentry/edgesentry-rs --locked --bin eds
+```
+
+To include optional transport features at install time:
+
+```bash
+cargo install --git https://github.com/edgesentry/edgesentry-rs --locked --bin eds \
+  --features transport-http,transport-tls
+```
+
+Verify the installation:
+
+```bash
+eds --version
+eds --help
+```
+
+---
+
 ## Device Provisioning
 
 Generate a fresh Ed25519 keypair for a new device:
 
 ```bash
-cargo run -p edgesentry-rs -- keygen
+eds audit keygen
 ```
 
 Save directly to a file:
 
 ```bash
-cargo run -p edgesentry-rs -- keygen --out device-lift-01.key.json
+eds audit keygen --out device-lift-01.key.json
 ```
 
 Derive the public key from an existing private key:
 
 ```bash
-cargo run -p edgesentry-rs -- inspect-key \
+eds audit inspect-key \
   --private-key-hex 0101010101010101010101010101010101010101010101010101010101010101
 ```
 
@@ -27,16 +88,17 @@ See [Key Management](key_management.md) for the full provisioning and rotation w
 
 ## CLI Usage
 
-Build and show help:
+Show help:
 
 ```bash
-cargo run -p edgesentry-rs -- --help
+eds --help
+eds audit --help
 ```
 
 Create a signed record and save it to `record1.json`:
 
 ```bash
-cargo run -p edgesentry-rs -- sign-record \
+eds audit sign-record \
   --device-id lift-01 \
   --sequence 1 \
   --timestamp-ms 1700000000000 \
@@ -49,7 +111,7 @@ cargo run -p edgesentry-rs -- sign-record \
 Verify one record signature:
 
 ```bash
-cargo run -p edgesentry-rs -- verify-record \
+eds audit verify-record \
   --record-file record1.json \
   --public-key-hex 8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
 ```
@@ -57,7 +119,7 @@ cargo run -p edgesentry-rs -- verify-record \
 Verify a whole chain from a JSON array file:
 
 ```bash
-cargo run -p edgesentry-rs -- verify-chain --records-file records.json
+eds audit verify-chain --records-file records.json
 ```
 
 ## Lift Inspection Scenario (CLI End-to-End)
@@ -71,7 +133,7 @@ This scenario simulates a remote lift inspection with three checks:
 ### 1) Generate a full signed chain for one inspection session
 
 ```bash
-cargo run -p edgesentry-rs -- demo-lift-inspection \
+eds audit demo-lift-inspection \
   --device-id lift-01 \
   --out-file lift_inspection_records.json
 ```
@@ -86,7 +148,7 @@ CHAIN_VALID
 ### 2) Verify chain integrity from file
 
 ```bash
-cargo run -p edgesentry-rs -- verify-chain --records-file lift_inspection_records.json
+eds audit verify-chain --records-file lift_inspection_records.json
 ```
 
 Expected output:
@@ -118,7 +180,7 @@ PY
 Run chain verification again:
 
 ```bash
-cargo run -p edgesentry-rs -- verify-chain --records-file lift_inspection_records.json
+eds audit verify-chain --records-file lift_inspection_records.json
 ```
 
 Expected result: command exits with a non-zero code and prints an error such as `chain verification failed: invalid previous hash ...`.
@@ -128,7 +190,7 @@ Expected result: command exits with a non-zero code and prints an error such as 
 Generate one signed event:
 
 ```bash
-cargo run -p edgesentry-rs -- sign-record \
+eds audit sign-record \
   --device-id lift-01 \
   --sequence 1 \
   --timestamp-ms 1700000000000 \
@@ -141,7 +203,7 @@ cargo run -p edgesentry-rs -- sign-record \
 Verify signature:
 
 ```bash
-cargo run -p edgesentry-rs -- verify-record \
+eds audit verify-record \
   --record-file lift_single_record.json \
   --public-key-hex 8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
 ```
@@ -175,7 +237,7 @@ PY
 Verify signature again:
 
 ```bash
-cargo run -p edgesentry-rs -- verify-record \
+eds audit verify-record \
   --record-file lift_single_record.json \
   --public-key-hex 8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c
 ```
@@ -190,7 +252,7 @@ INVALID
 
 ## Server Commands
 
-### `eds serve` — HTTP ingest server
+### `eds audit serve` — HTTP ingest server
 
 Requires the `transport-http` Cargo feature.
 
@@ -201,17 +263,17 @@ Requires the `transport-http` Cargo feature.
 | `--device ID=PUBKEY_HEX` | _(none)_ | Register a device; repeat for multiple devices |
 
 ```bash
-eds serve \
+eds audit serve \
   --addr 0.0.0.0:8080 \
   --allowed-sources 10.0.0.0/8 \
   --device lift-01=<PUBLIC_KEY_HEX>
 ```
 
-Plain HTTP on port 8080. Use behind a TLS-terminating reverse proxy, or use `eds serve-tls` for built-in TLS.
+Plain HTTP on port 8080. Use behind a TLS-terminating reverse proxy, or use `eds audit serve-tls` for built-in TLS.
 
 ---
 
-### `eds serve-tls` — HTTPS ingest server (TLS 1.2/1.3)
+### `eds audit serve-tls` — HTTPS ingest server (TLS 1.2/1.3)
 
 Requires the `transport-tls` Cargo feature.
 
@@ -224,7 +286,7 @@ Requires the `transport-tls` Cargo feature.
 | `--tls-key` | _(required)_ | Path to PEM private key (PKCS #8 or PKCS #1 RSA) |
 
 ```bash
-eds serve-tls \
+eds audit serve-tls \
   --addr 0.0.0.0:8443 \
   --allowed-sources 10.0.0.0/8 \
   --device lift-01=<PUBLIC_KEY_HEX> \
@@ -236,7 +298,7 @@ Uses rustls TLS 1.2/1.3. Network policy (IP allowlist) is enforced at TCP accept
 
 ---
 
-### `eds serve-mqtt` — MQTT ingest subscriber
+### `eds audit serve-mqtt` — MQTT ingest subscriber
 
 Requires the `transport-mqtt` Cargo feature. Optionally add `transport-mqtt-tls` for MQTTS.
 
@@ -251,14 +313,14 @@ Requires the `transport-mqtt` Cargo feature. Optionally add `transport-mqtt-tls`
 
 ```bash
 # Plain MQTT (port 1883)
-eds serve-mqtt \
+eds audit serve-mqtt \
   --broker broker.example.com \
   --port 1883 \
   --topic edgesentry/ingest \
   --device lift-01=<PUBLIC_KEY_HEX>
 
 # MQTTS (port 8883, requires transport-mqtt-tls feature)
-eds serve-mqtt \
+eds audit serve-mqtt \
   --broker broker.example.com \
   --port 8883 \
   --tls-ca-cert /etc/edgesentry/ca.crt \
@@ -276,7 +338,7 @@ Requires the `s3` and `postgres` Cargo features and a running PostgreSQL + MinIO
 ### 1) Generate a chain with payloads file
 
 ```bash
-cargo run -p edgesentry-rs --features s3,postgres -- demo-lift-inspection \
+eds audit demo-lift-inspection \
   --device-id lift-01 \
   --out-file lift_inspection_records.json \
   --payloads-file lift_inspection_payloads.json
@@ -285,7 +347,7 @@ cargo run -p edgesentry-rs --features s3,postgres -- demo-lift-inspection \
 ### 2) Ingest records through IngestService
 
 ```bash
-cargo run -p edgesentry-rs --features s3,postgres -- demo-ingest \
+eds audit demo-ingest \
   --records-file lift_inspection_records.json \
   --payloads-file lift_inspection_payloads.json \
   --device-id lift-01 \

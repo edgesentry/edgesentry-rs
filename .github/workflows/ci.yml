@@ -70,7 +70,7 @@ jobs:
         run: cargo test -p edgesentry-audit --features transport-mqtt-tls
 
       - name: CLI integration tests (serve + serve-tls)
-        run: cargo test -p edgesentry-audit --features transport-http,transport-tls --test cli_integration
+        run: cargo test -p eds --features transport-http,transport-tls --test cli_integration
 
   license_check:
     name: OSS License Check

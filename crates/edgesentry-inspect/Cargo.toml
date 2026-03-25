@@ -14,13 +14,16 @@ name = "edgesentry_inspect"
 path = "src/lib.rs"
 
 [dependencies]
-trilink-core = { git = "https://github.com/edgesentry/trilink-core", branch = "main" }
+trilink-core = "0.1.1"
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 rstar = "0.12"
 glam = "0.32.1"
 image = { version = "0.25", default-features = false, features = ["png"] }
+toml = "0.8"
+ureq = "2"
 
 [dev-dependencies]
 tempfile = "3"
+mockito = "1"
