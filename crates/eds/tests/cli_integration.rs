@@ -418,7 +418,7 @@ fn serve_accepts_valid_record_returns_202() {
 
     let mut child = eds()
         .args([
-            "serve",
+            "audit", "serve",
             "--addr", &addr,
             "--allowed-sources", "127.0.0.1",
             "--device", &format!("dev-cli={pub_hex}"),
@@ -484,7 +484,7 @@ fn serve_tls_accepts_valid_record_returns_202() {
 
     let mut child = eds()
         .args([
-            "serve-tls",
+            "audit", "serve-tls",
             "--addr", &addr,
             "--allowed-sources", "127.0.0.1",
             "--device", &format!("dev-cli-tls={pub_hex}"),
