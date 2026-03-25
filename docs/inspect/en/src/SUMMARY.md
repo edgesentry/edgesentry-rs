@@ -8,3 +8,4 @@
 - [Architecture](architecture.md)
 - [Roadmap](roadmap.md)
 - [Demo Pipeline](demo.md)
+- [CLI Reference](cli.md)

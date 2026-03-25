@@ -27,7 +27,7 @@
 
 ### ステップ 3 — 偏差計算（M2）
 
-`edgesentry-inspect scan` CLI コマンドを実行し、IFC 設計ファイルとシミュレーションスキャンの PLY ファイルを指定します。CLI は `src/ifc.rs` で設計参照点群を読み込み、`src/deviation.rs` で点ごとの最近傍偏差を計算して、`compliant_pct`・`max_deviation_mm`・`mean_deviation_mm` を含む JSON レポートを出力します。
+`eds inspect scan` CLI コマンドを実行し、IFC 設計ファイルとシミュレーションスキャンの PLY ファイルを指定します。CLI は `src/ifc.rs` で設計参照点群を読み込み、`src/deviation.rs` で点ごとの最近傍偏差を計算して、`compliant_pct`・`max_deviation_mm`・`mean_deviation_mm` を含む JSON レポートを出力します。
 
 このステップでは `src/ifc.rs` と `src/deviation.rs`（M2）を使います。
 

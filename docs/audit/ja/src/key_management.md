@@ -12,7 +12,7 @@
 `eds` CLI を使って新しい Ed25519 キーペアを生成：
 
 ```bash
-eds keygen
+eds audit keygen
 ```
 
 出力例：
@@ -27,7 +27,7 @@ eds keygen
 ファイルに保存：
 
 ```bash
-eds keygen --out device-lift-01.key.json
+eds audit keygen --out device-lift-01.key.json
 ```
 
 各デバイスは **一意の** キーペアを持たなければなりません。デバイスをまたいで鍵を再利用しないでください。
@@ -39,13 +39,13 @@ eds keygen --out device-lift-01.key.json
 `private_key_hex`をすでに持っており、対応する公開鍵を確認したい場合：
 
 ```bash
-eds inspect-key --private-key-hex <64-hex-char-private-key>
+eds audit inspect-key --private-key-hex <64-hex-char-private-key>
 ```
 
 例：
 
 ```bash
-eds inspect-key \
+eds audit inspect-key \
   --private-key-hex 0101010101010101010101010101010101010101010101010101010101010101
 ```
 
@@ -113,7 +113,7 @@ gate.register_device("lift-01", verifying_key);
 
 1. 新しいデバイス設定用に新しいキーペアを生成：
    ```bash
-   eds keygen --out device-lift-01-v2.key.json
+   eds audit keygen --out device-lift-01-v2.key.json
    ```
 
 2. 新しい公開鍵を古い鍵と並べて登録します（ゲートは`device_id`あたり複数の鍵をまだサポートしていません。移行ウィンドウ中は`lift-01-v2`のような新しい`device_id`で登録してください）。
@@ -137,7 +137,7 @@ gate.register_device("lift-01", verifying_key);
 デバイスキーペアと同じ方法でパブリッシャーキーペアを生成：
 
 ```bash
-eds keygen --out publisher-acme-firmware.key.json
+eds audit keygen --out publisher-acme-firmware.key.json
 ```
 
 **秘密鍵** は高セキュリティのオフライン環境（ HSM ・エアギャップワークステーション、または厳格なアクセス制御付きのシークレットマネージャー）に保管しなければなりません。リリースアーティファクトへの署名のためにビルド時にのみ使用し、デバイス自体には置きません。

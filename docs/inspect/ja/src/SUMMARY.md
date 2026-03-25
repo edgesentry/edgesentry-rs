@@ -8,3 +8,4 @@
 - [アーキテクチャ](architecture.md)
 - [ロードマップ](roadmap.md)
 - [デモパイプライン](demo.md)
+- [CLI リファレンス](cli.md)

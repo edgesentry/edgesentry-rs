@@ -12,7 +12,7 @@ Relevant standards: Singapore CLS-04 / ETSI EN 303 645 §5.4 / JC-STAR STAR-1 R1
 Generate a fresh Ed25519 keypair with the `eds` CLI:
 
 ```bash
-eds keygen
+eds audit keygen
 ```
 
 Example output:
@@ -27,7 +27,7 @@ Example output:
 Save to a file:
 
 ```bash
-eds keygen --out device-lift-01.key.json
+eds audit keygen --out device-lift-01.key.json
 ```
 
 Each device must have a **unique** keypair. Never reuse keys across devices.
@@ -39,13 +39,13 @@ Each device must have a **unique** keypair. Never reuse keys across devices.
 If you already have a `private_key_hex` and need to confirm the matching public key:
 
 ```bash
-eds inspect-key --private-key-hex <64-hex-char-private-key>
+eds audit inspect-key --private-key-hex <64-hex-char-private-key>
 ```
 
 Example:
 
 ```bash
-eds inspect-key \
+eds audit inspect-key \
   --private-key-hex 0101010101010101010101010101010101010101010101010101010101010101
 ```
 
@@ -115,7 +115,7 @@ Rotate a device key when:
 
 1. Generate a new keypair on or for the new device configuration:
    ```bash
-   eds keygen --out device-lift-01-v2.key.json
+   eds audit keygen --out device-lift-01-v2.key.json
    ```
 
 2. Register the new public key alongside the old one (the gate allows
@@ -144,7 +144,7 @@ Software update verification uses a separate set of Ed25519 keys from device sig
 Generate a publisher keypair the same way as a device keypair:
 
 ```bash
-eds keygen --out publisher-acme-firmware.key.json
+eds audit keygen --out publisher-acme-firmware.key.json
 ```
 
 The **private key** must be kept in a high-security offline environment (HSM, air-gapped workstation, or a secrets manager with strict access control). It is used only at build time to sign a release artifact, never on the device itself.
