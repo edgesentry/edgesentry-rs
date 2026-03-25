@@ -85,7 +85,7 @@ pub fn load_ply_points(path: &Path) -> Result<Vec<Point3D>, PlyError> {
 
     for (i, line_result) in lines.take(vertex_count).enumerate() {
         let line = line_result?;
-        let parts: Vec<&str> = line.trim().split_whitespace().collect();
+        let parts: Vec<&str> = line.split_whitespace().collect();
 
         let parse = |col: usize| -> Result<f32, PlyError> {
             parts
