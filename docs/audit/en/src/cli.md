@@ -11,6 +11,12 @@ eds inspect <command>  — 3D scan vs. IFC deviation and AI detection pipeline
 
 ## Installation
 
+### For end users — Homebrew (macOS / Linux)
+
+```bash
+brew install edgesentry/tap/eds
+```
+
 ### For end users — pre-built binary
 
 Download the latest release from the [GitHub Releases page](https://github.com/edgesentry/edgesentry-rs/releases).
