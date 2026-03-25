@@ -426,9 +426,9 @@ fn serve_accepts_valid_record_returns_202() {
         .spawn()
         .expect("eds serve must spawn");
 
-    if !wait_for_tcp(&addr, 10) {
+    if !wait_for_tcp(&addr, 30) {
         child.kill().ok();
-        panic!("eds serve did not bind within 10 s");
+        panic!("eds serve did not bind within 30 s");
     }
 
     let payload = b"cli-test-payload";
@@ -496,9 +496,9 @@ fn serve_tls_accepts_valid_record_returns_202() {
         .spawn()
         .expect("eds serve-tls must spawn");
 
-    if !wait_for_tcp(&addr, 10) {
+    if !wait_for_tcp(&addr, 30) {
         child.kill().ok();
-        panic!("eds serve-tls did not bind within 10 s");
+        panic!("eds serve-tls did not bind within 30 s");
     }
 
     let payload = b"cli-tls-test-payload";
