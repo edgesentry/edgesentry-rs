@@ -42,13 +42,13 @@ eds --help
 Requires [Rust](https://rustup.rs) (stable toolchain).
 
 ```bash
-cargo install --git https://github.com/edgesentry/edgesentry-rs --bin eds
+cargo install --git https://github.com/edgesentry/edgesentry-rs --locked --bin eds
 ```
 
 To include optional transport features at install time:
 
 ```bash
-cargo install --git https://github.com/edgesentry/edgesentry-rs --bin eds \
+cargo install --git https://github.com/edgesentry/edgesentry-rs --locked --bin eds \
   --features transport-http,transport-tls
 ```
 
