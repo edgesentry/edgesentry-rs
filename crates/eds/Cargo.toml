@@ -25,14 +25,16 @@ postgres = ["edgesentry-audit/postgres"]
 [dependencies]
 edgesentry-audit   = { path = "../edgesentry-audit" }
 edgesentry-inspect = { path = "../edgesentry-inspect" }
-clap       = { workspace = true }
-hex        = { workspace = true }
-serde_json = { workspace = true }
+clap          = { workspace = true }
+ed25519-dalek = { workspace = true }
+hex           = { workspace = true }
+serde_json    = { workspace = true }
 tokio = { version = "1", features = ["rt-multi-thread"], optional = true }
 
 [dev-dependencies]
-serde_json  = { workspace = true }
-hex         = { workspace = true }
+serde_json    = { workspace = true }
+hex           = { workspace = true }
+ed25519-dalek = { workspace = true }
 edgesentry-audit = { path = "../edgesentry-audit", features = ["transport-http", "transport-tls"] }
 reqwest = { version = "0.12", features = ["json", "blocking", "rustls-tls"], default-features = false }
 rcgen   = "0.13"
