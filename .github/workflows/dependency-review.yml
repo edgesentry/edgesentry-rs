@@ -35,6 +35,7 @@ jobs:
             pkg:cargo/postgres,
             pkg:cargo/unicode-properties,
             pkg:cargo/cbindgen,
+            pkg:cargo/colored,
             pkg:cargo/axum,
             pkg:cargo/rusqlite,
             pkg:cargo/ahash,
