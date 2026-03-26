@@ -138,43 +138,6 @@ This item is tracked as part of M6. It does not change the `InferenceBackend` tr
 
 ---
 
-## Known Limitations
-
-The following constraints are inherent to the current design. They are documented in full in [`trilink-core/docs/limitations.md`](https://github.com/edgesentry/trilink-core/blob/main/docs/limitations.md).
-
-| # | Limitation | Affected milestone | Workaround |
-|---|---|---|---|
-| L1 | **Single-viewpoint occlusion** — Z-buffer projection discards surfaces not visible from the capture pose | M3, M4 | Fuse multiple poses before projection; monitor NaN fraction in depth map |
-| L2 | **Height map is protrusion-only** — maximum-Z aggregation misses depressions (spalling, section loss) | M3 | Use deviation engine (M2) for depression detection; height map is supplementary |
-| L3 | **Curved-surface back-projection bias** — unproject assumes a flat plane; ~11.7% relative error on cylinders/arches vs ~2.5% on flat surfaces | M4, M6 | Flag detections on high-curvature regions; apply expanded tolerances |
-| L4 | **f32 precision outside local frame** — coordinates must be in a local tangent-plane frame; UTM/WGS-84 input silently degrades to ~12 mm steps | Foundation | Subtract site origin before constructing `Point3D`; see `trilink-core/docs/math.md` |
-| L5 | **Depth-only inference** — built-in ONNX model uses depth map only; no RGB channel; ~76% F1 vs ~87% achievable with RGB-D fusion | M6 | Planned RGB-D extension to `InferenceBackend`; `FusionPacket.image_jpeg` already available |
-| L6 | **Fallback depth degrades localisation** — `fallback_depth_m = 2.0 m` when no sensor reading; position error ∝ `|true_depth − 2.0|` | M4 | Always co-register a range sensor; treat fallback detections as positional annotations only |
-| L7 | **Pose buffer dead zone** — inference results arriving >200 ms after capture, or after >33 s buffer window, are silently dropped | Foundation | Monitor `world_pos = None` rate; log warn on tolerance vs. buffer-exhausted failures |
-| L8 | **Not yet near-visual-inspection equivalent** — no documented MLIT/CONQUAS equivalence test; no IFC 4.3 metadata write-back in OSS layer yet | M7 | Covered by commercial compliance layer (M7) and IFC write-back roadmap item below |
-
-### RGB-D Fusion (M6 enhancement)
-
-The built-in inference model (M6) will be extended to accept an optional RGB channel alongside the depth map, forming an RGB-D input tensor. The `FusionPacket` already carries `image_jpeg`; the main change is in the inference module and model retraining.
-
-Published benchmarks on concrete infrastructure damage detection show the impact:
-
-| Input | F1 |
-|---|---|
-| 2D RGB only | 67.6% |
-| 3D depth only | 76.0% |
-| RGB-D fused | **86.7%** |
-
-This item is tracked as part of M6. It does not change the `InferenceBackend` trait signature — the RGB tensor is passed as an optional additional channel.
-
-### IFC 4.3 Metadata Write-back (post-M7)
-
-The ideal maintenance workflow writes AI detection results (defect type, width, area, confidence, inspection date) back into the IFC model as `IfcPropertySet` attributes on specific structural members, identified by `GlobalId`. IFC 4.3 added full support for port/waterway infrastructure (`IfcMarineFacility`, `Pset_MarineFacilityCommon`).
-
-This is not yet implemented in the OSS layer. The current pipeline reads IFC geometry (M2) and generates a JSON report, but does not write back to the model. The commercial compliance layer (M7) targets CONQUAS/MLIT report generation; full IFC write-back is a subsequent milestone.
-
----
-
 ## Demo Pipeline
 
 **Goal:** Run a fully self-contained end-to-end demonstration of the Inspect CLI using open datasets — no production hardware or data required.
