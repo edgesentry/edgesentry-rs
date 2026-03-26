@@ -4,12 +4,10 @@
 
 | Track | Scope | Audience |
 |---|---|---|
-| **OSS** | trilink-core (3D/2D projection, deviation engine), edgesentry-audit, edgesentry-inspect (CLI) | Developers, researchers |
-| **Commercial — App** | Inspect App (Tauri/GUI), 3D heatmap, field photos, BIM integration UI | Site supervisors, inspectors |
-| **Commercial — Reporting** | CONQUAS / MLIT-compliant automated report generation | Regulators, audit bodies |
-| **Commercial — Partnership** | Advanced inference and sensor integration plugins for partner platforms | Partner companies |
+| **OSS** (this repo) | trilink-core (3D/2D projection, deviation engine), edgesentry-audit, edgesentry-inspect (CLI) | Developers, researchers |
+| **Commercial** ([edgesentry-app](https://github.com/edgesentry/edgesentry-app)) | Inspect App (Tauri/GUI), compliance reports, partner sensor plugins | Site supervisors, inspectors, regulators |
 
-Milestones marked **[OSS]** ship as open-source. Milestones marked **[Commercial]** are closed-source products built on top of the OSS layer.
+All milestones in this document ship as open-source. Commercial milestones are tracked in [edgesentry-app](https://github.com/edgesentry/edgesentry-app).
 
 ## Ecosystem Strategy
 
@@ -18,10 +16,6 @@ Following the DuckDB model — keep algorithms, tools, and specifications as ope
 **Why maximise the open core**
 
 Publishing the deviation engine, projection algorithms, and CLI in full allows researchers, field engineers, regulators, and partner companies to verify, integrate, and extend independently. Transparency in the algorithms is itself the source of trust — it establishes Inspect as public infrastructure for construction inspection that no single vendor controls.
-
-**Commercial layer sustains the open core**
-
-Instant paperwork, regulation-compliant reports, and partner sensor integration are areas where a CLI alone falls short of what field operators need. The Inspect App, compliance report engine, and partner plugins cover these gaps and provide the revenue foundation that keeps the OSS development going. The commercial tier augments the OSS layer — it does not replace it.
 
 **Co-creating standards with regulators**
 
@@ -88,34 +82,6 @@ All foundation items are merged. M2 is also complete. M3 is unblocked.
 
 ---
 
-## M4.5 — Inspect App (Visualisation Prototype) \[Commercial\] *(parallel to M5/M6)*
-
-**Goal:** Interactive 3D heatmap viewer for field demos; runs alongside the CLI pipeline with no dependency on M5 or M6.
-
-**Architecture (Python × JS hybrid / Tauri shell):**
-
-| Layer | Technology | Role |
-|---|---|---|
-| Frontend | JavaScript / Three.js + Potree Core | Renders millions of points, Vertex Color heatmap, BIM integration UI |
-| Backend (Sidecar) | Python / IfcOpenShell | Parses IFC geometry and per-element `GlobalId` attributes → JSON |
-| Core Engine | Rust / trilink-core | Deviation calculation, coordinate transforms, audit hash signing |
-
-**Deliverables:**
-
-- Tauri desktop shell (Windows/macOS/Linux) — bundles the Python environment as a `sidecar`, distributed as a single executable
-- Potree Core: efficient in-browser rendering of millions of point cloud points
-- Python sidecar: IfcOpenShell extracts per-element `GlobalId` and attribute metadata from IFC → JSON
-- Metadata overlay: clicking an element looks up attributes by `GlobalId` and displays them in a Tooltip/sidebar
-- Vertex Color heatmap: deviation values mapped to RGB and applied directly to the Three.js mesh (real-time, not a PNG)
-- Field photo viewer: site photographs displayed alongside the 3D view
-- Consumes the JSON report produced by M4 — no changes to the Rust codebase required
-
-> **Why now?** CLI output is not intuitive for site supervisors and inspectors. A visual demo accelerates proof-of-concept approval. This milestone runs in parallel and does not block M5 or M6.
->
-> **Demo value:** Design data (BIM attributes) and as-built measurements (deviation) unified in 3D using only an OSS stack (Tauri + Python + Three.js) — no dependency on proprietary tools.
-
----
-
 ## M5 — Cloud Sync \[OSS\]
 
 **Goal:** Upload the deviation report and heatmap to an S3-compatible store; emit structural-change flags.
@@ -124,8 +90,6 @@ All foundation items are merged. M2 is also complete. M3 is unblocked.
 
 - `src/sync.rs` — S3-compatible upload (standard PUT); structural-change flag → SQS or MQTT when anomaly exceeds 2× threshold
 - Integration test: mock S3 + mock SQS → assert report uploaded, flag published for above-threshold anomaly, no flag for below-threshold
-
-> **Commercial extension:** Object Lock (WORM) enforcement and API-based official certificate issuance are out of scope for the OSS release and are delivered as part of the commercial immutable audit connector.
 
 ---
 
@@ -143,38 +107,6 @@ All foundation items are merged. M2 is also complete. M3 is unblocked.
 
 ---
 
-## M7 — Compliance Report Generation \[Commercial\]
-
-**Goal:** Automatically generate PDF reports compliant with CONQUAS (Singapore) and MLIT (Japan) inspection standards from M4 deviation data.
-
-**Background:** Implementing Singapore regulation (CLS / CONQUAS) compliance first means the OSS core is independently validated against globally recognised standards — accelerating international ecosystem adoption and providing third-party evidence of quality when entering the Japanese market.
-
-**Deliverables:**
-
-- CONQUAS-compliant report template — BCA (Building and Construction Authority) submission format
-- MLIT-compliant report template — Japan construction quality management standard
-- Report engine generating PDF from `report.json` and heatmap PNG
-- Tamper-evident output with electronic signature via edgesentry-audit integration
-
-**Prerequisites:** M4 (report JSON), M4.5 (Inspect App)
-
----
-
-## M8 — Partner Sensor Integration Plugins \[Commercial\]
-
-**Goal:** Integrate partner sensor and inference platforms directly with Inspect to enable advanced defect detection and specialised sensor data ingestion.
-
-**Deliverables:**
-
-- `plugins/<partner>/` — integration interface for partner AI inference engines (high-precision defect detection)
-- Direct point cloud ingestion from partner sensor platforms
-- Plugin API: extends the M6 `InferenceBackend` trait (symmetric with the built-in model)
-- Plugin SDK documentation for partner onboarding
-
-**Prerequisites:** M6 (`InferenceBackend` trait)
-
----
-
 ## Known Limitations
 
 The following constraints are inherent to the current design. They are documented in full in [`trilink-core/docs/limitations.md`](https://github.com/edgesentry/trilink-core/blob/main/docs/limitations.md).
@@ -188,7 +120,7 @@ The following constraints are inherent to the current design. They are documente
 | L5 | **Depth-only inference** — built-in ONNX model uses depth map only; no RGB channel; ~76% F1 vs ~87% achievable with RGB-D fusion | M6 | Planned RGB-D extension to `InferenceBackend`; `FusionPacket.image_jpeg` already available |
 | L6 | **Fallback depth degrades localisation** — `fallback_depth_m = 2.0 m` when no sensor reading; position error ∝ `|true_depth − 2.0|` | M4 | Always co-register a range sensor; treat fallback detections as positional annotations only |
 | L7 | **Pose buffer dead zone** — inference results arriving >200 ms after capture, or after >33 s buffer window, are silently dropped | Foundation | Monitor `world_pos = None` rate; log warn on tolerance vs. buffer-exhausted failures |
-| L8 | **Not yet near-visual-inspection equivalent** — no documented MLIT/CONQUAS equivalence test; no IFC 4.3 metadata write-back in OSS layer yet | M7 | Covered by commercial compliance layer (M7) and IFC write-back roadmap item below |
+| L8 | **Not yet near-visual-inspection equivalent** — no documented MLIT/CONQUAS equivalence test; no IFC 4.3 metadata write-back in OSS layer yet | — | Addressed by the commercial compliance layer in [edgesentry-app](https://github.com/edgesentry/edgesentry-app) |
 
 ### RGB-D Fusion (M6 enhancement)
 
@@ -203,12 +135,6 @@ Published benchmarks on concrete infrastructure damage detection show the impact
 | RGB-D fused | **86.7%** |
 
 This item is tracked as part of M6. It does not change the `InferenceBackend` trait signature — the RGB tensor is passed as an optional additional channel.
-
-### IFC 4.3 Metadata Write-back (post-M7)
-
-The ideal maintenance workflow writes AI detection results (defect type, width, area, confidence, inspection date) back into the IFC model as `IfcPropertySet` attributes on specific structural members, identified by `GlobalId`. IFC 4.3 added full support for port/waterway infrastructure (`IfcMarineFacility`, `Pset_MarineFacilityCommon`).
-
-This is not yet implemented in the OSS layer. The current pipeline reads IFC geometry (M2) and generates a JSON report, but does not write back to the model. The commercial compliance layer (M7) targets CONQUAS/MLIT report generation; full IFC write-back is a subsequent milestone.
 
 ---
 
@@ -245,10 +171,9 @@ trilink-core #30, #31, #32, #33, #34  (foundation — complete)
     └── M2 (IFC loader + deviation engine)               [OSS]
          └── M3 (heatmap rendering)                      [OSS]
               └── M4 (field PC pipeline CLI)              [OSS]
-                   ├── M4.5 (Inspect App — Python×JS)     [Commercial, parallel]
-                   │    └── M7 (compliance report gen.)   [Commercial]
                    ├── M5 (cloud sync)                    [OSS]
                    ├── M6 (built-in inference model)      [OSS]
-                   │    └── M8 (partner sensor plugins)   [Commercial]
                    └── Demo Pipeline (open datasets + CLI)
+
+Commercial milestones (M4.5, M7, M8) → edgesentry-app
 ```

@@ -41,15 +41,11 @@ For the detailed clause-by-clause mapping of CLS / ETSI EN 303 645 / JC-STAR req
 
 ---
 
-## OSS Core vs Commercial
+## OSS scope
 
-| Track | Scope | Audience |
-|-------|-------|----------|
-| **OSS** | Ed25519 signing, BLAKE3 hash chain, ISO 19650 schema, verification CLI (`eds`) | Developers, researchers, integrators |
-| **Commercial — Security** | CLS integration module, JC-STAR compliance connector | Enterprise IoT vendors, regulated industries |
-| **Commercial — Infrastructure** | immugate WORM storage direct connector, HSM key storage | Government agencies, critical infrastructure operators |
+This repository implements the OSS audit layer: Ed25519 signing, BLAKE3 hash chain, ISO 19650 schema, and the `eds` verification CLI. All milestones in this document are open-source.
 
-**Business model:** The signing logic and verification algorithms are open — enabling ecosystem adoption and de facto standardisation. Revenue comes from the "container of trust": where audit records ultimately rest (immugate WORM) and the hardware security backing them (HSM). *"Methods are free, proof is paid."*
+Commercial connectors (immugate WORM storage, CLS/JC-STAR compliance module, HSM key storage) are tracked in [edgesentry-app](https://github.com/edgesentry/edgesentry-app).
 
 ---
 
@@ -147,14 +143,9 @@ Singapore's Cyber Trust Mark becomes mandatory for Critical Information Infrastr
 - ISO 27001 control alignment documentation
 - See [#95](https://github.com/edgesentry/edgesentry-rs/issues/95)
 
-### Milestone 2.6: immugate WORM Storage Connector 🔲 Planned
+### Milestone 2.6: immugate WORM Storage Connector
 
-The OSS core writes standard, verifiable audit records. immugate provides the tamper-proof storage layer — Object Lock (WORM) with immutability guarantees required by government and enterprise audit mandates. This is the primary commercial infrastructure revenue milestone.
-
-- `edgesentry_rs::connectors::immugate` — direct write connector to immugate WORM storage
-- Object Lock lifecycle policies aligned with CLS, ISO 19650, and MLIT retention requirements
-- Official audit trail issuance via immugate API (replacing the manual export flow)
-- HSM key storage integration for hardware-bound signing (foundation for CLS Level 4)
+Moved to [edgesentry-app](https://github.com/edgesentry/edgesentry-app) — see [edgesentry-app#22](https://github.com/edgesentry/edgesentry-app/issues/22).
 
 ---
 
