@@ -13,7 +13,12 @@ documentation = "https://edgesentry.github.io/edgesentry-rs/inspect/en/"
 name = "edgesentry_inspect"
 path = "src/lib.rs"
 
+[[bin]]
+name = "edgesentry-inspect"
+path = "src/main.rs"
+
 [dependencies]
+clap = { workspace = true }
 trilink-core = "0.1.1"
 serde = { workspace = true }
 serde_json = { workspace = true }

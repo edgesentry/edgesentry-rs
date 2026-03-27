@@ -20,6 +20,11 @@ pub struct DeviationReport {
     pub mean_deviation_mm: f64,
     /// Total number of scan points analysed.
     pub point_count: usize,
+    /// Compliance threshold used for this report, in mm.
+    ///
+    /// Included so that downstream consumers (e.g. the M4.5 Inspect App viewer)
+    /// can reconstruct the colour scale without needing the original config file.
+    pub threshold_mm: f64,
 }
 
 /// Compute per-point nearest-neighbour distances (in mm) between `scan` and `reference`.
@@ -71,6 +76,7 @@ pub fn compute_deviation(
             max_deviation_mm: 0.0,
             mean_deviation_mm: 0.0,
             point_count: 0,
+            threshold_mm,
         };
     }
 
@@ -95,6 +101,7 @@ pub fn compute_deviation(
         max_deviation_mm: max_mm,
         mean_deviation_mm: sum_mm / n as f64,
         point_count: n,
+        threshold_mm,
     }
 }
 
@@ -119,6 +126,7 @@ mod tests {
         assert_eq!(report.point_count, 9);
         assert!(report.max_deviation_mm < 1e-3);
         assert!((report.compliant_pct - 100.0).abs() < 1e-6);
+        assert!((report.threshold_mm - 1.0).abs() < 1e-9);
     }
 
     #[test]
@@ -133,5 +141,6 @@ mod tests {
         assert_eq!(report.point_count, 9);
         assert!((report.max_deviation_mm - 20.0).abs() < 0.1);
         assert!(report.compliant_pct < 100.0);
+        assert!((report.threshold_mm - 15.0).abs() < 1e-9);
     }
 }

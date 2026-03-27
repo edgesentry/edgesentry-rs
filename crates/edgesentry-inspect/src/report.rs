@@ -45,11 +45,13 @@ mod tests {
             max_deviation_mm: 25.3,
             mean_deviation_mm: 5.1,
             point_count: 9,
+            threshold_mm: 10.0,
         };
         let json = serde_json::to_string(&report).unwrap();
         let decoded: DeviationReport = serde_json::from_str(&json).unwrap();
         assert!((decoded.compliant_pct - 88.9).abs() < 1e-6);
         assert!((decoded.max_deviation_mm - 25.3).abs() < 1e-6);
         assert_eq!(decoded.point_count, 9);
+        assert!((decoded.threshold_mm - 10.0).abs() < 1e-9);
     }
 }
