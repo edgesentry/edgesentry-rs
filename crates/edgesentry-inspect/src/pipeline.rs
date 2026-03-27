@@ -18,6 +18,7 @@ use crate::{
     ifc::load_ifc_points,
     inference::{depth_map_to_png, http_infer, InferenceError},
     ply::{load_ply_points, PlyError},
+    points::{write_points, PointsError, PointsJson},
     report::{write_report, ReportError},
 };
 
@@ -30,6 +31,8 @@ pub struct ScanOutput {
     pub report_path: PathBuf,
     /// Absolute path to the written `heatmap.png`.
     pub heatmap_path: PathBuf,
+    /// Absolute path to the written `points.json`.
+    pub points_path: PathBuf,
     /// Number of AI detections back-projected to 3D (0 when `mode = "off"`).
     pub detection_count: usize,
     /// 3D world positions for each detection (parallel to `detection_count`).
@@ -51,6 +54,8 @@ pub enum ScanError {
     Report(#[from] ReportError),
     #[error("heatmap write failed: {0}")]
     Heatmap(String),
+    #[error("points write failed: {0}")]
+    Points(#[from] PointsError),
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 }
@@ -128,15 +133,19 @@ pub fn run_scan(config: &ScanConfig) -> Result<ScanOutput, ScanError> {
     std::fs::create_dir_all(&config.output.dir)?;
     let report_path = config.output.dir.join("report.json");
     let heatmap_path = config.output.dir.join("heatmap.png");
+    let points_path = config.output.dir.join("points.json");
 
     write_report(&report, &report_path)?;
     write_heatmap_png(&img, &heatmap_path)
         .map_err(|e| ScanError::Heatmap(e.to_string()))?;
+    let points_json = PointsJson::new(&scan, &deviations_mm, &world_detections);
+    write_points(&points_json, &points_path)?;
 
     Ok(ScanOutput {
         report,
         report_path,
         heatmap_path,
+        points_path,
         detection_count: detections.len(),
         world_detections,
     })
