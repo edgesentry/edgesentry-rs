@@ -10,4 +10,5 @@ pub mod ifc;
 pub mod inference;
 pub mod pipeline;
 pub mod ply;
+pub mod points;
 pub mod report;

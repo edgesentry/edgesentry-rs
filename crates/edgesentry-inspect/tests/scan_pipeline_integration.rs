@@ -76,6 +76,7 @@ fn scan_off_mode_produces_report_and_heatmap() {
     // Output files exist
     assert!(out.report_path.exists(), "report.json must be written");
     assert!(out.heatmap_path.exists(), "heatmap.png must be written");
+    assert!(out.points_path.exists(), "points.json must be written");
 
     // report.json is valid JSON with expected fields
     let json = std::fs::read_to_string(&out.report_path).unwrap();
@@ -159,4 +160,5 @@ fn scan_http_mode_returns_detections() {
     assert_eq!(out.report.point_count, 7);
     assert!(out.report_path.exists());
     assert!(out.heatmap_path.exists());
+    assert!(out.points_path.exists());
 }
