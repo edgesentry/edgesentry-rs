@@ -90,19 +90,23 @@ JSON schema:
 
 ```json
 {
-  "capture_ts_us": 1711234567000000,
-  "ifc_ref": "building-A-floor-3-v12.ifc",
-  "scan_point_count": 142850,
   "compliant_pct": 94.2,
   "max_deviation_mm": 23.1,
   "mean_deviation_mm": 3.8,
-  "anomalies": [
-    {
-      "world_pos": { "x": 12.3, "y": 4.1, "z": 2.05 },
-      "deviation_mm": 23.1,
-      "ai_class": "rebar_missing",
-      "ai_confidence": 0.91
-    }
+  "point_count": 142850,
+  "threshold_mm": 10.0
+}
+```
+
+AI detection locations are written to `points.json` alongside the report:
+
+```json
+{
+  "scan_points": [
+    { "x": 12.3, "y": 4.1, "z": 2.05, "deviation_mm": 23.1 }
+  ],
+  "detections": [
+    { "x": 12.3, "y": 4.1, "z": 2.05 }
   ]
 }
 ```

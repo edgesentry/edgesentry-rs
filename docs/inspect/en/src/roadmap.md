@@ -57,7 +57,7 @@ All foundation items are merged. M2 is also complete. M3 is unblocked.
 
 ---
 
-## M3 — Heatmap Rendering \[OSS\]
+## M3 — Heatmap Rendering \[OSS\] ✅ Implemented
 
 **Goal:** Produce a PNG heatmap that maps per-point deviation to colour, positioned in 2D using the depth map projection.
 
@@ -69,7 +69,7 @@ All foundation items are merged. M2 is also complete. M3 is unblocked.
 
 ---
 
-## M4 — Field PC Pipeline (CLI) \[OSS\]
+## M4 — Field PC Pipeline (CLI) \[OSS\] ✅ Implemented
 
 **Goal:** End-to-end pipeline on the field PC from point cloud to deviation report, runnable as a single CLI command.
 

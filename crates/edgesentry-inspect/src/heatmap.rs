@@ -44,6 +44,12 @@ pub fn deviation_to_rgb(deviation_mm: f64, threshold_mm: f64) -> Rgb<u8> {
 // Heatmap rendering
 // ---------------------------------------------------------------------------
 
+/// Physical splat radius (metres). Each projected scan point is rendered as a
+/// filled disk of this world-space radius, giving perspective-correct coverage:
+/// `r_px = fx · SPLAT_M / Zc`.  At a typical 2 m standoff with fx = 1000 this
+/// is ≈ 13 px, filling the gaps between 5 cm-spaced scan points.
+const SPLAT_M: f64 = 0.025;
+
 /// Render a per-point deviation heatmap as an [`ImageBuffer`].
 ///
 /// Projects each point in `scan` to a 2D pixel using the same pinhole camera
@@ -53,8 +59,8 @@ pub fn deviation_to_rgb(deviation_mm: f64, threshold_mm: f64) -> Rgb<u8> {
 /// 2. Behind-camera points (`Zc ≤ 0`) are skipped.
 /// 3. `u = fx·(Xc/Zc) + cx`, `v = fy·(Yc/Zc) + cy`
 /// 4. Out-of-bounds pixels are skipped.
-/// 5. Z-buffer: when multiple points project to the same pixel the nearest
-///    one (smallest `Zc`) determines the colour.
+/// 5. Each point is splatted as a filled disk of radius `fx·SPLAT_M/Zc` px.
+/// 6. Z-buffer: when disks overlap the nearest point (smallest `Zc`) wins.
 ///
 /// Pixels with no projected point are black `[0, 0, 0]`.
 ///
@@ -93,16 +99,29 @@ pub fn render_heatmap(
         let u = k.fx * (pc.x as f64 / zc) + k.cx;
         let v = k.fy * (pc.y as f64 / zc) + k.cy;
 
-        if u < 0.0 || v < 0.0 || u >= width as f64 || v >= height as f64 {
-            continue;
-        }
+        // Perspective-correct disk radius in pixels (minimum 1).
+        let r = ((k.fx * SPLAT_M / zc).ceil() as i32).max(1);
+        let r2 = r * r;
 
-        let idx = v as u32 * width + u as u32;
-        let idx = idx as usize;
+        let u0 = u as i32;
+        let v0 = v as i32;
 
-        if pc.z < z_buf[idx] {
-            z_buf[idx] = pc.z;
-            dev_buf[idx] = dev_mm;
+        for dv in -r..=r {
+            for du in -r..=r {
+                if du * du + dv * dv > r2 {
+                    continue; // outside the disk
+                }
+                let pu = u0 + du;
+                let pv = v0 + dv;
+                if pu < 0 || pv < 0 || pu >= width as i32 || pv >= height as i32 {
+                    continue;
+                }
+                let idx = (pv as u32 * width + pu as u32) as usize;
+                if pc.z < z_buf[idx] {
+                    z_buf[idx] = pc.z;
+                    dev_buf[idx] = dev_mm;
+                }
+            }
         }
     }
 

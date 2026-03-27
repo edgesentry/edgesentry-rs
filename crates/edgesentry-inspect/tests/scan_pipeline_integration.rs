@@ -82,6 +82,7 @@ fn scan_off_mode_produces_report_and_heatmap() {
     let json = std::fs::read_to_string(&out.report_path).unwrap();
     let v: serde_json::Value = serde_json::from_str(&json).unwrap();
     assert!(v["point_count"].as_u64().unwrap() == 7);
+    assert!((v["threshold_mm"].as_f64().unwrap() - 10.0).abs() < 1e-9);
 
     // heatmap.png is a valid PNG (correct magic bytes)
     let png = std::fs::read(&out.heatmap_path).unwrap();
