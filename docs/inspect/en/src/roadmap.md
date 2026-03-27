@@ -176,4 +176,7 @@ trilink-core #30, #31, #32, #33, #34  (foundation — complete)
                    └── Demo Pipeline (open datasets + CLI)
 
 Commercial milestones (M4.5, M7, M8) → edgesentry-app
+Phase 2 (2D/MPA/JTC, 1D/NEA/PUB) → edgesentry-app Phase 2 roadmap
 ```
+
+The Phase 2 expansion (YOLO11/SAM 2 for 2D maritime/industrial, PatchTST/iTransformer for 1D time-series) is planned in the [edgesentry-app inspect roadmap](https://github.com/edgesentry/edgesentry-app/blob/main/docs/inspect/roadmap.md). Development priority is 3D demo first, then 2D, then 1D.

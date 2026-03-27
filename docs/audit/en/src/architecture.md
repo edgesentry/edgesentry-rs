@@ -50,6 +50,22 @@ The device-side design is intentionally lightweight so it can be adapted to Cort
 
 In short, the edge signs facts, and the cloud enforces continuity and authenticity.
 
+## Notarization Metadata Schema
+
+For AI inference results to serve as legally admissible evidence (BCA/CONQUAS inspection reports, MPA ship certificates, MLIT near-visual-inspection equivalence), the audit record payload must capture five categories of provenance metadata in addition to the cryptographic chain. This is the target schema for the notarization connector.
+
+| Category | Fields | Purpose |
+|---|---|---|
+| **Sensor** | `sensor_id`, `calibration_ts`, `firmware_version`, `sampling_rate` | Prove the measuring instrument was calibrated and operating within spec at capture time |
+| **AI model** | `model_uuid`, `model_arch`, `weight_sha256`, `prompt_version` | Enable third-party reproduction of the same inference output from the same input (AI Verify Outcome 3.1 / 3.5) |
+| **Compute environment** | `device_type`, `os_version`, `dependency_hashes`, `hw_temp_c` | Full runtime reproducibility; hardware temperature flags thermal throttling that could affect inference timing |
+| **Context** | `ntp_ts`, `gps_lat_lon` (or indoor position), `input_data_hash` | Bind the record to a specific physical location and moment; `input_data_hash` prevents payload substitution |
+| **Inference process** | `confidence_score`, `preprocessing_algo`, `guardrail_actions` | Support human-in-the-loop triage (AI Verify Outcome 4.5); low-confidence records can be routed for manual review |
+
+These fields are stored in the `payload` object alongside the domain-specific detection data. The `payload_hash` in `AuditRecord` covers the entire payload, so any metadata field change invalidates the signature.
+
+**ALCOA+ alignment:** The five categories map directly to the ALCOA+ data integrity framework required for regulatory submissions — Attributable (sensor/model identity), Legible (structured JSON), Contemporaneous (`ntp_ts`), Original (`input_data_hash`), Accurate (`weight_sha256`, `calibration_ts`), plus Complete, Consistent, Enduring, and Available (covered by the WORM storage connector).
+
 ## Ingest Service: Sync and Async Paths
 
 `edgesentry-rs` provides two orchestration service types for cloud-side ingest, selectable by feature flag:
