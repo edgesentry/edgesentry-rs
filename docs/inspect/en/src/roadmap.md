@@ -5,9 +5,9 @@
 | Track | Scope | Audience |
 |---|---|---|
 | **OSS** (this repo) | trilink-core (3D/2D projection, deviation engine), edgesentry-audit, edgesentry-inspect (CLI) | Developers, researchers |
-| **Commercial** ([edgesentry-app](https://github.com/edgesentry/edgesentry-app)) | Inspect App (Tauri/GUI), compliance reports, partner sensor plugins | Site supervisors, inspectors, regulators |
+| **Commercial** (closed commercial repository) | Inspect App (Tauri/GUI), compliance reports, partner sensor plugins | Site supervisors, inspectors, regulators |
 
-All milestones in this document ship as open-source. Commercial milestones are tracked in [edgesentry-app](https://github.com/edgesentry/edgesentry-app).
+All milestones in this document ship as open-source. Commercial milestones are tracked in the commercial compliance layer.
 
 ## Ecosystem Strategy
 
@@ -120,7 +120,7 @@ The following constraints are inherent to the current design. They are documente
 | L5 | **Depth-only inference** — built-in ONNX model uses depth map only; no RGB channel; ~76% F1 vs ~87% achievable with RGB-D fusion | M6 | Planned RGB-D extension to `InferenceBackend`; `FusionPacket.image_jpeg` already available |
 | L6 | **Fallback depth degrades localisation** — `fallback_depth_m = 2.0 m` when no sensor reading; position error ∝ `|true_depth − 2.0|` | M4 | Always co-register a range sensor; treat fallback detections as positional annotations only |
 | L7 | **Pose buffer dead zone** — inference results arriving >200 ms after capture, or after >33 s buffer window, are silently dropped | Foundation | Monitor `world_pos = None` rate; log warn on tolerance vs. buffer-exhausted failures |
-| L8 | **Not yet near-visual-inspection equivalent** — no documented MLIT/CONQUAS equivalence test; no IFC 4.3 metadata write-back in OSS layer yet | — | Addressed by the commercial compliance layer in [edgesentry-app](https://github.com/edgesentry/edgesentry-app) |
+| L8 | **Not yet near-visual-inspection equivalent** — no documented MLIT/CONQUAS equivalence test; no IFC 4.3 metadata write-back in OSS layer yet | — | Addressed by the commercial compliance layer |
 
 ### RGB-D Fusion (M6 enhancement)
 
@@ -175,8 +175,8 @@ trilink-core #30, #31, #32, #33, #34  (foundation — complete)
                    ├── M6 (built-in inference model)      [OSS]
                    └── Demo Pipeline (open datasets + CLI)
 
-Commercial milestones (M4.5, M7, M8) → edgesentry-app
-Phase 2 (2D/MPA/JTC, 1D/NEA/PUB) → edgesentry-app Phase 2 roadmap
+Commercial milestones (M4.5, M7, M8) → commercial compliance layer
+Phase 2 (2D/MPA/JTC, 1D/NEA/PUB) → commercial compliance layer
 ```
 
-The Phase 2 expansion (YOLO11/SAM 2 for 2D maritime/industrial, PatchTST/iTransformer for 1D time-series) is planned in the [edgesentry-app inspect roadmap](https://github.com/edgesentry/edgesentry-app/blob/main/docs/inspect/roadmap.md). Development priority is 3D demo first, then 2D, then 1D.
+The Phase 2 expansion (YOLO11/SAM 2 for 2D maritime/industrial, PatchTST/iTransformer for 1D time-series) is tracked in the commercial compliance layer. Development priority is 3D demo first, then 2D, then 1D.

@@ -45,7 +45,7 @@ For the detailed clause-by-clause mapping of CLS / ETSI EN 303 645 / JC-STAR req
 
 This repository implements the OSS audit layer: Ed25519 signing, BLAKE3 hash chain, ISO 19650 schema, and the `eds` verification CLI. All milestones in this document are open-source.
 
-Commercial connectors (immugate WORM storage, CLS/JC-STAR compliance module, HSM key storage) are tracked in [edgesentry-app](https://github.com/edgesentry/edgesentry-app).
+Commercial connectors (immugate WORM storage, CLS/JC-STAR compliance module, HSM key storage) are tracked in the commercial compliance layer.
 
 ---
 
@@ -145,7 +145,7 @@ Singapore's Cyber Trust Mark becomes mandatory for Critical Information Infrastr
 
 ### Milestone 2.6: immugate WORM Storage Connector
 
-Moved to [edgesentry-app](https://github.com/edgesentry/edgesentry-app) — see [edgesentry-app#22](https://github.com/edgesentry/edgesentry-app/issues/22).
+Moved to the commercial compliance layer.
 
 ---
 
