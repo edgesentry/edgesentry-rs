@@ -7,7 +7,7 @@ use edgesentry_inspect::{config::load_config, pipeline::run_scan};
 ///
 /// Executed via `uv run` so uv handles installing `ifcopenshell` automatically.
 /// PEP 723 inline metadata in the script declares the dependency.
-const EXTRACT_MESH_SCRIPT: &str = include_str!("../../../scripts/extract_mesh.py");
+const EXTRACT_MESH_SCRIPT: &str = include_str!("extract_mesh.py");
 
 #[derive(Debug, Subcommand)]
 pub enum InspectCommand {
