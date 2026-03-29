@@ -5,6 +5,7 @@
 
 pub mod config;
 pub mod deviation;
+pub mod fixtures;
 pub mod heatmap;
 pub mod ifc;
 pub mod inference;
