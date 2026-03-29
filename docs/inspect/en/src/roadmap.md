@@ -82,6 +82,23 @@ All foundation items are merged. M2 is also complete. M3 is unblocked.
 
 ---
 
+## M4.6 — Temporal Diff CLI \[OSS\]
+
+**Goal:** Enable change-detection between two inspection scans of the same structure (T0 = previous inspection, T1 = current inspection), producing a deviation report and heatmap that highlight what has changed — not what deviates from design.
+
+**Deliverables:**
+
+- `src/main.rs` — new subcommand: `edgesentry-inspect diff --t0 <cloud> --t1 <cloud> --config config.toml`
+- Wires: T0 and T1 point cloud ingress → `trilink-core::scan_delta` → deviation report → heatmap PNG
+- Output format identical to `edgesentry-inspect scan` — same JSON schema, same PNG heatmap — so M4.5 viewer and M7 report engine consume it without changes
+- End-to-end test: synthetic T0/T1 cloud pair with known 10 mm raised patch → assert `max_deviation_mm ∈ [8.0, 12.0]`
+
+**Why now?** Fundraising and partner demos require showing temporal change (structure deterioration over time), not just IFC-vs-as-built deviation. This milestone is the minimal addition that unlocks the T0/T1 demo without touching the existing pipeline.
+
+**Prerequisites:** trilink-core CP3 (`scan_delta`), M4 (CLI infrastructure)
+
+---
+
 ## M5 — Cloud Sync \[OSS\]
 
 **Goal:** Upload the deviation report and heatmap to an S3-compatible store; emit structural-change flags.
@@ -138,19 +155,36 @@ This item is tracked as part of M6. It does not change the `InferenceBackend` tr
 
 ---
 
-## Demo Pipeline
+## Demo Pipeline (Prototype)
 
-**Goal:** Run a fully self-contained end-to-end demonstration of the Inspect CLI using open datasets — no production hardware or data required.
+**Goal:** Run a fully self-contained end-to-end demonstration of the Inspect pipeline using open datasets — no production hardware or proprietary data required. Suitable for fundraising and partner engagement.
 
-**Prerequisites:** M2, M3, M4 (CLI must be built and on PATH).
+**Prerequisites:** M2, M3, M4, M4.6 (CLI must be built and on PATH).
 
-**Steps:**
+### Scene A — IFC deviation (design vs. as-built)
 
 1. Download a public IFC file (buildingSMART BIMNet gallery) and an indoor LiDAR scan (S3DIS dataset).
 2. Use IfcOpenShell to sample the IFC surface into a reference point cloud.
 3. Use Open3D to introduce a controlled 15 mm deformation, producing a simulated scan with a known defect.
 4. Run `edgesentry-inspect scan --config config.toml` — the CLI loads the IFC, computes deviation, projects to a depth map, calls the HTTP inference server, back-projects detections, renders a heatmap, and writes the JSON report.
 5. Inspect `report.json` (`compliant_pct`, `max_deviation_mm`, `mean_deviation_mm`) and the PNG heatmap to verify the simulated defect is detected and quantified.
+
+### Scene B — T0/T1 temporal change detection
+
+1. Obtain a public bridge or structure point cloud (e.g. Sketchfab, OpenTopography "Bridge" or "Concrete" datasets).
+2. Treat the unmodified cloud as **T0** (last inspection).
+3. Use CloudCompare or Blender to digitally add synthetic deterioration (crack geometry, section loss) to produce **T1** (current inspection).
+4. Run `edgesentry-inspect diff --t0 t0.e57 --t1 t1.e57 --config config.toml` — outputs a change-deviation report and heatmap highlighting the introduced deterioration.
+5. Pass the 2D crop of the flagged region to the HTTP inference endpoint; verify defect class and confidence score are returned.
+6. Confirm the final PDF report (M7, BCA format) reflects the AI finding.
+
+**Investor / partner talking points this demo supports:**
+
+- End-to-end automation: 3D scan → 2D crop → AI scoring → compliance report, without manual steps.
+- Temporal diff: past vs. present inspections surfaced as a colour-coded change map.
+- AI workflow: 3D change detection narrows the search region; a 2D AI model scores severity within that region — low computational load, high precision.
+- Offline operation: entire pipeline runs on a single field PC; no cloud dependency during capture.
+- Compliance output: report rendered in BCA submission format.
 
 See [Demo Pipeline](demo.md) for the full walkthrough.
 
@@ -171,9 +205,11 @@ trilink-core #30, #31, #32, #33, #34  (foundation — complete)
     └── M2 (IFC loader + deviation engine)               [OSS]
          └── M3 (heatmap rendering)                      [OSS]
               └── M4 (field PC pipeline CLI)              [OSS]
+                   ├── M4.6 (temporal diff CLI)           [OSS]  ← trilink-core CP3
+                   │    └── Demo Pipeline Scene B
                    ├── M5 (cloud sync)                    [OSS]
                    ├── M6 (built-in inference model)      [OSS]
-                   └── Demo Pipeline (open datasets + CLI)
+                   └── Demo Pipeline Scene A
 
 Commercial milestones (M4.5, M7, M8) → commercial compliance layer
 Phase 2 (2D/MPA/JTC, 1D/NEA/PUB) → commercial compliance layer
