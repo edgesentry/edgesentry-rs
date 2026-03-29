@@ -13,6 +13,17 @@ pub enum InspectCommand {
         #[arg(short, long, default_value = "config.toml")]
         config: std::path::PathBuf,
     },
+    /// Generate offline demo data: synthetic IFC wall, matching PLY scan, and config.toml.
+    ///
+    /// All files are created locally with no external dependencies.
+    /// After generation, run the pipeline with:
+    ///
+    ///   eds inspect scan --config <DIR>/config.toml
+    GenerateFixtures {
+        /// Directory to write generated files into (created if absent).
+        #[arg(short, long, default_value = "demo-data")]
+        dir: std::path::PathBuf,
+    },
 }
 
 pub fn run(cmd: InspectCommand) -> Result<(), Box<dyn std::error::Error>> {
@@ -38,6 +49,30 @@ pub fn run(cmd: InspectCommand) -> Result<(), Box<dyn std::error::Error>> {
             }
             println!("\n  report  → {}", out.report_path.display());
             println!("  heatmap → {}", out.heatmap_path.display());
+        }
+
+        InspectCommand::GenerateFixtures { dir } => {
+            use edgesentry_inspect::fixtures::generate_fixtures;
+
+            let summary = generate_fixtures(&dir)
+                .map_err(|e| format!("failed to generate fixtures in '{}': {e}", dir.display()))?;
+
+            println!("Generated demo data in '{}':", dir.display());
+            println!(
+                "  wall_slab.ifc      — 3 m × 2 m IFC reference wall ({} points)",
+                summary.point_count
+            );
+            println!(
+                "  wall_slab_scan.ply — matching scan with {} points displaced 20 mm (centre defect)",
+                summary.defect_point_count
+            );
+            println!("  config.toml        — pre-configured for eds inspect scan");
+            println!();
+            println!("Run the pipeline:");
+            println!(
+                "  cd {} && eds inspect scan --config config.toml",
+                dir.display()
+            );
         }
     }
 

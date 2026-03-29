@@ -44,6 +44,34 @@ cargo install --git https://github.com/edgesentry/edgesentry-rs --locked --bin e
 
 ---
 
+## `eds inspect generate-fixtures`
+
+オフラインのデモデータを生成します（外部依存なし）：
+
+```bash
+eds inspect generate-fixtures --dir ./demo-data
+```
+
+| フラグ | 説明 |
+|--------|------|
+| `-d`, `--dir` | 出力ディレクトリ（存在しない場合は作成、デフォルト: `demo-data`） |
+
+`<dir>` に以下の 3 ファイルを生成します：
+
+| ファイル | 内容 |
+|----------|------|
+| `wall_slab.ifc` | 651 個の `IFCCARTESIANPOINT` — 3 m × 2 m フラット壁の参照モデル |
+| `wall_slab_scan.ply` | 同じグリッドで中心部に 20 mm の外向き膨らみ（49 点が非適合） |
+| `config.toml` | `eds inspect scan` 用に事前設定済み |
+
+生成したデータに対してパイプラインを実行するには：
+
+```bash
+cd demo-data && eds inspect scan --config config.toml
+```
+
+---
+
 ## `eds inspect scan`
 
 TOML 設定ファイルからフルスキャンパイプラインを実行：

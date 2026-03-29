@@ -50,6 +50,34 @@ cargo install --git https://github.com/edgesentry/edgesentry-rs --locked --bin e
 
 ---
 
+## `eds inspect generate-fixtures`
+
+Generate offline demo data — no external dependencies required:
+
+```bash
+eds inspect generate-fixtures --dir ./demo-data
+```
+
+| Flag | Description |
+|------|-------------|
+| `-d`, `--dir` | Output directory (created if absent, default: `demo-data`) |
+
+Creates three files in `<dir>`:
+
+| File | Contents |
+|------|----------|
+| `wall_slab.ifc` | 651 `IFCCARTESIANPOINT` entries — flat 3 m × 2 m wall |
+| `wall_slab_scan.ply` | Same grid with a 20 mm outward bulge in the centre (49 non-compliant points) |
+| `config.toml` | Pre-configured for `eds inspect scan` |
+
+Then run the full pipeline against the generated data:
+
+```bash
+cd demo-data && eds inspect scan --config config.toml
+```
+
+---
+
 ## `eds inspect scan`
 
 Run a full scan pipeline from a TOML config file:
