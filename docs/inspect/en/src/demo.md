@@ -1,65 +1,107 @@
 # Demo Pipeline
 
-This page describes how to build a self-contained proof-of-concept demonstration using open datasets and the Inspect CLI. It is intended for use in technical evaluations and field demos before production data is available.
+Two paths are available depending on whether you want a fully offline demo or a real IFC model with 3D mesh overlay.
 
 ---
 
-## Open datasets
+## Path 1 — Fully offline (no downloads, no Python)
 
-| Asset | Source | Notes |
-|---|---|---|
-| IFC design model | [buildingSMART BIMNet gallery](https://awards.buildingsmart.org/gallery/) | Publicly shared IFC files from BIM award entries |
-| 3D point cloud | [S3DIS (Stanford Large-Area Indoor Spaces)](https://www.open3d.org/docs/latest/python_api/open3d.ml.tf.datasets.S3DIS.html) | Indoor LiDAR scans of real buildings; well-suited for structural inspection scenarios |
+The fastest way to see the complete pipeline end-to-end. Everything runs locally with zero external dependencies.
 
-> Verify any IFC download URL before use. The buildingSMART gallery is the authoritative source; third-party mirrors may serve modified files.
+```bash
+# 1. Generate synthetic wall fixture (651-point 3 m × 2 m wall + 20 mm centre defect)
+eds inspect generate-fixtures --dir ./demo
 
----
+# 2. Run the scan pipeline
+cd demo
+eds inspect scan --config config.toml
+```
 
-## Pipeline steps
+Expected output:
+```
+compliant_pct    : 92.5%
+max_deviation_mm : 20.000 mm
+mean_deviation_mm: 2.680 mm
+```
 
-### Step 1 — Generate design point cloud from IFC
+Output files written to `./demo/output/`:
 
-Use [IfcOpenShell](https://ifcopenshell.org/) to sample the IFC surface geometry into a reference point cloud (the "ground truth" design). Each `IfcProduct` element is triangulated and its vertices collected into a flat `(N, 3)` array representing the design surface.
+| File | Contents |
+|------|----------|
+| `report.json` | Deviation statistics |
+| `heatmap.png` | 2D colour map — green (compliant) → red (defect) |
+| `points.json` | Per-point 3D positions + deviations for the viewer |
 
-### Step 2 — Simulate a damaged scan
-
-Use [Open3D](https://www.open3d.org/) to introduce controlled deformations into a copy of the design cloud, producing a simulated "as-built" scan with known defects. A representative demo deforms a localised region by 15 mm to simulate a surface depression, then saves the result as a PLY file.
-
-### Step 3 — Compute deviation (M2)
-
-Run the `eds inspect scan` CLI command, pointing it at the IFC design file and the simulated scan PLY. The CLI calls `src/ifc.rs` to load the design reference cloud, then `src/deviation.rs` to compute per-point nearest-neighbour deviation and emit a JSON report containing `compliant_pct`, `max_deviation_mm`, and `mean_deviation_mm`.
-
-This step exercises `src/ifc.rs` and `src/deviation.rs` (M2).
-
-### Step 4 — Project 3D → 2D (trilink-core)
-
-`trilink-core::project_to_depth_map` converts the scan point cloud into a depth map image for AI inference input. This is handled automatically by the CLI using the camera intrinsics in `config.toml` — no manual step is required.
-
-This step exercises `trilink-core::project_to_depth_map` (foundation #31).
-
-### Step 5 — AI defect detection
-
-A detection model runs over the depth map via the HTTP inference path (`inference.mode = "http"`). For demos, YOLOv8 can be used as the external inference server. The CLI sends the depth map image to the configured HTTP endpoint and receives bounding-box detections in return (M4).
-
-### Step 6 — Back-project 2D → 3D
-
-Detected 2D bounding boxes are back-projected to world coordinates using `trilink-core::unproject`, then overlaid on the 3D model and included in the deviation report (M4).
+Open `./demo/output/` in the Inspect App viewer to see the coloured point cloud.
 
 ---
 
-## Deviation engine in the demo
+## Path 2 — Real IFC with 3D mesh overlay
 
-The deviation engine (M2) is the quantitative centrepiece of the demo. It answers the question *"by how many millimetres does the as-built structure deviate from the IFC design?"* — not just *"is there an anomaly?"*. Make sure Step 3 is demonstrated explicitly, as it differentiates this pipeline from a generic defect detector.
+Uses a real buildingSMART sample IFC and renders the IFC reference geometry as a blue wireframe in the viewer alongside the scan cloud.
+
+### Prerequisites
+
+- `uv` — `brew install uv` (manages Python and `ifcopenshell` automatically)
+
+### Step 1 — Download sample IFC
+
+```bash
+eds inspect download-samples --dir ./ifc-samples
+```
+
+Downloads `Building-Architecture.ifc` (~220 KB, IFC 4 PCERT sample) from buildingSMART. Skipped if already present.
+
+### Step 2 — Extract IFC mesh
+
+```bash
+eds inspect extract-mesh \
+    --ifc ./ifc-samples/Building-Architecture.ifc \
+    --out ./ifc-samples/reference.json
+```
+
+On first run, `uv` downloads Python and installs `ifcopenshell` automatically (cached at `~/.cache/uv/`). Subsequent calls are instant.
+
+Output: `reference.json` — vertices and triangle faces in world coordinates.
+
+### Step 3 — Generate a demo scan
+
+```bash
+eds inspect generate-fixtures --dir ./demo
+```
+
+This provides a PLY scan and a pre-configured `config.toml`. For a real scan, replace `wall_slab_scan.ply` with your own PLY file.
+
+### Step 4 — Add `mesh_path` to config
+
+```bash
+echo 'mesh_path = "../ifc-samples/reference.json"' >> ./demo/config.toml
+```
+
+### Step 5 — Run the pipeline
+
+```bash
+cd demo
+eds inspect scan --config config.toml
+```
+
+`reference.json` is copied to `./demo/output/reference.json` alongside `points.json`.
+
+### Step 6 — View in the Inspect App
+
+Open `./demo/output/` in the Inspect App viewer. The IFC reference mesh renders as a semi-transparent blue wireframe over the coloured scan point cloud. Use the **Reference mesh** toggle in the sidebar to show or hide it.
 
 ---
 
 ## Tech stack summary
 
-| Component | Language / Library | Roadmap milestone |
-|---|---|---|
-| IFC surface sampling | Python / IfcOpenShell | Demo setup (pre-M2) |
-| Damage simulation | Python / Open3D | Demo setup only |
-| IFC deviation engine | Rust CLI / `src/ifc.rs`, `src/deviation.rs` | M2 |
-| 3D ↔ 2D projection | Rust / trilink-core | Foundation #31–#32 |
-| AI defect detection | External HTTP server (e.g. YOLOv8) | M4 `inference.mode = "http"` |
-| Report + heatmap | Rust CLI / `src/report.rs`, `src/heatmap.rs` | M2–M3 |
+| Component | Implementation | Command |
+|-----------|---------------|---------|
+| Synthetic fixture | Rust (built-in) | `eds inspect generate-fixtures` |
+| IFC sample download | Rust + ureq | `eds inspect download-samples` |
+| IFC mesh extraction | Python / IfcOpenShell (via `uv run`) | `eds inspect extract-mesh` |
+| Deviation engine | Rust / `deviation.rs` | `eds inspect scan` |
+| 3D ↔ 2D projection | Rust / trilink-core | automatic in `scan` |
+| AI defect detection | External HTTP server | `inference.mode = "http"` |
+| Heatmap + report | Rust / `heatmap.rs`, `report.rs` | automatic in `scan` |
+| 3D viewer | Three.js (Inspect App) | open output folder in app |
