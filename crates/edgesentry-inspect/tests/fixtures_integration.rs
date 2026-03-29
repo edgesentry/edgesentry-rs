@@ -115,6 +115,7 @@ fn pipeline_detects_defect_in_generated_fixtures() {
             endpoint: None,
             fallback_depth_m: 2.0,
         },
+        mesh_path: None,
         output: OutputConfig { dir: out_dir.clone(), threshold_mm: 10.0 },
     };
 

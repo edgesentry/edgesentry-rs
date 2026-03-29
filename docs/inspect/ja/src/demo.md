@@ -1,65 +1,107 @@
 # デモパイプライン
 
-このページでは、オープンデータセットと Inspect CLI を使って、自己完結した概念実証（PoC）デモを構築する手順を説明します。本番データが用意できる前の技術評価・現場デモでの利用を想定しています。
+完全オフラインのデモと、実際の IFC モデルと 3D メッシュオーバーレイを使ったデモの 2 つのパスがあります。
 
 ---
 
-## オープンデータセット
+## パス 1 — 完全オフライン（ダウンロード不要・Python 不要）
 
-| アセット | ソース | 備考 |
-|---|---|---|
-| IFC 設計モデル | [buildingSMART BIMNet ギャラリー](https://awards.buildingsmart.org/gallery/) | BIM 受賞作品として公開された IFC ファイル |
-| 3D 点群 | [S3DIS（Stanford Large-Area Indoor Spaces）](https://www.open3d.org/docs/latest/python_api/open3d.ml.tf.datasets.S3DIS.html) | 実建物の屋内 LiDAR スキャン。構造検査シナリオに適している |
+外部依存なしでパイプライン全体をエンドツーエンドで確認する最速の方法です。
 
-> IFC のダウンロード URL は使用前に必ず確認してください。buildingSMART ギャラリーが一次ソースです。サードパーティのミラーは改変済みのファイルを配信している場合があります。
+```bash
+# 1. 合成ウォールフィクスチャを生成（651 点の 3 m × 2 m 壁 + 中心部に 20 mm の欠陥）
+eds inspect generate-fixtures --dir ./demo
 
----
+# 2. スキャンパイプラインを実行
+cd demo
+eds inspect scan --config config.toml
+```
 
-## パイプライン手順
+期待される出力：
+```
+compliant_pct    : 92.5%
+max_deviation_mm : 20.000 mm
+mean_deviation_mm: 2.680 mm
+```
 
-### ステップ 1 — IFC から設計点群を生成
+`./demo/output/` に以下のファイルが生成されます：
 
-[IfcOpenShell](https://ifcopenshell.org/) を使って IFC の表面ジオメトリをサンプリングし、参照点群（「正解」となる設計データ）を生成します。各 `IfcProduct` 要素を三角形分割し、頂点座標を `(N, 3)` の配列として収集します。
+| ファイル | 内容 |
+|----------|------|
+| `report.json` | 偏差統計 |
+| `heatmap.png` | 2D カラーマップ — 緑（適合）→ 赤（欠陥） |
+| `points.json` | ビューアー用の点ごとの 3D 位置と偏差値 |
 
-### ステップ 2 — 損傷スキャンのシミュレーション
-
-[Open3D](https://www.open3d.org/) を使って設計点群のコピーに意図的な変形を加え、既知の欠陥を持つ「実測データ」を作成します。デモの例では、特定領域を 15 mm 押し込んで表面の凹みを再現し、結果を PLY ファイルとして保存します。
-
-### ステップ 3 — 偏差計算（M2）
-
-`eds inspect scan` CLI コマンドを実行し、IFC 設計ファイルとシミュレーションスキャンの PLY ファイルを指定します。CLI は `src/ifc.rs` で設計参照点群を読み込み、`src/deviation.rs` で点ごとの最近傍偏差を計算して、`compliant_pct`・`max_deviation_mm`・`mean_deviation_mm` を含む JSON レポートを出力します。
-
-このステップでは `src/ifc.rs` と `src/deviation.rs`（M2）を使います。
-
-### ステップ 4 — 3D → 2D 投影（trilink-core）
-
-`trilink-core::project_to_depth_map` がスキャン点群を深度マップ画像に変換し、AI 推論の入力とします。`config.toml` に設定されたカメラ内部パラメータを使って CLI が自動的に処理するため、手動操作は不要です。
-
-このステップでは `trilink-core::project_to_depth_map`（基盤 #31）を使います。
-
-### ステップ 5 — AI による欠陥検出
-
-HTTP 推論パス（`inference.mode = "http"`）経由で深度マップに対して検出モデルを実行します。デモでは YOLOv8 を外部推論サーバーとして使用できます。CLI は深度マップ画像を設定済みの HTTP エンドポイントに送信し、バウンディングボックスの検出結果を受け取ります（M4）。
-
-### ステップ 6 — 2D → 3D 逆投影
-
-検出された 2D バウンディングボックスは `trilink-core::unproject` によってワールド座標に逆投影され、3D モデル上に重ねて表示されるとともに偏差レポートに含まれます（M4）。
+`./demo/output/` を Inspect App ビューアーで開くと、カラー点群を確認できます。
 
 ---
 
-## デモにおける偏差エンジンの位置づけ
+## パス 2 — 実際の IFC ファイルと 3D メッシュオーバーレイ
 
-偏差エンジン（M2）はデモの定量的な核心です。「異常があるか？」だけでなく、**「IFC 設計に対して実際の構造物が何ミリずれているか？」** に答えます。汎用的な欠陥検出器との差別化ポイントであるため、ステップ 3 を必ずデモで明示してください。
+実際の buildingSMART サンプル IFC を使い、IFC 参照ジオメトリを青いワイヤーフレームとしてビューアーのスキャン点群に重ねて表示します。
+
+### 前提条件
+
+- `uv` — `brew install uv`（Python と `ifcopenshell` を自動管理）
+
+### ステップ 1 — サンプル IFC をダウンロード
+
+```bash
+eds inspect download-samples --dir ./ifc-samples
+```
+
+buildingSMART から `Building-Architecture.ifc`（約 220 KB、IFC 4 PCERT サンプル）をダウンロードします。すでに存在する場合はスキップされます。
+
+### ステップ 2 — IFC メッシュを抽出
+
+```bash
+eds inspect extract-mesh \
+    --ifc ./ifc-samples/Building-Architecture.ifc \
+    --out ./ifc-samples/reference.json
+```
+
+初回実行時に `uv` が Python をダウンロードし、`ifcopenshell` を自動インストールします（`~/.cache/uv/` にキャッシュ）。以降の実行は高速です。
+
+出力：`reference.json` — ワールド座標の頂点と三角形面。
+
+### ステップ 3 — デモ用スキャンを生成
+
+```bash
+eds inspect generate-fixtures --dir ./demo
+```
+
+PLY スキャンと設定済みの `config.toml` が生成されます。実際のスキャンを使う場合は `wall_slab_scan.ply` を差し替えてください。
+
+### ステップ 4 — config.toml に `mesh_path` を追加
+
+```bash
+echo 'mesh_path = "../ifc-samples/reference.json"' >> ./demo/config.toml
+```
+
+### ステップ 5 — パイプラインを実行
+
+```bash
+cd demo
+eds inspect scan --config config.toml
+```
+
+`reference.json` が `./demo/output/reference.json` として `points.json` と並んでコピーされます。
+
+### ステップ 6 — Inspect App で表示
+
+`./demo/output/` を Inspect App ビューアーで開きます。IFC 参照メッシュが半透明の青いワイヤーフレームとしてカラー点群の上に重なって表示されます。サイドバーの **Reference mesh** トグルで表示・非表示を切り替えられます。
 
 ---
 
 ## テクニカルスタックまとめ
 
-| コンポーネント | 言語・ライブラリ | ロードマップのマイルストーン |
-|---|---|---|
-| IFC 表面サンプリング | Python / IfcOpenShell | デモ準備（M2 以前） |
-| 損傷シミュレーション | Python / Open3D | デモ専用 |
-| IFC 偏差エンジン | Rust CLI / `src/ifc.rs`、`src/deviation.rs` | M2 |
-| 3D ↔ 2D 投影 | Rust / trilink-core | 基盤 #31〜#32 |
-| AI 欠陥検出 | 外部 HTTP サーバー（例: YOLOv8） | M4 `inference.mode = "http"` |
-| レポート・ヒートマップ | Rust CLI / `src/report.rs`、`src/heatmap.rs` | M2〜M3 |
+| コンポーネント | 実装 | コマンド |
+|---------------|------|---------|
+| 合成フィクスチャ | Rust（組み込み） | `eds inspect generate-fixtures` |
+| IFC サンプルダウンロード | Rust + ureq | `eds inspect download-samples` |
+| IFC メッシュ抽出 | Python / IfcOpenShell（`uv run` 経由） | `eds inspect extract-mesh` |
+| 偏差エンジン | Rust / `deviation.rs` | `eds inspect scan` |
+| 3D ↔ 2D 投影 | Rust / trilink-core | `scan` 内で自動実行 |
+| AI 欠陥検出 | 外部 HTTP サーバー | `inference.mode = "http"` |
+| ヒートマップ・レポート | Rust / `heatmap.rs`、`report.rs` | `scan` 内で自動実行 |
+| 3D ビューアー | Three.js（Inspect App） | 出力フォルダをアプリで開く |
