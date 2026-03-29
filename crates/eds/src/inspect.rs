@@ -149,7 +149,7 @@ pub fn run(cmd: InspectCommand) -> Result<(), Box<dyn std::error::Error>> {
             println!();
             println!("Saved to '{}'", dir.display());
             println!();
-            println!("Next step — extract the mesh (requires: pip install ifcopenshell):");
+            println!("Next step — extract the mesh (requires: brew install uv):");
             println!(
                 "  eds inspect extract-mesh \\\n      --ifc {}/{} \\\n      --out {}/reference.json",
                 dir.display(),
@@ -205,7 +205,7 @@ pub fn run(cmd: InspectCommand) -> Result<(), Box<dyn std::error::Error>> {
             println!();
             println!("Reference mesh written to '{}'", out.display());
             println!();
-            println!("Add to your config.toml to include it in scan output:");
+            println!("Add at the top level of config.toml (before any [section] headers):");
             println!("  mesh_path = \"{}\"", out.display());
         }
     }
