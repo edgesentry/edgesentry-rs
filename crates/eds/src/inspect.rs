@@ -3,6 +3,12 @@
 use clap::Subcommand;
 use edgesentry_inspect::{config::load_config, pipeline::run_scan};
 
+/// The IfcOpenShell extraction script embedded at compile time.
+///
+/// Executed via `uv run` so uv handles installing `ifcopenshell` automatically.
+/// PEP 723 inline metadata in the script declares the dependency.
+const EXTRACT_MESH_SCRIPT: &str = include_str!("../../../scripts/extract_mesh.py");
+
 #[derive(Debug, Subcommand)]
 pub enum InspectCommand {
     /// Run a full scan: load IFC + PLY, compute deviation, render heatmap.
@@ -40,9 +46,12 @@ pub enum InspectCommand {
         dir: std::path::PathBuf,
     },
 
-    /// Extract triangulated mesh from an IFC file via the IfcOpenShell Python sidecar.
+    /// Extract triangulated mesh from an IFC file via IfcOpenShell.
     ///
-    /// Prerequisite: pip install ifcopenshell
+    /// Uses `uv run` to execute the embedded extraction script. `uv` installs
+    /// `ifcopenshell` automatically on first run (cached for subsequent calls).
+    ///
+    /// Prerequisite: uv  (brew install uv)
     ///
     /// Writes reference.json consumed by the Inspect App viewer for 3D overlay.
     /// Pass the output path as mesh_path in config.toml to include it in scan output.
@@ -53,9 +62,6 @@ pub enum InspectCommand {
         /// Output reference.json path.
         #[arg(long)]
         out: std::path::PathBuf,
-        /// Path to the Python sidecar script.
-        #[arg(long, default_value = "scripts/extract_mesh.py")]
-        script: std::path::PathBuf,
     },
 }
 
@@ -152,25 +158,46 @@ pub fn run(cmd: InspectCommand) -> Result<(), Box<dyn std::error::Error>> {
             );
         }
 
-        InspectCommand::ExtractMesh { ifc, out, script } => {
-            if !script.exists() {
-                return Err(format!(
-                    "Python sidecar not found at '{}'\n\
-                     Run from the repository root, or pass --script <path>",
-                    script.display()
-                )
-                .into());
+        InspectCommand::ExtractMesh { ifc, out } => {
+            // Verify uv is on PATH before doing any work
+            let uv_ok = std::process::Command::new("uv")
+                .arg("--version")
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false);
+
+            if !uv_ok {
+                return Err(
+                    "uv not found on PATH\n\
+                     Install it with:\n  \
+                       brew install uv\n  \
+                       # or\n  \
+                       curl -LsSf https://astral.sh/uv/install.sh | sh"
+                        .into(),
+                );
             }
 
-            let status = std::process::Command::new("python3")
-                .arg(&script)
+            // Write embedded script to a per-process temp file
+            let tmp_script = std::env::temp_dir()
+                .join(format!("eds_extract_mesh_{}.py", std::process::id()));
+            std::fs::write(&tmp_script, EXTRACT_MESH_SCRIPT)?;
+
+            // uv run reads the PEP 723 inline deps and installs ifcopenshell
+            // automatically into a cached venv (~/.cache/uv/) on first call.
+            let status = std::process::Command::new("uv")
+                .arg("run")
+                .arg(&tmp_script)
                 .arg("--ifc")
                 .arg(&ifc)
                 .arg("--out")
                 .arg(&out)
-                .status()
-                .map_err(|e| format!("failed to run python3: {e}"))?;
+                .status();
 
+            let _ = std::fs::remove_file(&tmp_script); // always clean up
+
+            let status = status.map_err(|e| format!("failed to run uv: {e}"))?;
             if !status.success() {
                 return Err("extract-mesh script exited with non-zero status".into());
             }

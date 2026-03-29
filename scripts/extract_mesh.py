@@ -1,16 +1,22 @@
-#!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.9"
+# dependencies = ["ifcopenshell"]
+# ///
 """IfcOpenShell mesh extraction sidecar for ``eds inspect extract-mesh``.
 
 Reads an IFC file and writes all product geometry as a triangulated mesh to a
 ``reference.json`` file consumed by the Inspect App Three.js viewer.
 
-Usage
------
-    python3 extract_mesh.py --ifc <input.ifc> --out <reference.json>
+This script is embedded inside the ``eds`` binary at compile time and executed
+via ``uv run`` — no manual ``pip install`` is needed.
 
-Prerequisites
--------------
-    pip install ifcopenshell
+Usage (via eds)
+---------------
+    eds inspect extract-mesh --ifc design.ifc --out reference.json
+
+Usage (direct, for development)
+--------------------------------
+    uv run scripts/extract_mesh.py --ifc design.ifc --out reference.json
 
 Output format
 -------------
@@ -26,22 +32,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from typing import List
+
+import ifcopenshell
+import ifcopenshell.geom
 
 
 def extract_mesh(ifc_path: str, out_path: str) -> None:
-    try:
-        import ifcopenshell
-        import ifcopenshell.geom
-    except ImportError:
-        print(
-            "error: ifcopenshell is not installed\n"
-            "  Install it with: pip install ifcopenshell",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
     ifc = ifcopenshell.open(ifc_path)
 
     settings = ifcopenshell.geom.settings()
