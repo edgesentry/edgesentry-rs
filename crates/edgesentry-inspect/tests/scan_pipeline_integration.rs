@@ -61,6 +61,7 @@ fn scan_off_mode_produces_report_and_heatmap() {
             endpoint: None,
             fallback_depth_m: 2.0,
         },
+        mesh_path: None,
         output: OutputConfig { dir: tmp.path().join("out"), threshold_mm: 10.0 },
     };
 
@@ -107,6 +108,7 @@ fn scan_zero_deviation_fully_compliant() {
             endpoint: None,
             fallback_depth_m: 2.0,
         },
+        mesh_path: None,
         output: OutputConfig { dir: tmp.path().join("out"), threshold_mm: 10.0 },
     };
 
@@ -146,6 +148,7 @@ fn scan_http_mode_returns_detections() {
             endpoint: Some(endpoint),
             fallback_depth_m: 2.0,
         },
+        mesh_path: None,
         output: OutputConfig { dir: tmp.path().join("out"), threshold_mm: 10.0 },
     };
 

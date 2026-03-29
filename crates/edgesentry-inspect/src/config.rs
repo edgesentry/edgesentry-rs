@@ -13,6 +13,13 @@ pub struct ScanConfig {
     pub ifc_path: PathBuf,
     /// Path to the scan point cloud (PLY, ASCII format).
     pub scan_path: PathBuf,
+    /// Optional path to a pre-extracted `reference.json` mesh file.
+    ///
+    /// When set, `run_scan` copies it to the output directory so the
+    /// Inspect App viewer can render the IFC reference as a wireframe.
+    /// Produce this file with `eds inspect extract-mesh`.
+    #[serde(default)]
+    pub mesh_path: Option<PathBuf>,
     /// Pinhole camera calibration used for depth-map projection and heatmap rendering.
     pub camera: CameraConfig,
     /// AI inference settings.

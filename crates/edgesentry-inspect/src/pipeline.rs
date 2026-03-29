@@ -33,6 +33,8 @@ pub struct ScanOutput {
     pub heatmap_path: PathBuf,
     /// Absolute path to the written `points.json`.
     pub points_path: PathBuf,
+    /// Absolute path to the copied `reference.json`, if `mesh_path` was set in config.
+    pub reference_mesh_path: Option<PathBuf>,
     /// Number of AI detections back-projected to 3D (0 when `mode = "off"`).
     pub detection_count: usize,
     /// 3D world positions for each detection (parallel to `detection_count`).
@@ -72,7 +74,7 @@ pub enum ScanError {
 /// 6. Unproject each detection bbox to 3D world coordinates
 /// 7. Compute per-point deviation (scan vs. IFC reference)
 /// 8. Render deviation heatmap PNG
-/// 9. Write `report.json` and `heatmap.png` to the output directory
+/// 9. Write `report.json`, `heatmap.png`, `points.json` (and optionally `reference.json`)
 pub fn run_scan(config: &ScanConfig) -> Result<ScanOutput, ScanError> {
     // Step 1 — IFC reference cloud
     let reference =
@@ -141,11 +143,21 @@ pub fn run_scan(config: &ScanConfig) -> Result<ScanOutput, ScanError> {
     let points_json = PointsJson::new(&scan, &deviations_mm, &world_detections);
     write_points(&points_json, &points_path)?;
 
+    // Optional: copy reference mesh to output directory so the viewer finds it
+    let reference_mesh_path = if let Some(src) = &config.mesh_path {
+        let dest = config.output.dir.join("reference.json");
+        std::fs::copy(src, &dest)?;
+        Some(dest)
+    } else {
+        None
+    };
+
     Ok(ScanOutput {
         report,
         report_path,
         heatmap_path,
         points_path,
+        reference_mesh_path,
         detection_count: detections.len(),
         world_detections,
     })

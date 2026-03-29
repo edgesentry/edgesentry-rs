@@ -29,10 +29,12 @@ clap          = { workspace = true }
 ed25519-dalek = { workspace = true }
 hex           = { workspace = true }
 serde_json    = { workspace = true }
+ureq          = "2"
 tokio = { version = "1", features = ["rt-multi-thread"], optional = true }
 
 [dev-dependencies]
 serde_json    = { workspace = true }
+ureq          = "2"
 hex           = { workspace = true }
 ed25519-dalek = { workspace = true }
 edgesentry-audit = { path = "../edgesentry-audit", features = ["transport-http", "transport-tls"] }

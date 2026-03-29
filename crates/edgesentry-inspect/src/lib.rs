@@ -9,6 +9,7 @@ pub mod fixtures;
 pub mod heatmap;
 pub mod ifc;
 pub mod inference;
+pub mod mesh;
 pub mod pipeline;
 pub mod ply;
 pub mod points;
