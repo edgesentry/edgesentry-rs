@@ -1,7 +1,14 @@
-// edgesentry-inspect — edge-first deviation detection for construction and maritime inspection.
-// M2: IFC Loader and Deviation Engine.
-// M3: Heatmap Rendering.
-// M4: Field PC Pipeline CLI.
+//! Edge-first deviation detection for construction and maritime inspection.
+//!
+//! # Quick start
+//!
+//! ```no_run
+//! use edgesentry_inspect::{ScanConfig, run_scan};
+//!
+//! let config: ScanConfig = toml::from_str(include_str!("../config.example.toml")).unwrap();
+//! let result = run_scan(&config).unwrap();
+//! println!("compliant: {:.1}%", result.report.compliant_pct);
+//! ```
 
 pub mod config;
 pub mod deviation;
@@ -14,3 +21,11 @@ pub mod pipeline;
 pub mod ply;
 pub mod points;
 pub mod report;
+
+// ---------------------------------------------------------------------------
+// Top-level re-exports — stable public API surface
+// ---------------------------------------------------------------------------
+
+pub use config::{CameraConfig, InferenceConfig, InferenceMode, OutputConfig, ScanConfig};
+pub use deviation::DeviationReport;
+pub use pipeline::{run_scan, ScanError, ScanOutput};
