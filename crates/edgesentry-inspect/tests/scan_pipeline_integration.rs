@@ -118,6 +118,41 @@ fn scan_zero_deviation_fully_compliant() {
 }
 
 // ---------------------------------------------------------------------------
+// Mock inference mode (built-in)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn scan_mock_mode_returns_one_detection_without_server() {
+    let tmp = TempDir::new().unwrap();
+    let scan_pts = make_scan_with_defect();
+    let ply_path = tmp.path().join("scan.ply");
+    write_ply_points(&ply_path, &scan_pts).unwrap();
+
+    let cfg = ScanConfig {
+        ifc_path: sample_ifc(),
+        scan_path: ply_path,
+        camera: default_camera(),
+        inference: InferenceConfig {
+            mode: InferenceMode::Mock,
+            endpoint: None,
+            fallback_depth_m: 2.0,
+        },
+        mesh_path: None,
+        output: OutputConfig { dir: tmp.path().join("out"), threshold_mm: 10.0 },
+    };
+
+    let out = run_scan(&cfg).unwrap();
+
+    assert_eq!(out.detection_count, 1, "mock mode must return exactly one detection");
+    assert_eq!(out.world_detections.len(), 1);
+    let wp = &out.world_detections[0];
+    assert!(wp.x.is_finite() && wp.y.is_finite() && wp.z.is_finite());
+    assert!(out.report_path.exists());
+    assert!(out.heatmap_path.exists());
+    assert!(out.points_path.exists());
+}
+
+// ---------------------------------------------------------------------------
 // HTTP inference mode (mock server)
 // ---------------------------------------------------------------------------
 

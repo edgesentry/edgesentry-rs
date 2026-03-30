@@ -148,7 +148,7 @@ width  = 640
 height = 480
 
 [inference]
-mode = "off"          # "off" or "http"
+mode = "off"          # "off", "mock", or "http"
 # endpoint = "http://localhost:8000/infer"   # required when mode = "http"
 
 [output]
@@ -175,7 +175,9 @@ See [`config.example.toml`](../../../../crates/edgesentry-inspect/config.example
 
 **`mode = "off"`** — deviation and heatmap only; no AI call.
 
-**`mode = "http"`** — depth map is POSTed as a PNG to `endpoint`; the server must return a JSON array of bounding boxes:
+**`mode = "mock"`** — built-in hardcoded detections for the synthetic wall fixture. No external server required. Use this to demonstrate the full AI pipeline (depth map → orange spheres in viewer) without a production model.
+
+**`mode = "http"`** — depth map is POSTed as a PNG to `endpoint` (third-party model, e.g. YOLOv8); the server must return a JSON array of bounding boxes:
 
 ```json
 [{"u0": 10, "v0": 20, "u1": 60, "v1": 80}, ...]

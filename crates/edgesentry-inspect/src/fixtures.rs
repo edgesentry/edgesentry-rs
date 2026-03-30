@@ -179,7 +179,9 @@ width  = 1920
 height = 1080
 
 [inference]
-mode = \"off\"   # no AI server required for the demo
+mode = \"mock\"   # built-in demo detections — shows orange spheres in viewer without a real model
+# mode = \"http\"
+# endpoint = \"http://localhost:8000/infer\"   # required when mode = \"http\"
 
 [output]
 dir          = \"./output\"

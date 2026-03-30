@@ -147,7 +147,7 @@ width  = 640
 height = 480
 
 [inference]
-mode = "off"          # "off" または "http"
+mode = "off"          # "off"、"mock"、または "http"
 # endpoint = "http://localhost:8000/infer"   # mode = "http" の場合に必須
 
 [output]
@@ -174,7 +174,9 @@ threshold_mm = 10.0
 
 **`mode = "off"`** — 偏差計算とヒートマップのみ。AI 呼び出しなし。
 
-**`mode = "http"`** — 深度マップが PNG として `endpoint` に POST されます。サーバーはバウンディングボックスの JSON 配列を返す必要があります：
+**`mode = "mock"`** — 合成ウォールフィクスチャ用の組み込み検出結果を返します。外部サーバー不要。本番モデルなしで AI 検出パイプライン全体（深度マップ → ビューアーのオレンジ球）をデモするために使用します。
+
+**`mode = "http"`** — 深度マップが PNG としてサードパーティの推論サーバー（例：YOLOv8）の `endpoint` に POST されます。サーバーはバウンディングボックスの JSON 配列を返す必要があります：
 
 ```json
 [{"u0": 10, "v0": 20, "u1": 60, "v1": 80}, ...]
