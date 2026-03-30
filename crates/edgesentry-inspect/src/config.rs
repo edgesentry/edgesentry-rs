@@ -42,8 +42,11 @@ pub struct CameraConfig {
 /// Inference mode and endpoint configuration.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct InferenceConfig {
-    /// `"off"` — skip AI inference; `"mock"` — built-in demo detections; `"http"` — POST depth-map PNG to `endpoint`.
+    /// `"off"` — skip; `"mock"` — built-in demo; `"onnx"` — local model file; `"http"` — third-party server.
     pub mode: InferenceMode,
+    /// Required when `mode = "onnx"`. Path to a `.onnx` model file.
+    #[serde(default)]
+    pub model_path: Option<PathBuf>,
     /// Required when `mode = "http"`. URL of the inference service.
     #[serde(default)]
     pub endpoint: Option<String>,
@@ -68,6 +71,11 @@ pub enum InferenceMode {
     /// AI detection pipeline (depth map → detections → orange spheres in viewer)
     /// without a production model.
     Mock,
+    /// Load a local `.onnx` model file and run inference in-process via `tract`.
+    ///
+    /// No external server or network access required. Suitable for edge / field-PC
+    /// deployment. Set `model_path` to the `.onnx` file.
+    Onnx,
     /// POST the depth-map PNG to a third-party HTTP inference server (e.g. YOLOv8).
     Http,
 }

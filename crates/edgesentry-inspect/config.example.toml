@@ -22,9 +22,11 @@ height = 1080    # image height (pixels)
 # AI inference settings.
 # mode = "off"  — skip AI detection; deviation report and heatmap still produced.
 # mode = "mock" — built-in hardcoded detections for the synthetic wall fixture demo.
+# mode = "onnx" — run a local .onnx model file in-process via tract (edge / field-PC).
 # mode = "http" — POST depth-map PNG to `endpoint` (third-party model, e.g. YOLOv8).
 [inference]
 mode             = "off"
+# model_path     = "model.onnx"                    # required when mode = "onnx"
 # endpoint       = "http://localhost:8000/infer"   # required when mode = "http"
 fallback_depth_m = 2.0   # depth used when ToF reading is unavailable (metres)
 

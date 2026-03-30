@@ -37,6 +37,9 @@ tmp/
 *.cdx.json
 sbom/
 
+# Generated demo data (eds inspect generate-fixtures)
+demo/
+
 # Local output artifacts (examples / manual runs)
 record*.json
 lift_*_record*.json

@@ -147,7 +147,8 @@ width  = 640
 height = 480
 
 [inference]
-mode = "off"          # "off"、"mock"、または "http"
+mode = "off"          # "off"、"mock"、"onnx"、または "http"
+# model_path = "model.onnx"                 # mode = "onnx" の場合に必須
 # endpoint = "http://localhost:8000/infer"   # mode = "http" の場合に必須
 
 [output]
@@ -175,6 +176,12 @@ threshold_mm = 10.0
 **`mode = "off"`** — 偏差計算とヒートマップのみ。AI 呼び出しなし。
 
 **`mode = "mock"`** — 合成ウォールフィクスチャ用の組み込み検出結果を返します。外部サーバー不要。本番モデルなしで AI 検出パイプライン全体（深度マップ → ビューアーのオレンジ球）をデモするために使用します。
+
+**`mode = "onnx"`** — ローカルの `.onnx` モデルファイルを読み込み、[`tract`](https://github.com/sonos/tract)（純 Rust、C 依存なし）でプロセス内推論を実行します。`model_path` にモデルファイルを指定してください。エッジ / フィールド PC デプロイに最適 — ネットワーク不要。合成フィクスチャ用プロトタイプモデルの生成：
+
+```bash
+uv run scripts/generate_prototype_model.py --out model.onnx
+```
 
 **`mode = "http"`** — 深度マップが PNG としてサードパーティの推論サーバー（例：YOLOv8）の `endpoint` に POST されます。サーバーはバウンディングボックスの JSON 配列を返す必要があります：
 

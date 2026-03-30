@@ -106,6 +106,7 @@ eds inspect scan --config config.toml
 | 偏差エンジン | Rust / `deviation.rs` | `eds inspect scan` |
 | 3D ↔ 2D 投影 | Rust / trilink-core | `scan` 内で自動実行 |
 | AI 欠陥検出（デモ） | Rust（組み込みモック） | `inference.mode = "mock"` |
-| AI 欠陥検出（本番） | サードパーティ HTTP サーバー | `inference.mode = "http"` |
+| AI 欠陥検出（エッジ / フィールド PC） | Rust / tract（ローカル ONNX モデル） | `inference.mode = "onnx"` |
+| AI 欠陥検出（サーバー） | サードパーティ HTTP サーバー | `inference.mode = "http"` |
 | ヒートマップ・レポート | Rust / `heatmap.rs`、`report.rs` | `scan` 内で自動実行 |
 | 3D ビューアー | Three.js（Inspect App） | 出力フォルダをアプリで開く |

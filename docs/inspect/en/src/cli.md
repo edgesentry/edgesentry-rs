@@ -148,7 +148,8 @@ width  = 640
 height = 480
 
 [inference]
-mode = "off"          # "off", "mock", or "http"
+mode = "off"          # "off", "mock", "onnx", or "http"
+# model_path = "model.onnx"                 # required when mode = "onnx"
 # endpoint = "http://localhost:8000/infer"   # required when mode = "http"
 
 [output]
@@ -176,6 +177,12 @@ See [`config.example.toml`](../../../../crates/edgesentry-inspect/config.example
 **`mode = "off"`** — deviation and heatmap only; no AI call.
 
 **`mode = "mock"`** — built-in hardcoded detections for the synthetic wall fixture. No external server required. Use this to demonstrate the full AI pipeline (depth map → orange spheres in viewer) without a production model.
+
+**`mode = "onnx"`** — load a local `.onnx` model file and run inference in-process via [`tract`](https://github.com/sonos/tract) (pure Rust, no C deps). Set `model_path` to the model file. Suitable for edge / field-PC deployment — no network access required. The model must accept a `[1, 1, 32, 32]` float32 depth-map tensor and return `[1, 5]` normalised bounding boxes `[u0, v0, u1, v1, confidence]`. Generate a prototype model for the synthetic fixture with:
+
+```bash
+uv run scripts/generate_prototype_model.py --out model.onnx
+```
 
 **`mode = "http"`** — depth map is POSTed as a PNG to `endpoint` (third-party model, e.g. YOLOv8); the server must return a JSON array of bounding boxes:
 
