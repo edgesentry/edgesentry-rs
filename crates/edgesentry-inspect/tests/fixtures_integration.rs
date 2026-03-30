@@ -111,6 +111,7 @@ fn pipeline_detects_defect_in_generated_fixtures() {
             height: 1080,
         },
         inference: InferenceConfig {
+            model_path: None,
             mode: InferenceMode::Off,
             endpoint: None,
             fallback_depth_m: 2.0,

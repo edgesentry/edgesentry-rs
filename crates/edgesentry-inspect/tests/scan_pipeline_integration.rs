@@ -57,6 +57,7 @@ fn scan_off_mode_produces_report_and_heatmap() {
         scan_path: ply_path,
         camera: default_camera(),
         inference: InferenceConfig {
+            model_path: None,
             mode: InferenceMode::Off,
             endpoint: None,
             fallback_depth_m: 2.0,
@@ -104,6 +105,7 @@ fn scan_zero_deviation_fully_compliant() {
         scan_path: ply_path,
         camera: default_camera(),
         inference: InferenceConfig {
+            model_path: None,
             mode: InferenceMode::Off,
             endpoint: None,
             fallback_depth_m: 2.0,
@@ -133,6 +135,7 @@ fn scan_mock_mode_returns_one_detection_without_server() {
         scan_path: ply_path,
         camera: default_camera(),
         inference: InferenceConfig {
+            model_path: None,
             mode: InferenceMode::Mock,
             endpoint: None,
             fallback_depth_m: 2.0,
@@ -147,6 +150,57 @@ fn scan_mock_mode_returns_one_detection_without_server() {
     assert_eq!(out.world_detections.len(), 1);
     let wp = &out.world_detections[0];
     assert!(wp.x.is_finite() && wp.y.is_finite() && wp.z.is_finite());
+    assert!(out.report_path.exists());
+    assert!(out.heatmap_path.exists());
+    assert!(out.points_path.exists());
+}
+
+// ---------------------------------------------------------------------------
+// ONNX inference mode (local model file)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn scan_onnx_mode_detects_fixture_defect() {
+    let tmp = TempDir::new().unwrap();
+
+    // Use the full synthetic fixture (651 points, 1920×1080 camera) so the
+    // depth-map encoding matches what the prototype model was designed for.
+    let fixture_dir = tempfile::TempDir::new().unwrap();
+    edgesentry_inspect::fixtures::generate_fixtures(fixture_dir.path()).unwrap();
+
+    let cfg = edgesentry_inspect::config::ScanConfig {
+        ifc_path:  fixture_dir.path().join("wall_slab.ifc"),
+        scan_path: fixture_dir.path().join("wall_slab_scan.ply"),
+        camera: edgesentry_inspect::config::CameraConfig {
+            fx: 1280.0, fy: 1080.0,
+            cx: 960.0,  cy: 540.0,
+            width: 1920, height: 1080,
+        },
+        inference: edgesentry_inspect::config::InferenceConfig {
+            mode: edgesentry_inspect::config::InferenceMode::Onnx,
+            model_path: Some(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/prototype_detector.onnx"),
+            ),
+            endpoint: None,
+            fallback_depth_m: 2.0,
+        },
+        mesh_path: None,
+        output: edgesentry_inspect::config::OutputConfig {
+            dir: tmp.path().join("out"),
+            threshold_mm: 10.0,
+        },
+    };
+
+    let out = run_scan(&cfg).expect("ONNX pipeline must succeed");
+
+    assert_eq!(out.detection_count, 1, "prototype model must return exactly one detection");
+    let wp = &out.world_detections[0];
+    assert!(wp.x.is_finite() && wp.y.is_finite() && wp.z.is_finite());
+    // Defect centre is at (0, 0, 1.98) — check we are within 0.5 m (coarse, prototype accuracy)
+    assert!(wp.x.abs() < 0.5, "detection x should be near 0, got {}", wp.x);
+    assert!(wp.y.abs() < 0.5, "detection y should be near 0, got {}", wp.y);
+    assert!((wp.z - 1.98).abs() < 0.5, "detection z should be near 1.98, got {}", wp.z);
     assert!(out.report_path.exists());
     assert!(out.heatmap_path.exists());
     assert!(out.points_path.exists());
@@ -179,6 +233,7 @@ fn scan_http_mode_returns_detections() {
         scan_path: ply_path,
         camera: default_camera(),
         inference: InferenceConfig {
+            model_path: None,
             mode: InferenceMode::Http,
             endpoint: Some(endpoint),
             fallback_depth_m: 2.0,

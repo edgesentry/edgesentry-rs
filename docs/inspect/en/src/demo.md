@@ -106,6 +106,7 @@ Open `./demo/output/` in the Inspect App viewer. The IFC reference mesh renders 
 | Deviation engine | Rust / `deviation.rs` | `eds inspect scan` |
 | 3D ↔ 2D projection | Rust / trilink-core | automatic in `scan` |
 | AI defect detection (demo) | Rust (built-in mock) | `inference.mode = "mock"` |
-| AI defect detection (production) | Third-party HTTP server | `inference.mode = "http"` |
+| AI defect detection (edge / field-PC) | Rust / tract (local ONNX model) | `inference.mode = "onnx"` |
+| AI defect detection (server) | Third-party HTTP server | `inference.mode = "http"` |
 | Heatmap + report | Rust / `heatmap.rs`, `report.rs` | automatic in `scan` |
 | 3D viewer | Three.js (Inspect App) | open output folder in app |

@@ -17,7 +17,7 @@ use edgesentry_inspect::{
     deviation::{compute_deviation, per_point_deviations_mm},
     heatmap::{render_heatmap, write_heatmap_png},
     ifc::load_ifc_points,
-    inference::{depth_map_to_png, http_infer, mock_infer},
+    inference::{depth_map_to_png, http_infer, mock_infer, onnx_infer},
     ply::load_ply_points,
     points::{write_points, PointsJson},
     report::write_report,
@@ -119,6 +119,7 @@ fn main() {
                 match cfg.inference.mode {
                     InferenceMode::Off => "off (deviation report only)",
                     InferenceMode::Mock => "mock (built-in demo detections)",
+                    InferenceMode::Onnx => "onnx (local model file, in-process)",
                     InferenceMode::Http => "http (POST depth map to inference server)",
                 }
             );
@@ -185,8 +186,9 @@ fn main() {
                 InferenceMode::Off => {
                     skip("skipped (inference.mode = \"off\" in config)");
                     println!(
-                        "      Set inference.mode = \"mock\" for a built-in demo, or \
-                         inference.mode = \"http\" with an endpoint for a real model."
+                        "      Set inference.mode = \"mock\" for a built-in demo, \
+                         \"onnx\" with model_path for a local model, or \
+                         \"http\" with an endpoint for a remote model."
                     );
                     vec![]
                 }
@@ -198,6 +200,33 @@ fn main() {
                          coordinate and shown as a sphere in the Inspect App."
                     );
                     dets
+                }
+                InferenceMode::Onnx => {
+                    let model_path = match cfg.inference.model_path.as_deref() {
+                        Some(p) => p,
+                        None => {
+                            eprintln!(
+                                "      error: inference.model_path is required when \
+                                 inference.mode = \"onnx\""
+                            );
+                            process::exit(1);
+                        }
+                    };
+                    println!("      Loading ONNX model from {} …", model_path.display());
+                    match onnx_infer(model_path, &depth_map) {
+                        Ok(dets) => {
+                            ok(&format!("{} defect bounding boxes from ONNX model", dets.len()));
+                            println!(
+                                "      Each bounding box is back-projected to a 3D world \
+                                 coordinate and shown as a sphere in the Inspect App."
+                            );
+                            dets
+                        }
+                        Err(e) => {
+                            eprintln!("      error: ONNX inference failed: {e}");
+                            process::exit(1);
+                        }
+                    }
                 }
                 InferenceMode::Http => {
                     let endpoint = match cfg.inference.endpoint.as_deref() {
