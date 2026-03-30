@@ -17,7 +17,7 @@ use edgesentry_inspect::{
     deviation::{compute_deviation, per_point_deviations_mm},
     heatmap::{render_heatmap, write_heatmap_png},
     ifc::load_ifc_points,
-    inference::{depth_map_to_png, http_infer},
+    inference::{depth_map_to_png, http_infer, mock_infer},
     ply::load_ply_points,
     points::{write_points, PointsJson},
     report::write_report,
@@ -118,6 +118,7 @@ fn main() {
                 "  AI mode     : {}",
                 match cfg.inference.mode {
                     InferenceMode::Off => "off (deviation report only)",
+                    InferenceMode::Mock => "mock (built-in demo detections)",
                     InferenceMode::Http => "http (POST depth map to inference server)",
                 }
             );
@@ -184,10 +185,19 @@ fn main() {
                 InferenceMode::Off => {
                     skip("skipped (inference.mode = \"off\" in config)");
                     println!(
-                        "      Set inference.mode = \"http\" and provide an endpoint \
-                         to enable defect detection."
+                        "      Set inference.mode = \"mock\" for a built-in demo, or \
+                         inference.mode = \"http\" with an endpoint for a real model."
                     );
                     vec![]
+                }
+                InferenceMode::Mock => {
+                    let dets = mock_infer();
+                    ok(&format!("{} demo defect bounding boxes (built-in mock)", dets.len()));
+                    println!(
+                        "      Each bounding box is back-projected to a 3D world \
+                         coordinate and shown as a sphere in the Inspect App."
+                    );
+                    dets
                 }
                 InferenceMode::Http => {
                     let endpoint = match cfg.inference.endpoint.as_deref() {

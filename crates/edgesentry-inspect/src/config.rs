@@ -42,7 +42,7 @@ pub struct CameraConfig {
 /// Inference mode and endpoint configuration.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct InferenceConfig {
-    /// `"off"` — skip AI inference; `"http"` — POST depth-map PNG to `endpoint`.
+    /// `"off"` — skip AI inference; `"mock"` — built-in demo detections; `"http"` — POST depth-map PNG to `endpoint`.
     pub mode: InferenceMode,
     /// Required when `mode = "http"`. URL of the inference service.
     #[serde(default)]
@@ -62,7 +62,13 @@ fn default_fallback_depth() -> f32 {
 pub enum InferenceMode {
     /// Skip AI inference — deviation report and heatmap are still produced.
     Off,
-    /// POST the depth-map PNG to an HTTP inference server (e.g. YOLOv8).
+    /// Return hardcoded bounding boxes for the built-in synthetic fixture.
+    ///
+    /// No external server required. Use this mode to demonstrate the full
+    /// AI detection pipeline (depth map → detections → orange spheres in viewer)
+    /// without a production model.
+    Mock,
+    /// POST the depth-map PNG to a third-party HTTP inference server (e.g. YOLOv8).
     Http,
 }
 

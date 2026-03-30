@@ -16,7 +16,7 @@ use crate::{
     deviation::{compute_deviation, per_point_deviations_mm, DeviationReport},
     heatmap::{render_heatmap, write_heatmap_png},
     ifc::load_ifc_points,
-    inference::{depth_map_to_png, http_infer, InferenceError},
+    inference::{depth_map_to_png, http_infer, mock_infer, InferenceError},
     ply::{load_ply_points, PlyError},
     points::{write_points, PointsError, PointsJson},
     report::{write_report, ReportError},
@@ -99,6 +99,7 @@ pub fn run_scan(config: &ScanConfig) -> Result<ScanOutput, ScanError> {
     // Step 5 — AI inference (optional)
     let detections: Vec<BBox2D> = match &config.inference.mode {
         InferenceMode::Off => vec![],
+        InferenceMode::Mock => mock_infer(),
         InferenceMode::Http => {
             let endpoint = config.inference.endpoint.as_deref().ok_or_else(|| {
                 ScanError::Config(

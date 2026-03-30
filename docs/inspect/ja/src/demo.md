@@ -6,33 +6,36 @@
 
 ## パス 1 — 完全オフライン（ダウンロード不要・Python 不要）
 
-外部依存なしでパイプライン全体をエンドツーエンドで確認する最速の方法です。
+外部依存なしで、AI 欠陥検出を含むパイプライン全体をエンドツーエンドで確認する最速の方法です。
 
 ```bash
 # 1. 合成ウォールフィクスチャを生成（651 点の 3 m × 2 m 壁 + 中心部に 20 mm の欠陥）
 eds inspect generate-fixtures --dir ./demo
 
-# 2. スキャンパイプラインを実行
+# 2. 偏差計算 + AI 検出（モックモード、外部サーバー不要）を実行
 cd demo
 eds inspect scan --config config.toml
 ```
+
+生成された `config.toml` は `inference.mode = "mock"` を使用しており、中心部の欠陥に対応する組み込みの検出結果を返します。外部 AI サーバーは不要です。
 
 期待される出力：
 ```
 compliant_pct    : 92.5%
 max_deviation_mm : 20.000 mm
 mean_deviation_mm: 2.680 mm
+AI detections    :        1  ⚠  see orange spheres in viewer
 ```
 
 `./demo/output/` に以下のファイルが生成されます：
 
 | ファイル | 内容 |
 |----------|------|
-| `report.json` | 偏差統計 |
+| `report.json` | 偏差統計 + 検出座標 |
 | `heatmap.png` | 2D カラーマップ — 緑（適合）→ 赤（欠陥） |
-| `points.json` | ビューアー用の点ごとの 3D 位置と偏差値 |
+| `points.json` | ビューアー用の点ごとの 3D 位置・偏差値・検出球 |
 
-`./demo/output/` を Inspect App ビューアーで開くと、カラー点群を確認できます。
+`./demo/output/` を Inspect App ビューアーで開くと、カラー点群と欠陥中心のオレンジ色の検出球を確認できます。
 
 ---
 
@@ -102,6 +105,7 @@ eds inspect scan --config config.toml
 | IFC メッシュ抽出 | Python / IfcOpenShell（`uv run` 経由） | `eds inspect extract-mesh` |
 | 偏差エンジン | Rust / `deviation.rs` | `eds inspect scan` |
 | 3D ↔ 2D 投影 | Rust / trilink-core | `scan` 内で自動実行 |
-| AI 欠陥検出 | 外部 HTTP サーバー | `inference.mode = "http"` |
+| AI 欠陥検出（デモ） | Rust（組み込みモック） | `inference.mode = "mock"` |
+| AI 欠陥検出（本番） | サードパーティ HTTP サーバー | `inference.mode = "http"` |
 | ヒートマップ・レポート | Rust / `heatmap.rs`、`report.rs` | `scan` 内で自動実行 |
 | 3D ビューアー | Three.js（Inspect App） | 出力フォルダをアプリで開く |

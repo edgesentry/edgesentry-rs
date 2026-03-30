@@ -6,33 +6,36 @@ Two paths are available depending on whether you want a fully offline demo or a 
 
 ## Path 1 — Fully offline (no downloads, no Python)
 
-The fastest way to see the complete pipeline end-to-end. Everything runs locally with zero external dependencies.
+The fastest way to see the complete pipeline end-to-end, including AI defect detection. Everything runs locally with zero external dependencies.
 
 ```bash
 # 1. Generate synthetic wall fixture (651-point 3 m × 2 m wall + 20 mm centre defect)
 eds inspect generate-fixtures --dir ./demo
 
-# 2. Run the scan pipeline
+# 2. Run the full pipeline — deviation + AI detection (mock mode, no server needed)
 cd demo
 eds inspect scan --config config.toml
 ```
+
+The generated `config.toml` uses `inference.mode = "mock"`, which returns built-in detections for the centre defect. No external AI server is required.
 
 Expected output:
 ```
 compliant_pct    : 92.5%
 max_deviation_mm : 20.000 mm
 mean_deviation_mm: 2.680 mm
+AI detections    :        1  ⚠  see orange spheres in viewer
 ```
 
 Output files written to `./demo/output/`:
 
 | File | Contents |
 |------|----------|
-| `report.json` | Deviation statistics |
+| `report.json` | Deviation statistics + detection coordinates |
 | `heatmap.png` | 2D colour map — green (compliant) → red (defect) |
-| `points.json` | Per-point 3D positions + deviations for the viewer |
+| `points.json` | Per-point 3D positions + deviations + detection spheres for the viewer |
 
-Open `./demo/output/` in the Inspect App viewer to see the coloured point cloud.
+Open `./demo/output/` in the Inspect App viewer to see the coloured point cloud and orange detection sphere at the defect centre.
 
 ---
 
@@ -102,6 +105,7 @@ Open `./demo/output/` in the Inspect App viewer. The IFC reference mesh renders 
 | IFC mesh extraction | Python / IfcOpenShell (via `uv run`) | `eds inspect extract-mesh` |
 | Deviation engine | Rust / `deviation.rs` | `eds inspect scan` |
 | 3D ↔ 2D projection | Rust / trilink-core | automatic in `scan` |
-| AI defect detection | External HTTP server | `inference.mode = "http"` |
+| AI defect detection (demo) | Rust (built-in mock) | `inference.mode = "mock"` |
+| AI defect detection (production) | Third-party HTTP server | `inference.mode = "http"` |
 | Heatmap + report | Rust / `heatmap.rs`, `report.rs` | automatic in `scan` |
 | 3D viewer | Three.js (Inspect App) | open output folder in app |

@@ -70,6 +70,16 @@ pub fn depth_map_to_png(dm: &DepthMap) -> Result<Vec<u8>, InferenceError> {
     Ok(buf)
 }
 
+/// Return hardcoded bounding boxes for the built-in synthetic wall fixture.
+///
+/// The fixture has a 20 mm bulge centred at (0, 0) in a 3 m × 2 m wall placed
+/// 2 m from the camera. With the demo camera (`fx = 1280`, `fy = 1080`,
+/// `cx = 960`, `cy = 540`, `1920 × 1080`) the defect region (`|x| ≤ 0.35`,
+/// `|y| ≤ 0.35`) projects to approximately pixel box (734, 349) → (1186, 731).
+pub fn mock_infer() -> Vec<BBox2D> {
+    vec![BBox2D { u0: 734.0, v0: 349.0, u1: 1186.0, v1: 731.0 }]
+}
+
 /// POST a depth-map PNG to an HTTP inference server and return bounding boxes.
 ///
 /// The server must accept `Content-Type: image/png` and respond with a JSON

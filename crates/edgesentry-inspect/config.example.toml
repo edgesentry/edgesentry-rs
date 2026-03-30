@@ -21,10 +21,11 @@ height = 1080    # image height (pixels)
 
 # AI inference settings.
 # mode = "off"  — skip AI detection; deviation report and heatmap still produced.
-# mode = "http" — POST depth-map PNG to `endpoint` and back-project detections.
+# mode = "mock" — built-in hardcoded detections for the synthetic wall fixture demo.
+# mode = "http" — POST depth-map PNG to `endpoint` (third-party model, e.g. YOLOv8).
 [inference]
 mode             = "off"
-# endpoint       = "http://localhost:8000/detect"   # required when mode = "http"
+# endpoint       = "http://localhost:8000/infer"   # required when mode = "http"
 fallback_depth_m = 2.0   # depth used when ToF reading is unavailable (metres)
 
 # Output settings.
