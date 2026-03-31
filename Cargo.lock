@@ -1183,6 +1183,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "thiserror",
+ "tokio",
  "toml",
  "tract-onnx",
  "trilink-core",
@@ -4066,8 +4067,6 @@ dependencies = [
 [[package]]
 name = "trilink-core"
 version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe6f76f5a12a8b1c6f125c337378bd99679e277a3710476ab359d4c82f1f4890"
 dependencies = [
  "glam",
  "serde",
