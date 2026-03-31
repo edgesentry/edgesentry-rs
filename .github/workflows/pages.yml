@@ -20,6 +20,18 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+      - name: Setup Rust
+        run: rustup update stable && rustup default stable
+      - name: Cache Rust artifacts
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7  # v5
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
       - name: Install mdBook
         run: cargo install mdbook --locked
       - name: Build audit docs (EN)
@@ -30,8 +42,14 @@ jobs:
         run: mdbook build docs/inspect/en/
       - name: Build inspect docs (JA)
         run: mdbook build docs/inspect/ja/
+      - name: Build API docs (cargo doc)
+        run: cargo doc --workspace --no-deps --locked
+        env:
+          RUSTDOCFLAGS: "--cfg docsrs"
       - name: Copy hub index pages
-        run: cp -r docs/hub/. docs/book/
+        run: |
+          cp -r docs/hub/. docs/book/
+          cp -r target/doc/. docs/book/api/
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa  # v3
         with:
           path: docs/book/
