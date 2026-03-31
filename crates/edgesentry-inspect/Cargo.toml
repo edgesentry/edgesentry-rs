@@ -19,7 +19,7 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { workspace = true }
-trilink-core = "0.1.1"
+trilink-core = { git = "https://github.com/edgesentry/trilink-core.git", branch = "main" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
