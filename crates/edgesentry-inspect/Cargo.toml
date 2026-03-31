@@ -32,4 +32,5 @@ tract-onnx = "0.22"
 
 [dev-dependencies]
 tempfile = "3"
-mockito = "1"
+mockito  = "1"
+tokio    = { version = "1", features = ["rt", "macros"] }

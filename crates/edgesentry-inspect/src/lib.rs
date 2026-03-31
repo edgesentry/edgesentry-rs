@@ -16,6 +16,7 @@ pub mod fixtures;
 pub mod heatmap;
 pub mod ifc;
 pub mod inference;
+pub mod ingress;
 pub mod mesh;
 pub mod pipeline;
 pub mod ply;
@@ -28,4 +29,5 @@ pub mod report;
 
 pub use config::{CameraConfig, InferenceConfig, InferenceMode, OutputConfig, ScanConfig};
 pub use deviation::DeviationReport;
+pub use ingress::{FrameSource, SensorFrame};
 pub use pipeline::{run_scan, ScanError, ScanOutput};
