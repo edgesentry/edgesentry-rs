@@ -15,7 +15,7 @@ use crate::{
     config::{InferenceMode, ScanConfig},
     deviation::{compute_deviation, per_point_deviations_mm, DeviationReport},
     heatmap::{render_heatmap, write_heatmap_png},
-    ifc::load_ifc_points,
+    ifc::{fetch_ifc_url, load_ifc_points},
     inference::{depth_map_to_png, http_infer, mock_infer, onnx_infer, InferenceError},
     ply::{load_ply_points, PlyError},
     points::{write_points, PointsError, PointsJson},
@@ -77,8 +77,20 @@ pub enum ScanError {
 /// 9. Write `report.json`, `heatmap.png`, `points.json` (and optionally `reference.json`)
 pub fn run_scan(config: &ScanConfig) -> Result<ScanOutput, ScanError> {
     // Step 1 — IFC reference cloud
+    // Resolve the IFC source: remote URL (fetched to a temp file) or local path.
+    // `_ifc_tmp` must be kept alive here so the temp file is not deleted before loading.
+    let mut _ifc_tmp: Option<tempfile::NamedTempFile> = None;
+    let ifc_local_path: std::path::PathBuf = if let Some(url_cfg) = &config.ifc {
+        let tmp = fetch_ifc_url(&url_cfg.url, url_cfg.token.as_deref())
+            .map_err(|e| ScanError::Ifc(e.to_string()))?;
+        let path = tmp.path().to_owned();
+        _ifc_tmp = Some(tmp);
+        path
+    } else {
+        config.ifc_path.clone()
+    };
     let reference =
-        load_ifc_points(&config.ifc_path).map_err(|e| ScanError::Ifc(e.to_string()))?;
+        load_ifc_points(&ifc_local_path).map_err(|e| ScanError::Ifc(e.to_string()))?;
 
     // Step 2 — Scan point cloud
     let scan = load_ply_points(&config.scan_path)?;

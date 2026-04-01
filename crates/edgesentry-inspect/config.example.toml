@@ -3,8 +3,17 @@
 # Copy to config.toml and adjust paths before running:
 #   edgesentry-inspect scan --config config.toml
 
-# Path to the IFC design file (reference model).
+# IFC design file — choose one of the two options below.
+#
+# Option A — local file (default)
 ifc_path = "design.ifc"
+#
+# Option B — remote URL fetched before the pipeline runs (mutually exclusive with ifc_path).
+# The file is downloaded to a secure temp path; `ifc_path` is ignored when [ifc] is set.
+# Omit `token` for self-authenticating pre-signed S3 URLs.
+# [ifc]
+# url   = "https://bim.example.com/elements/E-001/ifc"
+# token = "eyJ..."   # optional Bearer token
 
 # Path to the as-built scan in ASCII PLY format.
 scan_path = "scan.ply"

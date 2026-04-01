@@ -10,7 +10,17 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ScanConfig {
     /// Path to the IFC design file (reference model).
+    ///
+    /// Mutually exclusive with the `[ifc]` remote-URL section.
+    /// Defaults to an empty path when `[ifc]` is provided instead.
+    #[serde(default)]
     pub ifc_path: PathBuf,
+    /// Remote IFC source fetched via HTTPS before the pipeline runs.
+    ///
+    /// When set, `ifc_path` is ignored.  The IFC is downloaded to a secure
+    /// temp file and passed to the loader unchanged.
+    #[serde(default)]
+    pub ifc: Option<IfcUrlConfig>,
     /// Path to the scan point cloud (PLY, ASCII format).
     pub scan_path: PathBuf,
     /// Optional path to a pre-extracted `reference.json` mesh file.
@@ -92,6 +102,28 @@ pub struct OutputConfig {
 
 fn default_threshold() -> f64 {
     10.0
+}
+
+/// Remote IFC source — fetched from an HTTPS URL before the pipeline runs.
+///
+/// Supports optional Bearer-token authentication for BIM servers and
+/// self-authenticating pre-signed S3 URLs alike.
+///
+/// # Example (`config.toml`)
+///
+/// ```toml
+/// [ifc]
+/// url   = "https://bim.example.com/elements/E-001/ifc"
+/// token = "eyJ..."   # optional; omit for pre-signed URLs
+/// ```
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct IfcUrlConfig {
+    /// HTTPS URL of the IFC file (direct download or pre-signed S3 URL).
+    pub url: String,
+    /// Bearer token sent as `Authorization: Bearer <token>`.
+    /// Leave unset when using a self-authenticating pre-signed URL.
+    #[serde(default)]
+    pub token: Option<String>,
 }
 
 /// Parse a [`ScanConfig`] from a TOML file.

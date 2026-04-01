@@ -27,7 +27,7 @@ pub mod report;
 // Top-level re-exports — stable public API surface
 // ---------------------------------------------------------------------------
 
-pub use config::{CameraConfig, InferenceConfig, InferenceMode, OutputConfig, ScanConfig};
+pub use config::{CameraConfig, IfcUrlConfig, InferenceConfig, InferenceMode, OutputConfig, ScanConfig};
 pub use deviation::DeviationReport;
 pub use ingress::{FrameSource, SensorFrame};
 pub use pipeline::{run_scan, ScanError, ScanOutput};
