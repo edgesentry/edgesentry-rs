@@ -100,7 +100,7 @@ fn pipeline_detects_defect_in_generated_fixtures() {
 
     let out_dir = tmp.path().join("out");
     let cfg = ScanConfig {
-        ifc_path: tmp.path().join("wall_slab.ifc"),
+        ifc: None, ifc_path: tmp.path().join("wall_slab.ifc"),
         scan_path: tmp.path().join("wall_slab_scan.ply"),
         camera: CameraConfig {
             fx: 1280.0,

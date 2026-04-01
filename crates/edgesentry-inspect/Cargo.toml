@@ -28,9 +28,9 @@ glam = "0.32.1"
 image = { version = "0.25", default-features = false, features = ["png"] }
 toml = "0.8"
 ureq = "2"
+tempfile = "3"
 tract-onnx = "0.22"
 
 [dev-dependencies]
-tempfile = "3"
 mockito  = "1"
 tokio    = { version = "1", features = ["rt", "macros"] }

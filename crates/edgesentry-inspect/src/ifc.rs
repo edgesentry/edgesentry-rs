@@ -3,7 +3,10 @@
 //! Parses `IFCCARTESIANPOINT` entries from an IFC file and returns them as a
 //! `Vec<Point3D>`. Only 3D points (three coordinate values) are included;
 //! 2D points are silently skipped.
+//!
+//! Remote IFC files can be fetched with [`fetch_ifc_url`] before loading.
 
+use std::io::Write as _;
 use std::path::Path;
 
 use trilink_core::Point3D;
@@ -16,6 +19,42 @@ pub enum IfcError {
 
     #[error("no 3D IFCCARTESIANPOINT entries found in file")]
     NoPoints,
+
+    #[error("HTTP fetch failed: {0}")]
+    Fetch(String),
+}
+
+/// Fetch an IFC file from `url` into a secure temp file and return it.
+///
+/// The [`tempfile::NamedTempFile`] is automatically deleted when dropped, so
+/// callers must keep it alive for as long as the path is needed.
+///
+/// # Authentication
+///
+/// Pass `token` to send `Authorization: Bearer <token>`.  Leave `None` for
+/// unauthenticated or self-authenticating pre-signed S3 URLs.
+pub fn fetch_ifc_url(url: &str, token: Option<&str>) -> Result<tempfile::NamedTempFile, IfcError> {
+    let resp = {
+        let req = ureq::get(url);
+        if let Some(t) = token {
+            req.set("Authorization", &format!("Bearer {t}"))
+        } else {
+            req
+        }
+        .call()
+        .map_err(|e| IfcError::Fetch(e.to_string()))?
+    };
+
+    let mut tmp = tempfile::Builder::new()
+        .prefix("edgesentry-ifc-")
+        .suffix(".ifc")
+        .tempfile()
+        .map_err(IfcError::Io)?;
+
+    std::io::copy(&mut resp.into_reader(), tmp.as_file_mut()).map_err(IfcError::Io)?;
+    tmp.flush().map_err(IfcError::Io)?;
+
+    Ok(tmp)
 }
 
 /// Load all 3-dimensional `IFCCARTESIANPOINT` entries from an IFC STEP-21 file.
@@ -100,5 +139,47 @@ END-ISO-10303-21;
     fn empty_file_returns_empty() {
         let pts = parse_ifc_points("ISO-10303-21;\nHEADER;\nENDSEC;\n");
         assert!(pts.is_empty());
+    }
+
+    // ------------------------------------------------------------------
+    // fetch_ifc_url tests (require mockito)
+    // ------------------------------------------------------------------
+
+    const MINIMAL_IFC: &str = "#1= IFCCARTESIANPOINT((1.0,2.0,3.0));";
+
+    #[test]
+    fn fetch_ifc_url_downloads_content() {
+        let mut server = mockito::Server::new();
+        let _m = server
+            .mock("GET", "/wall.ifc")
+            .with_status(200)
+            .with_body(MINIMAL_IFC)
+            .create();
+
+        let tmp = fetch_ifc_url(&format!("{}/wall.ifc", server.url()), None).unwrap();
+        let content = std::fs::read_to_string(tmp.path()).unwrap();
+        assert_eq!(content.trim(), MINIMAL_IFC);
+    }
+
+    #[test]
+    fn fetch_ifc_url_sends_bearer_token() {
+        let mut server = mockito::Server::new();
+        let _m = server
+            .mock("GET", "/wall.ifc")
+            .match_header("authorization", "Bearer test-token-abc")
+            .with_status(200)
+            .with_body(MINIMAL_IFC)
+            .create();
+
+        fetch_ifc_url(&format!("{}/wall.ifc", server.url()), Some("test-token-abc")).unwrap();
+    }
+
+    #[test]
+    fn fetch_ifc_url_404_returns_error() {
+        let mut server = mockito::Server::new();
+        let _m = server.mock("GET", "/missing.ifc").with_status(404).create();
+
+        let result = fetch_ifc_url(&format!("{}/missing.ifc", server.url()), None);
+        assert!(matches!(result, Err(IfcError::Fetch(_))));
     }
 }

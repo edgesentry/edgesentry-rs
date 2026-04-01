@@ -53,7 +53,7 @@ fn scan_off_mode_produces_report_and_heatmap() {
     write_ply_points(&ply_path, &scan_pts).unwrap();
 
     let cfg = ScanConfig {
-        ifc_path: sample_ifc(),
+        ifc: None, ifc_path: sample_ifc(),
         scan_path: ply_path,
         camera: default_camera(),
         inference: InferenceConfig {
@@ -101,7 +101,7 @@ fn scan_zero_deviation_fully_compliant() {
     write_ply_points(&ply_path, &reference).unwrap();
 
     let cfg = ScanConfig {
-        ifc_path: sample_ifc(),
+        ifc: None, ifc_path: sample_ifc(),
         scan_path: ply_path,
         camera: default_camera(),
         inference: InferenceConfig {
@@ -131,7 +131,7 @@ fn scan_mock_mode_returns_one_detection_without_server() {
     write_ply_points(&ply_path, &scan_pts).unwrap();
 
     let cfg = ScanConfig {
-        ifc_path: sample_ifc(),
+        ifc: None, ifc_path: sample_ifc(),
         scan_path: ply_path,
         camera: default_camera(),
         inference: InferenceConfig {
@@ -169,7 +169,7 @@ fn scan_onnx_mode_detects_fixture_defect() {
     edgesentry_inspect::fixtures::generate_fixtures(fixture_dir.path()).unwrap();
 
     let cfg = edgesentry_inspect::config::ScanConfig {
-        ifc_path:  fixture_dir.path().join("wall_slab.ifc"),
+        ifc: None, ifc_path:  fixture_dir.path().join("wall_slab.ifc"),
         scan_path: fixture_dir.path().join("wall_slab_scan.ply"),
         camera: edgesentry_inspect::config::CameraConfig {
             fx: 1280.0, fy: 1080.0,
@@ -229,7 +229,7 @@ fn scan_http_mode_returns_detections() {
     let endpoint = format!("{}/detect", server.url());
 
     let cfg = ScanConfig {
-        ifc_path: sample_ifc(),
+        ifc: None, ifc_path: sample_ifc(),
         scan_path: ply_path,
         camera: default_camera(),
         inference: InferenceConfig {
