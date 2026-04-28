@@ -7,6 +7,8 @@ use std::path::PathBuf;
 use edgesentry_ingest::csv_replay::FileReplayAdapter;
 use edgesentry_ingest::jsonl::JsonlWriter;
 
+use crate::ingest_stream;
+
 #[derive(Debug, Subcommand)]
 pub enum IngestCommand {
     /// Replay entities from a CSV file and write EntityFrame JSONL.
@@ -23,11 +25,28 @@ pub enum IngestCommand {
         #[arg(long)]
         out: PathBuf,
     },
+    /// Stream entities from a live UDP source and write EntityFrame JSONL.
+    Stream {
+        /// UDP source address, e.g. udp://127.0.0.1:9000.
+        #[arg(long)]
+        source: String,
+
+        /// Profile directory.
+        #[arg(long)]
+        profile: PathBuf,
+
+        /// Output JSONL file path.
+        #[arg(long)]
+        out: PathBuf,
+    },
 }
 
 pub fn run(cmd: IngestCommand) -> Result<(), Box<dyn std::error::Error>> {
     match cmd {
         IngestCommand::Replay { source, profile: _, out } => run_replay(source, out),
+        IngestCommand::Stream { source, profile, out } => {
+            ingest_stream::run_stream(&source, &profile, &out)
+        }
     }
 }
 

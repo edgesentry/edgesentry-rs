@@ -1132,6 +1132,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "edgesentry-assess"
+version = "0.2.0"
+dependencies = [
+ "edgesentry-evaluate",
+ "edgesentry-ingest",
+ "edgesentry-store",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "edgesentry-audit"
 version = "0.2.0"
 dependencies = [
@@ -1190,6 +1201,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "edgesentry-explain"
+version = "0.2.0"
+dependencies = [
+ "edgesentry-evaluate",
+ "edgesentry-ingest",
+ "serde",
+ "serde_json",
+ "ureq",
+]
+
+[[package]]
 name = "edgesentry-ingest"
 version = "0.2.0"
 dependencies = [
@@ -1229,17 +1251,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "edgesentry-store"
+version = "0.2.0"
+dependencies = [
+ "edgesentry-evaluate",
+ "serde",
+]
+
+[[package]]
 name = "eds"
 version = "0.2.0"
 dependencies = [
  "clap",
  "ed25519-dalek",
+ "edgesentry-assess",
  "edgesentry-audit",
  "edgesentry-compute",
  "edgesentry-evaluate",
+ "edgesentry-explain",
  "edgesentry-ingest",
  "edgesentry-inspect",
  "edgesentry-profile",
+ "edgesentry-store",
  "hex",
  "rcgen",
  "reqwest",
@@ -4192,6 +4225,8 @@ dependencies = [
  "once_cell",
  "rustls 0.23.37",
  "rustls-pki-types",
+ "serde",
+ "serde_json",
  "url",
  "webpki-roots 0.26.11",
 ]

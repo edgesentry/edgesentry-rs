@@ -1,0 +1,14 @@
+[package]
+name = "edgesentry-assess"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Trend and correlation analysis — detects rising frequency, escalating risk patterns"
+
+[dependencies]
+edgesentry-evaluate = { path = "../edgesentry-evaluate" }
+edgesentry-store = { path = "../edgesentry-store" }
+edgesentry-ingest = { path = "../edgesentry-ingest" }
+serde = { workspace = true }
+serde_json = { workspace = true }

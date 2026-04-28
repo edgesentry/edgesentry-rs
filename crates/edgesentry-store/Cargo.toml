@@ -1,0 +1,11 @@
+[package]
+name = "edgesentry-store"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Trait-abstracted event store — in-memory v1, future SQLite/DuckDB backends"
+
+[dependencies]
+edgesentry-evaluate = { path = "../edgesentry-evaluate" }
+serde = { workspace = true }
