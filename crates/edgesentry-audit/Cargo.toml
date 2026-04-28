@@ -68,7 +68,7 @@ aws-sdk-s3 = { version = "1", optional = true }
 aws-credential-types = { version = "1", optional = true }
 tokio = { version = "1", features = ["rt-multi-thread", "sync", "macros", "net"], optional = true }
 postgres = { version = "0.19", optional = true }
-rusqlite = { version = "0.31", optional = true }
+rusqlite = { version = "0.39", optional = true }
 
 [dev-dependencies]
 reqwest = { version = "0.12", features = ["json", "blocking", "rustls-tls"], default-features = false }
