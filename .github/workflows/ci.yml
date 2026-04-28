@@ -6,8 +6,8 @@ on:
   pull_request:
   workflow_dispatch:
   schedule:
-    # Weekly cross-platform build: macOS + Windows, every Monday 02:00 UTC
-    - cron: '0 2 * * 1'
+    - cron: '0 2 * * 2'  # Tuesday  02:00 UTC — macOS
+    - cron: '0 2 * * 4'  # Thursday 02:00 UTC — Windows
 
 permissions: {}
 
@@ -29,8 +29,8 @@ jobs:
       fail-fast: false
       matrix:
         # PRs and main-branch pushes: Ubuntu only (fast feedback).
-        # Scheduled Monday run: macOS + Windows cross-platform check.
-        os: ${{ github.event_name == 'schedule' && fromJSON('["macos-latest", "windows-latest"]') || fromJSON('["ubuntu-latest"]') }}
+        # Scheduled runs: Tuesday → macOS, Thursday → Windows.
+        os: ${{ github.event.schedule == '0 2 * * 2' && fromJSON('["macos-latest"]') || github.event.schedule == '0 2 * * 4' && fromJSON('["windows-latest"]') || fromJSON('["ubuntu-latest"]') }}
 
     steps:
       - name: Checkout
