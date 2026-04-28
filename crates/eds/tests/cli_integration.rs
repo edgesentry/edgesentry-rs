@@ -354,6 +354,7 @@ fn demo_lift_inspection_writes_payloads_file_when_requested() {
 /// Bind an ephemeral port, drop the listener, and return the address string.
 /// The port is free for the next bind — there is a brief TOCTOU window but
 /// it is acceptable for test use.
+#[cfg(feature = "transport-http")]
 fn free_addr() -> String {
     let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
     l.local_addr().unwrap().to_string()
@@ -361,6 +362,7 @@ fn free_addr() -> String {
 
 /// Poll TCP connect until the address is accepting connections or the timeout
 /// elapses.  Returns `true` if the server became ready in time.
+#[cfg(feature = "transport-http")]
 fn wait_for_tcp(addr: &str, timeout_secs: u64) -> bool {
     let deadline =
         std::time::Instant::now() + std::time::Duration::from_secs(timeout_secs);
