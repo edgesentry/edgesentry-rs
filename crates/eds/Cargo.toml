@@ -23,11 +23,16 @@ s3       = ["edgesentry-audit/s3",       "dep:tokio"]
 postgres = ["edgesentry-audit/postgres"]
 
 [dependencies]
-edgesentry-audit   = { path = "../edgesentry-audit" }
-edgesentry-inspect = { path = "../edgesentry-inspect" }
+edgesentry-audit    = { path = "../edgesentry-audit" }
+edgesentry-inspect  = { path = "../edgesentry-inspect" }
+edgesentry-ingest   = { path = "../edgesentry-ingest" }
+edgesentry-compute  = { path = "../edgesentry-compute" }
+edgesentry-evaluate = { path = "../edgesentry-evaluate" }
+edgesentry-profile  = { path = "../edgesentry-profile" }
 clap          = { workspace = true }
 ed25519-dalek = { workspace = true }
 hex           = { workspace = true }
+serde         = { workspace = true }
 serde_json    = { workspace = true }
 ureq          = "2"
 tokio = { version = "1", features = ["rt-multi-thread"], optional = true }
