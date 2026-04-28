@@ -5,6 +5,9 @@ on:
     branches: ["main"]
   pull_request:
   workflow_dispatch:
+  schedule:
+    # Weekly cross-platform build: macOS + Windows, every Monday 02:00 UTC
+    - cron: '0 2 * * 1'
 
 permissions: {}
 
@@ -25,7 +28,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # PRs and main-branch pushes: Ubuntu only (fast feedback).
+        # Scheduled Monday run: macOS + Windows cross-platform check.
+        os: ${{ github.event_name == 'schedule' && fromJSON('["macos-latest", "windows-latest"]') || fromJSON('["ubuntu-latest"]') }}
 
     steps:
       - name: Checkout
