@@ -70,7 +70,7 @@ pub fn assess(events: &[RiskEvent], window_sec: Option<u64>) -> Assessment {
         .filter(|(_, (count, _))| *count > 1)
         .map(|(rule_id, (count, severity))| RuleFrequency { rule_id, count, severity })
         .collect();
-    repeated_rules.sort_by(|a, b| b.count.cmp(&a.count));
+    repeated_rules.sort_by_key(|r| std::cmp::Reverse(r.count));
 
     // Entity correlation
     let mut entity_counts: std::collections::HashMap<Vec<String>, usize> =
@@ -85,7 +85,7 @@ pub fn assess(events: &[RiskEvent], window_sec: Option<u64>) -> Assessment {
         .filter(|(_, count)| *count > 1)
         .map(|(entity_ids, event_count)| EntityCorrelation { entity_ids, event_count })
         .collect();
-    correlated_entities.sort_by(|a, b| b.event_count.cmp(&a.event_count));
+    correlated_entities.sort_by_key(|r| std::cmp::Reverse(r.event_count));
 
     // Trend: compare event rate in first half vs second half of window
     let trend = compute_trend(&windowed);
