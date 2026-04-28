@@ -209,6 +209,7 @@ else
       --n 2 \
       --pick severity \
       --llm-url "$LLM_URL" \
+      --profile "$PROFILE_DIR" \
       --out "$EXPLANATIONS_JSONL"
 
     EXP_COUNT=$(count_lines "$EXPLANATIONS_JSONL")

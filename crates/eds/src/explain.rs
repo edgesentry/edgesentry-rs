@@ -2,7 +2,7 @@
 
 use clap::{Subcommand, ValueEnum};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use edgesentry_evaluate::RiskEvent;
 use edgesentry_explain::{pick_events, Explainer, KnowledgeBase, LlmClient, PickStrategy};
@@ -49,6 +49,11 @@ pub enum ExplainCommand {
         #[arg(long)]
         model: Option<String>,
 
+        /// Profile directory containing a kb/ subdirectory with <RULE_ID>.txt snippets.
+        /// When provided, explanations will be grounded against the KB.
+        #[arg(long)]
+        profile: Option<PathBuf>,
+
         /// Output Explanation JSONL file.
         #[arg(long)]
         out: PathBuf,
@@ -57,8 +62,8 @@ pub enum ExplainCommand {
 
 pub fn run(cmd: ExplainCommand) -> Result<(), Box<dyn std::error::Error>> {
     match cmd {
-        ExplainCommand::Run { input, n, pick, llm_url, model, out } => {
-            run_explain(&input, n, pick.into(), &llm_url, model.as_deref(), &out)
+        ExplainCommand::Run { input, n, pick, llm_url, model, profile, out } => {
+            run_explain(&input, n, pick.into(), &llm_url, model.as_deref(), profile.as_deref(), &out)
         }
     }
 }
@@ -69,6 +74,7 @@ fn run_explain(
     strategy: PickStrategy,
     llm_url: &str,
     model: Option<&str>,
+    profile: Option<&Path>,
     out: &PathBuf,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let file = fs::File::open(input)?;
@@ -81,7 +87,13 @@ fn run_explain(
 
     let picked = pick_events(&events, n, strategy);
 
-    let kb = KnowledgeBase::from_map(std::collections::HashMap::new());
+    let kb = match profile {
+        Some(p) => {
+            KnowledgeBase::load(p.to_str().ok_or("profile path contains non-UTF-8 characters")?)
+                .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?
+        }
+        None => KnowledgeBase::from_map(std::collections::HashMap::new()),
+    };
     let llm = match model {
         Some(m) => LlmClient::new(llm_url, m),
         None => LlmClient::new_autodiscover(llm_url),
