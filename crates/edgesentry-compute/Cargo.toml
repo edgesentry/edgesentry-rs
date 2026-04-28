@@ -1,0 +1,12 @@
+[package]
+name = "edgesentry-compute"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Physics and geometry computations — distance, TTC, zone membership"
+
+[dependencies]
+edgesentry-ingest = { path = "../edgesentry-ingest" }
+serde = { workspace = true }
+serde_json = { workspace = true }

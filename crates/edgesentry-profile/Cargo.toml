@@ -1,0 +1,15 @@
+[package]
+name = "edgesentry-profile"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Profile loader and validator — rules.json format checking and KB coverage"
+
+[dependencies]
+edgesentry-evaluate = { path = "../edgesentry-evaluate" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

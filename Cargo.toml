@@ -4,6 +4,10 @@ members = [
   "crates/edgesentry-audit",
   "crates/edgesentry-bridge",
   "crates/edgesentry-inspect",
+  "crates/edgesentry-ingest",
+  "crates/edgesentry-compute",
+  "crates/edgesentry-evaluate",
+  "crates/edgesentry-profile",
 ]
 resolver = "2"
 
@@ -24,3 +28,4 @@ serde_json = "1"
 hex = "0.4"
 rand = "0.8"
 tracing = "0.1"
+tempfile = "3"
