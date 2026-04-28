@@ -119,12 +119,24 @@ jobs:
         run: cargo audit --version 2>/dev/null || cargo install cargo-audit --locked
 
       - name: Run security audit
-        # RUSTSEC-2026-0049 (GHSA-pwjx-qhcg-rvj4): rustls-webpki CRL bug.
-        # Two affected instances, no patch available for either:
-        #   0.101.7 — AWS SDK → hyper-rustls 0.24 → rustls 0.21 (#125)
-        #   0.102.8 — rumqttc 0.25 → rustls 0.22 (#166)
-        # No CRL revocation calls in the codebase; unexploitable as-is.
-        run: cargo audit --ignore RUSTSEC-2026-0049
+        # rustls-webpki advisories affecting 0.101.7 and 0.102.8 — two pinned
+        # transitive versions that cannot be updated without upstream changes:
+        #   0.101.7 — AWS SDK → hyper-rustls 0.24 → rustls 0.21
+        #   0.102.8 — rumqttc 0.25 → rustls ^0.102
+        # The 0.103.x line is updated to 0.103.13 which patches all three.
+        # None of these code paths call CRL APIs or validate URI/wildcard names
+        # in user-controlled certificate fields — unexploitable as-is.
+        #
+        # RUSTSEC-2026-0049: CRL Distribution Point matching flaw (pre-0.103.10)
+        # RUSTSEC-2026-0098: URI SAN name constraints incorrectly accepted
+        # RUSTSEC-2026-0099: Wildcard name constraints incorrectly accepted
+        # RUSTSEC-2026-0104: Reachable panic in CRL parsing (pre-0.103.13)
+        run: >
+          cargo audit
+          --ignore RUSTSEC-2026-0049
+          --ignore RUSTSEC-2026-0098
+          --ignore RUSTSEC-2026-0099
+          --ignore RUSTSEC-2026-0104
 
   sast:
     name: SAST (Clippy + cargo-deny advisories)
