@@ -122,7 +122,7 @@ pub enum PickStrategy {
     Random,
 }
 
-pub fn pick_events<'a>(events: &'a [RiskEvent], n: usize, strategy: PickStrategy) -> Vec<&'a RiskEvent> {
+pub fn pick_events(events: &[RiskEvent], n: usize, strategy: PickStrategy) -> Vec<&RiskEvent> {
     let mut sorted: Vec<&RiskEvent> = events.iter().collect();
     match strategy {
         PickStrategy::Severity => {
