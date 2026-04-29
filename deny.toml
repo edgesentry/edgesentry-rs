@@ -14,19 +14,6 @@ ignore = [
   # available via upstream; upgrading requires rustls to drop the dep.
   # No direct call-site exposure in our code.
   { id = "RUSTSEC-2025-0134", reason = "rustls-pemfile pulled in transitively by rustls 0.23 chain; no patch available. Functionality superseded by rustls-pki-types but not yet adopted by rustls." },
-  # RUSTSEC-2026-0049 / GHSA-pwjx-qhcg-rvj4: rustls-webpki CRL Distribution
-  # Point matching flaw. Removed from ignore list — 0.103.13 (now in lock file)
-  # patches this advisory. The 0.102.8 instance (rumqttc) was also affected but
-  # cargo-audit handles that via --ignore in ci.yml; cargo-deny no longer detects
-  # this advisory now that 0.103.13 satisfies it for the primary chain.
-  #
-  # New advisories (0.101.7 and 0.102.8 pinned by upstream — see ci.yml):
-  # RUSTSEC-2026-0098: URI SAN name constraints incorrectly accepted
-  { id = "RUSTSEC-2026-0098", reason = "Fixed in rustls-webpki 0.103.13 (updated). 0.101.7 (AWS SDK/rustls 0.21) and 0.102.8 (rumqttc) remain pinned by upstream — no 0.101.x or 0.102.x backport. No URI SAN validation in our code paths." },
-  # RUSTSEC-2026-0099: Wildcard name constraints incorrectly accepted
-  { id = "RUSTSEC-2026-0099", reason = "Fixed in rustls-webpki 0.103.13 (updated). 0.101.7 and 0.102.8 remain pinned by upstream. No wildcard SAN validation in our code paths." },
-  # RUSTSEC-2026-0104: Reachable panic in CRL parsing
-  { id = "RUSTSEC-2026-0104", reason = "Fixed in rustls-webpki 0.103.13 (updated). 0.101.7 and 0.102.8 remain pinned by upstream. No CRL revocation calls in our code paths." },
 ]
 
 [bans]
