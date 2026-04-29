@@ -1,51 +1,51 @@
 # edgesentry-audit
 
-**"Trust and verification for edge infrastructure."**
+**エッジインフラへの信頼と検証**
 
-- **Repository:** [github.com/edgesentry/edgesentry-rs](https://github.com/edgesentry/edgesentry-rs)
-- **Documentation:** [edgesentry.github.io/edgesentry-rs/audit/introduction/](https://edgesentry.github.io/edgesentry-rs/audit/introduction/)
+- **リポジトリ:** [github.com/edgesentry/edgesentry-rs](https://github.com/edgesentry/edgesentry-rs)
+- **ドキュメント:** [edgesentry.github.io/edgesentry-rs/audit/introduction/](https://edgesentry.github.io/edgesentry-rs/audit/introduction/)
 
-## Why
+## なぜこのプロジェクトが必要か
 
-In recent years, labor shortages have become a serious challenge in infrastructure operations. Labor-intensive industries such as construction are increasingly adopting IoT devices for remote inspections.
+近年、インフラ運営における人手不足が深刻な課題となっています。建設業などの労働集約型産業では、遠隔点検のために IoT デバイスの導入が進んでいます。
 
-At the same time, if device spoofing, device takeover, or inspection data tampering occurs, trust in the entire system is fundamentally undermined. This makes continuous verification of both device authenticity and data integrity essential.
+一方で、デバイスのなりすまし・乗っ取り・点検データの改ざんが発生すると、システム全体への信頼は根底から損なわれます。そのため、デバイスの真正性とデータの完全性を継続的に検証することが不可欠です。
 
-## Vision and Principles
+## ビジョンと原則
 
-EdgeSentry-Audit is an **early-stage learning project** — we are building this to deepen our understanding of IoT security techniques hands-on. The license is commercially compatible (MIT/Apache 2.0), but the implementation is just getting started and is not yet production-ready. Following the governance model of successful "in-process" systems like **DuckDB**, we keep the core intellectual property open and vendor-neutral, so it can grow into a public good over time.
+EdgeSentry-Audit は **初期段階の学習プロジェクト** です。 IoT セキュリティ技術への理解を深めるために実践的に構築しています。ライセンスは商用互換（ MIT/Apache 2.0 ）ですが、実装はまだ始まったばかりであり、プロダクション環境への導入は想定していません。 **DuckDB** のような成功した「インプロセス」システムのガバナンスモデルに倣い、コアとなる知的財産をオープンかつベンダーニュートラルに保つことで、時間をかけて公共財として成長させることを目指しています。
 
-Our goal is to serve as the **Common Trust Layer** for vendors in public infrastructure, maritime (MPA), and smart buildings (BCA), helping them meet the highest regulatory standards — including Singapore's **CLS Level 3/4**, **iM8**, and Japan's **Unified Government Standards**.
+私たちのゴールは、公共インフラ・海事（ MPA ）・スマートビルディング（ BCA ）分野のベンダーにとっての **共通トラストレイヤー** となり、シンガポールの **CLS レベル 3/4** ・ **iM8** 、そして日本の **統一政府標準** を含む最高水準の規制要件を満たす支援をすることです。
 
-We believe the infrastructure of trust should not be owned by a single private entity:
+信頼のインフラは単一の民間企業が独占すべきではないと考えています。
 
-- **Open for All:** A vendor-agnostic reference implementation that lowers the barrier for companies to achieve regulatory compliance.
-- **Cross-Industry Learning:** Engineers collaborate across corporate boundaries to master the complexities of global IoT security standards.
-- **Sustainable Growth:** The core remains a community-driven reference implementation; commercial services (advanced analytics, automated compliance reporting) are built on top of this stable foundation.
+- **すべてに開放：** ベンダー非依存のリファレンス実装として、企業がコンプライアンス達成に要するコストを引き下げる。
+- **業界横断の学習：** 企業の垣根を超えてエンジニアが協力し、グローバル IoT セキュリティ標準の複雑さを習得する。
+- **持続的な成長：** コアはコミュニティ主導のリファレンス実装に留め、商用サービス（高度な分析・自動コンプライアンスレポート）はこの安定した基盤の上に構築する。
 
-See the [Roadmap](roadmap.md) for the phased compliance plan.
+段階的なコンプライアンス計画については[ロードマップ](roadmap.md)を参照してください。
 
-## Initial Scope
+## 初期スコープ
 
-For public-infrastructure IoT deployments, Singapore's Cybersecurity Labelling Scheme (CLS) Level 3 and Level 4 introduce hardware-level security requirements. EdgeSentry-Audit is designed to support these requirements through hardware extensions — hardware security itself is implemented on the hardware side, with this library providing the software integration layer. The initial scope covers tamper prevention and tamper-evident audit records, with hardware-level extension points built in from the start.
+公共インフラ向け IoT 導入においては、シンガポールのサイバーセキュリティラベリングスキーム（CLS）レベル 3 およびレベル 4 がハードウェアレベルのセキュリティ要件を導入します。EdgeSentry-Audit はハードウェア拡張を通じてこれらの要件をサポートするよう設計されています。ハードウェアセキュリティ自体はハードウェア側で実装され、本ライブラリはソフトウェアインテグレーション層を提供します。初期スコープでは改ざん防止と改ざん検知可能な監査レコードをカバーし、ハードウェアレベルの拡張ポイントを最初から組み込んでいます。
 
-## How
+## どのように実現するか
 
-Modeled after the "Simple, Portable, Fast" philosophy, EdgeSentry-Audit implements three pillars of trust in Rust, designed for high-performance embedding:
+「シンプル・ポータブル・高速」という哲学をモデルに、 EdgeSentry-Audit は高性能な組み込みを念頭に置き、 Rust で 3 つの信頼の柱を実装しています。
 
-1. **Identity** — Ed25519 digital signatures to guarantee the authenticity of both devices and data. Built with C/C++ FFI at its heart, allowing legacy industrial systems and robotics platforms to adopt secure identity without a full rewrite.
+1. **同一性** — Ed25519 デジタル署名により、デバイスとデータ双方の真正性を保証します。 C/C++ FFI を中核に持つ設計により、レガシーな産業システムやロボティクスプラットフォームが全面的な書き直しなしにセキュアな同一性を導入できます。
 
-2. **Integrity** — BLAKE3 hash chains to ensure data immutability. Provides a verifiable cryptographic record that can be validated locally or in the cloud, ensuring forensic readiness even in offline scenarios.
+2. **完全性** — BLAKE3 ハッシュチェーンによりデータの不変性を保証します。ローカルまたはクラウドで検証可能な暗号証明レコードを提供し、オフライン環境においてもフォレンジックの準備を確保します。
 
-3. **Resilience** — Store-and-forward offline buffering (`OfflineBuffer` with `InMemoryBufferStore` and SQLite via `buffer-sqlite` feature) is delivered in Phase 1, satisfying CLS-09. Intelligent data summarization for narrow-bandwidth environments (Phase 2 *(planned)*) will add priority queuing for limited links. See [Roadmap](roadmap.md).
+3. **回復力** — オフラインバッファリング（`OfflineBuffer`、`InMemoryBufferStore` および `buffer-sqlite` フィーチャーによる SQLite）はフェーズ 1 で提供済みであり、CLS-09 を満足しています。帯域幅が限られた環境向けのインテリジェントなデータ要約（フェーズ 2 *(計画中)*）では、限られた回線上での優先キューイングが追加される予定です。[ロードマップ](roadmap.md)を参照してください。
 
-`edgesentry-audit` is the crate name. The Rust library is imported as `edgesentry_audit` (underscores). It includes all audit record types, hashing, signature verification, chain verification, ingestion-time verification, deduplication, sequence validation, persistence workflow, and the CLI.
+`edgesentry-audit` はクレート名です。 Rust ライブラリは `edgesentry_audit`（アンダースコア）としてインポートされます。監査レコードの全型定義・ハッシュ・署名検証・チェーン検証・インジェスト時検証・重複排除・シーケンス検証・永続化ワークフロー・ CLI がすべて含まれています。
 
-## License
+## ライセンス
 
-This project is licensed under either of:
+このプロジェクトは以下のいずれかのライセンスの下で提供されています。
 
 - [Apache License, Version 2.0](https://github.com/edgesentry/edgesentry-rs/blob/main/LICENSE-APACHE)
 - [MIT license](https://github.com/edgesentry/edgesentry-rs/blob/main/LICENSE-MIT)
 
-At your option.
+いずれかをお選びください。

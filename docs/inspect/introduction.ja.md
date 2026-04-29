@@ -1,45 +1,45 @@
 # EdgeSentry-Inspect
 
-Real-time digital twin audit platform for infrastructure inspection.
+インフラ点検向けリアルタイム・デジタルツイン監査プラットフォーム。
 
-- **Repository:** [github.com/edgesentry/edgesentry-rs](https://github.com/edgesentry/edgesentry-rs)
-- **Documentation:** [edgesentry.github.io/edgesentry-rs/inspect/introduction/](https://edgesentry.github.io/edgesentry-rs/inspect/introduction/)
+- **リポジトリ:** [github.com/edgesentry/edgesentry-rs](https://github.com/edgesentry/edgesentry-rs)
+- **ドキュメント:** [edgesentry.github.io/edgesentry-rs/inspect/introduction/](https://edgesentry.github.io/edgesentry-rs/inspect/introduction/)
 
-## What it does
+## 仕組み
 
-EdgeSentry-Inspect detects construction and structural deviations at the field edge by fusing 3D point clouds with BIM design data — no cloud round-trip required during inspection.
+EdgeSentry-Inspect は、3D 点群データと BIM 設計データを現場エッジで照合し、施工誤差や構造変化をリアルタイムで検出します。クラウドへの往復なしに、現場で完結します。
 
 ```
-3D sensor (LiDAR/ToF)
-    │  point cloud
+3D センサ（LiDAR/ToF）
+    │  点群データ
     ▼
-trilink-core::project          ← 3D → 2D depth map / height map
-    │  depth map (image)
+trilink-core::project          ← 3D → 2D 深度マップ / 高さマップ
+    │  深度マップ（画像）
     ▼
-Vision AI inference            ← anomaly detection on local GPU
-    │  bounding boxes + class
+ビジョン AI 推論               ← ローカル GPU で異常検出
+    │  バウンディングボックス + クラス
     ▼
-trilink-core::unproject        ← 2D detections → 3D world coords
-    │  world-space anomaly points
+trilink-core::unproject        ← 2D 検出 → 3D ワールド座標
+    │  ワールド座標系の異常位置
     ▼
-Scan-vs-BIM engine             ← compare against IFC design geometry
-    │  deviation heatmap + report
+Scan-vs-BIM エンジン           ← IFC 設計データと照合
+    │  偏差ヒートマップ + レポート
     ▼
-Field display (tablet / AR)    ← inspector sees deviation on site
+現場表示（タブレット / AR）    ← 点検員が現場でズレを確認
     │
-    ▼  (upload report only — not the raw point cloud)
-Cloud audit store              ← immutable evidence + digital twin update
+    ▼  （生点群ではなくレポートのみアップロード）
+クラウド監査ストア             ← 改ざん防止証跡 + デジタルツイン更新
 ```
 
-## Why edge-first
+## エッジファーストの理由
 
-The field PC handles everything from scan to deviation report. Only the report (JSON + PNG heatmap) is uploaded. This makes a 30-minute on-site inspection feasible even without a reliable cloud connection.
+現場 PC がスキャンから偏差レポートまでの全処理を担います。アップロードされるのはレポート（JSON + PNG ヒートマップ）のみです。これにより、安定したクラウド接続がない環境でも 30 分以内の現場点検が実現できます。
 
-## Built on
+## 依存ライブラリ
 
-- [`trilink-core`](https://github.com/edgesentry/trilink-core) — point cloud projection and spatial fusion (Rust)
-- [`edgesentry-rs`](https://github.com/edgesentry/edgesentry-rs) — cryptographically verifiable audit records (optional, for high-assurance contexts)
+- [`trilink-core`](https://github.com/edgesentry/trilink-core) — 点群投影と空間融合（Rust）
+- [`edgesentry-rs`](https://github.com/edgesentry/edgesentry-rs) — 数学的に検証可能な監査レコード（高保証が必要な用途向けオプション）
 
-## License
+## ライセンス
 
 MIT OR Apache-2.0
