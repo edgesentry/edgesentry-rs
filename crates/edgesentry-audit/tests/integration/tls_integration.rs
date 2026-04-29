@@ -32,7 +32,7 @@ fn generate_self_signed_cert() -> (PathBuf, PathBuf) {
         .expect("rcgen must generate self-signed cert");
 
     let cert_pem = cert.cert.pem();
-    let key_pem = cert.key_pair.serialize_pem();
+    let key_pem = cert.signing_key.serialize_pem();
 
     let pid = std::process::id();
     let id = COUNTER.fetch_add(1, Ordering::Relaxed);
