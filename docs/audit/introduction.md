@@ -3,7 +3,7 @@
 **"Trust and verification for edge infrastructure."**
 
 - **Repository:** [github.com/edgesentry/edgesentry-rs](https://github.com/edgesentry/edgesentry-rs)
-- **Documentation:** [edgesentry.github.io/edgesentry-rs/audit/en/](https://edgesentry.github.io/edgesentry-rs/audit/en/)
+- **Documentation:** [edgesentry.github.io/edgesentry-rs/audit/introduction/](https://edgesentry.github.io/edgesentry-rs/audit/introduction/)
 
 ## Why
 

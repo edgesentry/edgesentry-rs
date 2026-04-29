@@ -7,7 +7,7 @@ repository.workspace = true
 description   = "C/C++ FFI bridge — call Rust signing and verification from C without a full rewrite"
 keywords      = ["ffi", "cryptography", "ed25519", "blake3", "c-bindings"]
 categories    = ["cryptography", "embedded", "external-ffi-bindings", "authentication"]
-documentation = "https://edgesentry.github.io/edgesentry-rs/audit/en/ffi_bridge.html"
+documentation = "https://edgesentry.github.io/edgesentry-rs/audit/ffi_bridge/"
 
 [lib]
 crate-type = ["cdylib", "staticlib", "rlib"]
