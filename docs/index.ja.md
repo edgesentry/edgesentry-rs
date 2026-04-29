@@ -1,7 +1,7 @@
 # edgesentry-rs
 
-Reusable Rust crates and a unified CLI (`eds`) for building sensor-to-seal compliance pipelines.
+センサーからシールまでのコンプライアンスパイプラインを構築するための、再利用可能な Rust クレート群と統合 CLI (`eds`)。
 
-- [Pipeline](pipeline/introduction.md)
-- [Audit](audit/introduction.md)
-- [Inspect](inspect/introduction.md)
+- [パイプライン](pipeline/introduction.md)
+- [監査](audit/introduction.md)
+- [検査](inspect/introduction.md)
