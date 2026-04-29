@@ -1,0 +1,13 @@
+[book]
+title = "EdgeSentry Pipeline"
+description = "Seven-step sensor-to-seal pipeline: ingest, compute, evaluate, assess, explain, document, seal."
+authors = ["edgesentry-rs contributors"]
+language = "en"
+src = "src"
+
+[build]
+build-dir = "../../book/pipeline/en"
+
+[output.html]
+git-repository-url = "https://github.com/edgesentry/edgesentry-rs"
+edit-url-template = "https://github.com/edgesentry/edgesentry-rs/edit/main/docs/pipeline/en/src/{path}"

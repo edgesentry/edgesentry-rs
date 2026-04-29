@@ -47,3 +47,4 @@ lift_inspection_records.json
 crates/edgesentry-bridge/examples/c_integration/c_integration_test
 
 _inputs/
+docs/pipeline/en/book/
