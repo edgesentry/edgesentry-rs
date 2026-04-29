@@ -35,4 +35,4 @@ hex = "0.4"
 rand = "0.8"
 tracing = "0.1"
 tempfile = "3"
-ureq = { version = "2", features = ["json"] }
+ureq = { version = "3", features = ["json"] }
