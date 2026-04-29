@@ -49,3 +49,4 @@ crates/edgesentry-bridge/examples/c_integration/c_integration_test
 _inputs/
 site/
 docs/book/
+.claude/worktrees/
