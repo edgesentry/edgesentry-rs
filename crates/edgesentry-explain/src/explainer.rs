@@ -126,12 +126,10 @@ pub fn pick_events(events: &[RiskEvent], n: usize, strategy: PickStrategy) -> Ve
     let mut sorted: Vec<&RiskEvent> = events.iter().collect();
     match strategy {
         PickStrategy::Severity => {
-            sorted.sort_by(|a, b| {
-                severity_rank(&b.severity).cmp(&severity_rank(&a.severity))
-            });
+            sorted.sort_by_key(|e| std::cmp::Reverse(severity_rank(&e.severity)));
         }
         PickStrategy::Time => {
-            sorted.sort_by(|a, b| b.timestamp_ms.cmp(&a.timestamp_ms)); // newest first
+            sorted.sort_by_key(|e| std::cmp::Reverse(e.timestamp_ms)); // newest first
         }
         PickStrategy::Random => {
             // simple deterministic shuffle for testing — no rand dep needed
