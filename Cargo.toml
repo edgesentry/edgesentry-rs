@@ -11,6 +11,9 @@ members = [
   "crates/edgesentry-store",
   "crates/edgesentry-assess",
   "crates/edgesentry-explain",
+  "crates/edgesentry-report",
+  "crates/edgesentry-parse",
+  "crates/edgesentry-document",
 ]
 resolver = "2"
 

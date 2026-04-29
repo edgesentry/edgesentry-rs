@@ -32,6 +32,9 @@ edgesentry-profile  = { path = "../edgesentry-profile" }
 edgesentry-store    = { path = "../edgesentry-store" }
 edgesentry-assess   = { path = "../edgesentry-assess" }
 edgesentry-explain  = { path = "../edgesentry-explain" }
+edgesentry-report   = { path = "../edgesentry-report" }
+edgesentry-parse    = { path = "../edgesentry-parse" }
+edgesentry-document = { path = "../edgesentry-document" }
 clap          = { workspace = true }
 ed25519-dalek = { workspace = true }
 hex           = { workspace = true }
