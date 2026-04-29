@@ -1,7 +1,6 @@
-# Step 5 - Explain
+# ステップ 5 - 説明
 
-Generate plain-language explanations for RiskEvents using a local LLM, grounded against
-the regulatory KB snippets in the profile.
+ローカル LLM を使用して RiskEvent の平易な言葉による説明を生成し、プロファイル内の規制 KB スニペットに基づいて根拠付けします。
 
 ```
 eds explain run --input <FILE> --n <N> --out <FILE>
@@ -11,41 +10,41 @@ eds explain run --input <FILE> --n <N> --out <FILE>
               [--profile <DIR>]
 ```
 
-| Flag | Default | Description |
+| フラグ | デフォルト | 説明 |
 |------|---------|-------------|
-| `--input` | | Input RiskEvent JSONL file |
-| `--n` | 5 | Number of events to explain |
-| `--pick` | `severity` | Event selection strategy |
-| `--llm-url` | `http://localhost:8080` | OpenAI-compatible LLM server base URL |
-| `--model` | auto-discovered | Model name; omit to use the first model returned by `/v1/models` |
-| `--profile` | | Profile directory with `kb/<RULE_ID>.txt` snippets for grounding |
-| `--out` | | Output Explanation JSONL file |
+| `--input` | | 入力 RiskEvent JSONL ファイル |
+| `--n` | 5 | 説明するイベントの数 |
+| `--pick` | `severity` | イベント選択戦略 |
+| `--llm-url` | `http://localhost:8080` | OpenAI 互換 LLM サーバーのベース URL |
+| `--model` | 自動検出 | モデル名；省略すると `/v1/models` が返す最初のモデルを使用 |
+| `--profile` | | 根拠付けのための `kb/<RULE_ID>.txt` スニペットを含むプロファイルディレクトリ |
+| `--out` | | 出力 Explanation JSONL ファイル |
 
-## Event selection strategies
+## イベント選択戦略
 
-| Strategy | Behaviour |
+| 戦略 | 動作 |
 |---|---|
-| `severity` | Selects the N highest-severity events (CRITICAL before HIGH before MEDIUM before LOW) |
-| `time` | Selects the N most recent events by timestamp |
-| `random` | Selects N events at random |
+| `severity` | 最も重大度の高い N 個のイベントを選択（CRITICAL、HIGH、MEDIUM、LOW の順） |
+| `time` | タイムスタンプで最新の N 個のイベントを選択 |
+| `random` | ランダムに N 個のイベントを選択 |
 
-## LLM server setup
+## LLM サーバーセットアップ
 
-Any server that implements the OpenAI `/v1/chat/completions` API works:
+OpenAI `/v1/chat/completions` API を実装する任意のサーバーが動作します：
 
 - **llama.cpp**: `llama-server --model mistral-7b.gguf --port 8080`
-- **Ollama** (with OpenAI compat mode): `OLLAMA_HOST=0.0.0.0 ollama serve`
+- **Ollama**（OpenAI 互換モード）: `OLLAMA_HOST=0.0.0.0 ollama serve`
 
-## KB grounding
+## KB 根拠付け
 
-When `--profile` is provided, `eds explain run` loads the text file at
-`<profile>/kb/<RULE_ID>.txt` for each event being explained and includes it in the
-LLM prompt as the authoritative regulatory reference.
+`--profile` が指定された場合、`eds explain run` は説明される各イベントについて
+`<profile>/kb/<RULE_ID>.txt` のテキストファイルを読み込み、権威ある規制参照として
+LLM プロンプトに含めます。
 
-After generation, the explanation is checked: if the LLM cited a section reference
-(e.g. `§3.1`) that is not present in the KB snippet, `grounded` is set to `false`.
+生成後、説明が検証されます：LLM が KB スニペットに存在しないセクション参照
+（例：`§3.1`）を引用した場合、`grounded` は `false` に設定されます。
 
-## Explanation schema
+## Explanation スキーマ
 
 ```json
 {"eds_schema":"eds.explanation","version":"0.1"}
@@ -57,5 +56,4 @@ After generation, the explanation is checked: if the LLM cited a section referen
 }
 ```
 
-A `grounded: false` explanation should be flagged for human review before inclusion in
-an official report.
+`grounded: false` の説明は、公式レポートに含める前に人間によるレビューのためにフラグを立てる必要があります。

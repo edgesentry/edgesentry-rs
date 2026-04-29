@@ -1,35 +1,31 @@
-# Step 2 - Compute
+# ステップ 2 - 計算
 
-Apply physics and geometry operations to raw entity measurements.
+生のエンティティ計測値に物理・ジオメトリ演算を適用します。
 
 ```
 eds compute run --input <FILE> --out <FILE>
 ```
 
-| Flag | Description |
+| フラグ | 説明 |
 |------|-------------|
-| `--input` | Input EntityFrame JSONL file (from `eds ingest replay` or `eds ingest stream`) |
-| `--out` | Output Measurement JSONL file |
+| `--input` | 入力 EntityFrame JSONL ファイル（`eds ingest replay` または `eds ingest stream` から） |
+| `--out` | 出力 Measurement JSONL ファイル |
 
-## What it computes
+## 計算内容
 
-For every pair of entities in every frame:
+すべてのフレーム内のすべてのエンティティペアについて：
 
-| Function | Output | Formula |
+| 関数 | 出力 | 計算式 |
 |---|---|---|
-| `euclidean_distance` | metres | `sqrt((x2-x1)^2 + (y2-y1)^2)` |
-| `relative_velocity` | m/s | component of velocity along the line between entities |
-| `time_to_collision` | seconds | `distance / closing_speed` (only when entities are approaching) |
-| `braking_distance` | metres | entity-class-specific lookup table |
-| `zone_membership` | bool | point-in-polygon test using the profile zone definition |
+| `euclidean_distance` | メートル | `sqrt((x2-x1)^2 + (y2-y1)^2)` |
+| `relative_velocity` | m/s | エンティティ間の線に沿った速度の成分 |
+| `time_to_collision` | 秒 | `distance / closing_speed`（エンティティが接近している場合のみ） |
+| `braking_distance` | メートル | エンティティクラス固有のルックアップテーブル |
+| `zone_membership` | bool | プロファイルのゾーン定義を使用した多角形内の点判定 |
 
-TTC is only computed when `closing_speed > 0` (entities approaching). A positive TTC means
-a collision would occur at current trajectories; a negative or infinite TTC means they are
-separating.
+TTC は `closing_speed > 0`（エンティティが接近中）の場合のみ計算されます。正の TTC は現在の軌跡で衝突が発生することを意味し、負または無限の TTC はエンティティが離れていることを意味します。
 
-## Note on pipeline usage
+## パイプライン使用に関する注記
 
-`eds evaluate run` reads the original `EntityFrame` JSONL and applies physics internally.
-`eds compute run` is provided for inspection and debugging -- it lets you examine the raw
-measurements before rule evaluation. In production pipelines both commands may be run, or
-only `eds evaluate run` if intermediate measurements are not needed.
+`eds evaluate run` は元の `EntityFrame` JSONL を読み込み、内部で物理演算を適用します。
+`eds compute run` は検査とデバッグのために提供されており ── ルール評価の前に生の計測値を確認できます。本番パイプラインでは、両方のコマンドを実行することも、中間計測値が不要な場合は `eds evaluate run` のみを実行することもできます。

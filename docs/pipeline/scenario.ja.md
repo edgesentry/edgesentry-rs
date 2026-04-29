@@ -1,11 +1,10 @@
-# Scenario - Synthetic Data Generation
+# シナリオ - 合成データ生成
 
-Generate synthetic entity CSV fixtures and stream them over UDP to test the pipeline without
-a physical sensor.
+物理センサーなしでパイプラインをテストするために、合成エンティティ CSV フィクスチャを生成し、UDP 経由でストリームします。
 
 ## eds scenario generate
 
-Generate a CSV file containing synthetic entity positions across N frames.
+N フレームにわたる合成エンティティ位置を含む CSV ファイルを生成します。
 
 ```
 eds scenario generate --out <FILE>
@@ -13,15 +12,15 @@ eds scenario generate --out <FILE>
                       [--scenario-type entity]
 ```
 
-| Flag | Default | Description |
+| フラグ | デフォルト | 説明 |
 |------|---------|-------------|
-| `--entities` | 2 | Number of entities to simulate |
-| `--frames` | 10 | Number of time frames |
-| `--seed` | 0 | Integer seed for reproducible output (LCG RNG -- no external dependency) |
-| `--scenario-type` | `entity` | Scenario type (only `entity` is currently supported) |
-| `--out` | | Output CSV file path |
+| `--entities` | 2 | シミュレートするエンティティの数 |
+| `--frames` | 10 | 時間フレーム数 |
+| `--seed` | 0 | 再現可能な出力のための整数シード（LCG RNG ── 外部依存なし） |
+| `--scenario-type` | `entity` | シナリオタイプ（現在は `entity` のみサポート） |
+| `--out` | | 出力 CSV ファイルパス |
 
-**Output format** -- same header as `eds ingest replay` input:
+**出力形式** ── `eds ingest replay` の入力と同じヘッダ：
 
 ```
 timestamp_ms,entity_id,entity_type,x,y,vx,vy
@@ -31,29 +30,28 @@ timestamp_ms,entity_id,entity_type,x,y,vx,vy
 ...
 ```
 
-Entity types alternate: even-indexed entities are `Forklift`, odd-indexed are `Person`.
-Each entity has a random starting position within `[0, 20]` metres and a fixed velocity.
-Frame interval is 100 ms (10 fps by default).
+エンティティタイプは交互になります：偶数インデックスのエンティティは `Forklift`、奇数インデックスは `Person` です。
+各エンティティは `[0, 20]` メートル内のランダムな開始位置と固定速度を持ちます。
+フレーム間隔は 100 ms（デフォルトで 10 fps）です。
 
-**Bundled fixture**: `crates/edgesentry-scenario/fixtures/simple_crossing.csv` -- two Forklift
-entities approaching each other head-on across 10 frames.
+**バンドルされたフィクスチャ**：`crates/edgesentry-scenario/fixtures/simple_crossing.csv` ── 10フレームにわたって正面から接近する2つの Forklift エンティティ。
 
 ## eds scenario simulate
 
-Read a scenario CSV and stream entity frames over UDP to a running `eds ingest stream` process.
+シナリオ CSV を読み込み、実行中の `eds ingest stream` プロセスにエンティティフレームを UDP 経由でストリームします。
 
 ```
 eds scenario simulate --source <FILE> --target <udp://HOST:PORT>
                       [--fps N]
 ```
 
-| Flag | Default | Description |
+| フラグ | デフォルト | 説明 |
 |------|---------|-------------|
-| `--source` | | Input CSV file (produced by `eds scenario generate` or hand-written) |
-| `--target` | | UDP target address, e.g. `udp://127.0.0.1:9000` |
-| `--fps` | 10 | Frames per second -- controls sleep between frame sends |
+| `--source` | | 入力 CSV ファイル（`eds scenario generate` で生成または手書き） |
+| `--target` | | UDP ターゲットアドレス（例：`udp://127.0.0.1:9000`） |
+| `--fps` | 10 | 1秒あたりのフレーム数 ── フレーム送信間のスリープを制御 |
 
-Each frame is sent as a single UDP datagram containing a JSON object:
+各フレームは JSON オブジェクトを含む単一の UDP データグラムとして送信されます：
 
 ```json
 {"entities": [
@@ -62,22 +60,22 @@ Each frame is sent as a single UDP datagram containing a JSON object:
 ]}
 ```
 
-This matches the `UnityPacket` format expected by `eds ingest stream`.
+これは `eds ingest stream` が期待する `UnityPacket` 形式と一致します。
 
-## End-to-end example
+## エンドツーエンドの例
 
 ```bash
-# Terminal 1 -- start ingest stream listener
+# ターミナル 1 ── 取込ストリームリスナーを開始
 eds ingest stream \
   --source udp://127.0.0.1:9000 \
   --profile crates/edgesentry-profile/fixtures/demo \
   --out /tmp/live.jsonl
 
-# Terminal 2 -- generate and stream a scenario
+# ターミナル 2 ── シナリオを生成してストリーム
 eds scenario generate --frames 20 --entities 3 --out /tmp/scenario.csv
 eds scenario simulate --source /tmp/scenario.csv --target udp://127.0.0.1:9000 --fps 10
 
-# Evaluate the captured frames
+# キャプチャされたフレームを評価
 eds evaluate run \
   --input /tmp/live.jsonl \
   --profile crates/edgesentry-profile/fixtures/demo \

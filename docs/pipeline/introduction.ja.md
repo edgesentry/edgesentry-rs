@@ -1,41 +1,41 @@
-# Introduction
+# はじめに
 
-EdgeSentry is a Rust toolkit for building sensor-to-seal compliance pipelines. Any domain that needs to capture real-world data, check it against regulations, explain deviations, and produce a tamper-evident record fits the same seven-step pattern.
+EdgeSentry は、センサーから封印までのコンプライアンスパイプラインを構築するための Rust ツールキットです。現実のデータを取得し、規制と照合し、逸脱を説明し、改ざん検知可能な記録を生成する必要があるあらゆるドメインに、同じ7ステップのパターンが適用されます。
 
-## The seven steps
+## 7つのステップ
 
-| Step | Role | CLI | Crate |
+| ステップ | 役割 | CLI | クレート |
 |------|------|-----|-------|
-| Step 1 - Ingest | Capture structured sensor data or parse unstructured documents | `eds ingest` / `eds parse` | `edgesentry-ingest` / `edgesentry-parse` |
-| Step 2 - Compute | Apply physics and geometry operations to raw measurements | `eds compute` | `edgesentry-compute` |
-| Step 3 - Evaluate | Compare measurements against regulations or design specs | `eds evaluate` | `edgesentry-evaluate` |
-| Step 4 - Assess | Correlate evaluation results across time to find patterns | `eds assess` | `edgesentry-assess` |
-| Step 5 - Explain | Translate assessments into grounded plain-language text | `eds explain` | `edgesentry-explain` |
-| Step 6 - Document | Format results into a report or official document | `eds report` / `eds document` | `edgesentry-report` / `edgesentry-document` |
-| Step 7 - Seal | Sign each record; chain records for tamper detection | `eds audit` | `edgesentry-audit` |
+| ステップ 1 - 取込 | 構造化センサーデータの取得または非構造化ドキュメントの解析 | `eds ingest` / `eds parse` | `edgesentry-ingest` / `edgesentry-parse` |
+| ステップ 2 - 計算 | 生の計測値に対する物理・ジオメトリ演算の適用 | `eds compute` | `edgesentry-compute` |
+| ステップ 3 - 評価 | 規制または設計仕様に対する計測値の比較 | `eds evaluate` | `edgesentry-evaluate` |
+| ステップ 4 - 分析 | 時系列での評価結果の相関分析によるパターン発見 | `eds assess` | `edgesentry-assess` |
+| ステップ 5 - 説明 | 分析結果を根拠に基づいた平易なテキストに変換 | `eds explain` | `edgesentry-explain` |
+| ステップ 6 - 文書化 | 結果をレポートまたは公式ドキュメントに整形 | `eds report` / `eds document` | `edgesentry-report` / `edgesentry-document` |
+| ステップ 7 - 封印 | 各レコードへの署名と改ざん検知のためのチェーン化 | `eds audit` | `edgesentry-audit` |
 
-## Design principles
+## 設計原則
 
-**Pipeline stages are independent processes.** Each `eds` command reads JSONL from a file and writes JSONL to a file. No shared in-memory state between stages. This makes every stage independently testable and the entire pipeline reproducible from any point.
+**パイプラインの各ステージは独立したプロセスです。** 各 `eds` コマンドはファイルから JSONL を読み込み、ファイルに JSONL を書き出します。ステージ間での共有インメモリ状態はありません。これにより、各ステージを独立してテストでき、パイプライン全体をどの時点からでも再現できます。
 
-**evaluate vs assess.** Evaluate is fact-checking — does this single measurement breach a rule? Assess is insight — what pattern emerges across many evaluations? Single vs multiple events is not the axis; fact vs interpretation is.
+**評価（evaluate）vs 分析（assess）。** 評価はファクトチェック ── この単一の計測値がルールに違反しているか？ 分析はインサイト ── 多くの評価を横断してどんなパターンが浮かび上がるか？ 軸は単一イベントか複数イベントかではなく、事実か解釈かです。
 
-**The engine is domain-agnostic.** The same seven crates handle warehouse safety monitoring, maritime document compliance, and 3D point-cloud deviation analysis. The domain lives in profiles and templates, not the engine.
+**エンジンはドメイン非依存です。** 同じ7つのクレートが、倉庫の安全監視、海事ドキュメントコンプライアンス、3Dポイントクラウドの偏差分析を処理します。ドメインはプロファイルとテンプレートに存在し、エンジンには存在しません。
 
-## Inter-stage data format
+## ステージ間データ形式
 
-Every stage writes a headed JSONL file — line 1 is a schema header, subsequent lines are records:
+各ステージはヘッダ付き JSONL ファイルを書き出します ── 1行目はスキーマヘッダ、以降の行がレコードです。
 
 ```json
 {"eds_schema":"eds.entity-frame","version":"0.1"}
 {"timestamp_ms":1000,"entity_id":"FL-01","entity_type":"forklift","x":25.0,"y":8.0,"vx":-1.0,"vy":0.0}
 ```
 
-The header is validated by `JsonlReader` before any records are read, catching schema mismatches early.
+ヘッダはレコードが読み込まれる前に `JsonlReader` によって検証され、スキーマの不一致を早期に検出します。
 
-## Delivered scope (Phases 1–3)
+## 提供スコープ（フェーズ 1〜3）
 
-| Phase | PR | Crates added |
+| フェーズ | PR | 追加クレート |
 |-------|----|--------------|
 | 1 | [#270](https://github.com/edgesentry/edgesentry-rs/pull/270) | edgesentry-ingest, edgesentry-compute, edgesentry-evaluate, edgesentry-profile |
 | 2 | [#288](https://github.com/edgesentry/edgesentry-rs/pull/288) | edgesentry-store, edgesentry-assess, edgesentry-explain + UDP ingest |

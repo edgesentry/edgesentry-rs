@@ -1,20 +1,19 @@
-# Step 4 - Assess
+# ステップ 4 - 分析
 
-Correlate RiskEvents across time to surface patterns: repeated rules, entity pairs involved in
-multiple events, and rising or falling risk trends.
+RiskEvent を時系列で相関分析し、パターンを浮かび上がらせます：繰り返しルール、複数のイベントに関与するエンティティペア、および上昇または下降のリスクトレンド。
 
 ```
 eds assess run --input <FILE> --out <FILE> [--history <FILE>...] [--window-sec <N>]
 ```
 
-| Flag | Description |
+| フラグ | 説明 |
 |------|-------------|
-| `--input` | Input RiskEvent JSONL file (current window) |
-| `--out` | Output Assessment JSONL file |
-| `--history` | Additional RiskEvent JSONL files to merge with input (repeatable) |
-| `--window-sec` | Restrict analysis to events within this many seconds of the newest event |
+| `--input` | 入力 RiskEvent JSONL ファイル（現在のウィンドウ） |
+| `--out` | 出力 Assessment JSONL ファイル |
+| `--history` | 入力とマージする追加の RiskEvent JSONL ファイル（繰り返し可能） |
+| `--window-sec` | 最新イベントからこの秒数以内のイベントに分析を制限 |
 
-## Assessment schema
+## Assessment スキーマ
 
 ```json
 {"eds_schema":"eds.assessment","version":"0.1"}
@@ -32,27 +31,26 @@ eds assess run --input <FILE> --out <FILE> [--history <FILE>...] [--window-sec <
 }
 ```
 
-| Field | Description |
+| フィールド | 説明 |
 |-------|-------------|
-| `repeated_rules` | Rules that fired more than once in the window, sorted by count descending |
-| `correlated_entities` | Entity sets involved in more than one event, sorted by event_count descending |
-| `trend` | `Stable`, `Rising`, or `Falling` -- see algorithm below |
-| `event_count` | Total events analysed after window filtering |
+| `repeated_rules` | ウィンドウ内で複数回発火したルール、件数の降順でソート |
+| `correlated_entities` | 複数のイベントに関与したエンティティセット、event_count の降順でソート |
+| `trend` | `Stable`、`Rising`、または `Falling` ── 以下のアルゴリズムを参照 |
+| `event_count` | ウィンドウフィルタリング後に分析されたイベントの合計数 |
 
-## Trend algorithm
+## トレンドアルゴリズム
 
-Events in the window are split into two halves by timestamp. The event rate (events per
-millisecond) of each half is compared:
+ウィンドウ内のイベントはタイムスタンプで前半と後半に分割されます。各半分のイベントレート（ミリ秒あたりのイベント数）が比較されます：
 
-- Rate ratio > 1.2 -- **Rising**
-- Rate ratio < 0.8 -- **Falling**
-- Otherwise -- **Stable**
+- レート比 > 1.2 -- **Rising**
+- レート比 < 0.8 -- **Falling**
+- それ以外 -- **Stable**
 
-Fewer than 4 events always produces `Stable`.
+4イベント未満の場合は常に `Stable` になります。
 
-## Using history files
+## 履歴ファイルの使用
 
-To trend across multiple replay sessions or log files:
+複数の再生セッションまたはログファイルにわたってトレンドを追跡するには：
 
 ```bash
 eds assess run \
@@ -62,5 +60,4 @@ eds assess run \
   --out /tmp/assessment.jsonl
 ```
 
-All files are merged and sorted by timestamp before analysis. `--window-sec` is applied
-after merging.
+すべてのファイルは分析前にタイムスタンプでマージおよびソートされます。`--window-sec` はマージ後に適用されます。

@@ -1,27 +1,27 @@
-# Quickstart - Safety Monitoring
+# クイックスタート - 安全監視
 
-End-to-end walkthrough of the safety monitoring pipeline using the bundled forklift approach fixture.
-The full automated version of this walkthrough is `scripts/local_demo.sh`.
+付属のフォークリフト接近フィクスチャを使用した安全監視パイプラインのエンドツーエンドウォークスルーです。
+このウォークスルーの完全な自動化バージョンは `scripts/local_demo.sh` です。
 
-## Prerequisites
+## 前提条件
 
 ```bash
 cargo build -p eds
 ```
 
-For Step 5 (Explain), an OpenAI-compatible LLM server must be running on `http://localhost:8080`.
-All other steps work offline.
+ステップ 5（説明）では、`http://localhost:8080` で OpenAI 互換の LLM サーバーが実行されている必要があります。
+その他のすべてのステップはオフラインで動作します。
 
-## Fixture
+## フィクスチャ
 
-The demo uses a 10-frame scenario: forklift FL-01 approaches stationary worker W-03, and
-forklift FL-02 enters an exclusion zone. The CSV is at:
+デモは10フレームのシナリオを使用します：フォークリフト FL-01 が静止した作業者 W-03 に接近し、
+フォークリフト FL-02 が排除ゾーンに進入します。CSV ファイルの場所：
 
 ```
 crates/edgesentry-ingest/fixtures/forklift_approach.csv
 ```
 
-Profile and knowledge base:
+プロファイルとナレッジベース：
 
 ```
 crates/edgesentry-profile/fixtures/demo/
@@ -32,7 +32,7 @@ crates/edgesentry-profile/fixtures/demo/
     EXCLUSION_ZONE_BREACH.txt
 ```
 
-## Step 1 - Ingest
+## ステップ 1 - 取込
 
 ```bash
 eds ingest replay \
@@ -41,24 +41,23 @@ eds ingest replay \
   --out /tmp/frames.jsonl
 ```
 
-Expected output:
+期待される出力：
 
 ```
 ingest replay: wrote 10 frame(s) to /tmp/frames.jsonl
 ```
 
-`frames.jsonl` schema: `eds.entity-frame`. Each record is one timestamp snapshot of all entities.
+`frames.jsonl` スキーマ：`eds.entity-frame`。各レコードはすべてのエンティティの1タイムスタンプスナップショットです。
 
-## Step 2 - Compute
+## ステップ 2 - 計算
 
 ```bash
 eds compute run --input /tmp/frames.jsonl --out /tmp/measurements.jsonl
 ```
 
-Outputs pairwise distances, relative velocities, TTC values, and zone memberships for every
-entity pair in every frame.
+すべてのフレーム内のすべてのエンティティペアについて、ペアワイズ距離、相対速度、TTC 値、およびゾーンメンバーシップを出力します。
 
-## Step 3 - Evaluate
+## ステップ 3 - 評価
 
 ```bash
 eds evaluate run \
@@ -67,39 +66,38 @@ eds evaluate run \
   --out /tmp/events.jsonl
 ```
 
-Expected output:
+期待される出力：
 
 ```
 evaluate run: 7 event(s) from 10 frame(s) written to /tmp/events.jsonl
 ```
 
-The 7 events are: PROXIMITY_ALERT x4, TTC_ALERT x2, EXCLUSION_ZONE_BREACH x1.
+7つのイベントは：PROXIMITY_ALERT x4、TTC_ALERT x2、EXCLUSION_ZONE_BREACH x1 です。
 
-Sample `events.jsonl` record:
+`events.jsonl` レコードのサンプル：
 
 ```json
 {"rule_id":"PROXIMITY_ALERT","severity":"HIGH","regulation":"Site Safety Procedure §3.1",
  "entity_ids":["FL-01","W-03"],"measured_value":3.0,"threshold":5.0,"timestamp_ms":6000}
 ```
 
-## Step 4 - Assess
+## ステップ 4 - 分析
 
 ```bash
 eds assess run --input /tmp/events.jsonl --out /tmp/assessment.jsonl
 ```
 
-Expected output:
+期待される出力：
 
 ```
 assess run: 7 event(s) analysed, 2 repeated rule(s), 1 correlated entity pair(s), trend=Rising
 ```
 
-`assessment.jsonl` contains repeated rules, correlated entity pairs, and risk trend
-(Stable / Rising / Falling).
+`assessment.jsonl` には繰り返しルール、相関エンティティペア、およびリスクトレンド（Stable / Rising / Falling）が含まれます。
 
-## Step 5 - Explain (optional)
+## ステップ 5 - 説明（オプション）
 
-Requires a running llama-server or Ollama (OpenAI-compatible) on port 8080.
+ポート 8080 で実行中の llama-server または Ollama（OpenAI 互換）が必要です。
 
 ```bash
 eds explain run \
@@ -111,11 +109,9 @@ eds explain run \
   --out /tmp/explanations.jsonl
 ```
 
-`--pick severity` selects the two highest-severity events. Each explanation is checked against
-the KB snippet for the rule; `grounded: true` means the LLM cited a section reference present
-in the KB.
+`--pick severity` は最も重大度の高い2つのイベントを選択します。各説明はそのルールの KB スニペットと照合されます。`grounded: true` は LLM が KB 内に存在するセクション参照を引用したことを意味します。
 
-## Step 6 - Report
+## ステップ 6 - レポート
 
 ```bash
 eds report generate \
@@ -126,13 +122,13 @@ eds report generate \
   --out /tmp/report.md
 ```
 
-`report.md` is a Markdown file with:
-- Summary table (events by severity)
-- Risk Events by Rule table (rule, count, severity, regulation citation)
-- Entity Correlations section
-- Trend Analysis section
+`report.md` は以下を含む Markdown ファイルです：
+- サマリーテーブル（重大度別イベント数）
+- ルール別リスクイベントテーブル（ルール、件数、重大度、規制引用）
+- エンティティ相関セクション
+- トレンド分析セクション
 
-## Step 7 - Seal
+## ステップ 7 - 封印
 
 ```bash
 eds audit demo-lift-inspection \
@@ -143,7 +139,7 @@ eds audit demo-lift-inspection \
 eds audit verify-chain --records-file /tmp/chain.json
 ```
 
-Expected verify output:
+期待される検証出力：
 
 ```
 Chain verification passed: N records, all hashes and signatures valid.

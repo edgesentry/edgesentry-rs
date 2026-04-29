@@ -1,72 +1,71 @@
-# CLI Reference
+# CLI リファレンス
 
-All `eds` subcommands delivered in Phases 1-3. Run `eds <command> --help` for the full
-flag list directly from the binary.
+フェーズ 1-3 で提供されたすべての `eds` サブコマンドです。バイナリから直接フラグの全一覧を確認するには `eds <command> --help` を実行してください。
 
 ## eds ingest
 
-| Subcommand | Required flags | Optional flags |
+| サブコマンド | 必須フラグ | オプションフラグ |
 |---|---|---|
 | `replay` | `--source FILE` `--out FILE` | `--profile DIR` |
 | `stream` | `--source udp://HOST:PORT` `--profile DIR` `--out FILE` | |
 
 ## eds parse
 
-| Subcommand | Required flags | Optional flags |
+| サブコマンド | 必須フラグ | オプションフラグ |
 |---|---|---|
 | `maritime` | `--source FILE` `--out FILE` | |
 | `document` | `--source FILE` `--out FILE` | |
 | `form` | `--source FILE` `--out FILE` | |
-| `image` | `--source FILE` `--out FILE` | (stub -- requires `onnx` feature) |
+| `image` | `--source FILE` `--out FILE` | （スタブ ── `onnx` フィーチャーが必要） |
 
 ## eds scenario
 
-| Subcommand | Required flags | Optional flags |
+| サブコマンド | 必須フラグ | オプションフラグ |
 |---|---|---|
 | `generate` | `--out FILE` | `--entities N` `--frames N` `--seed N` `--scenario-type entity` |
 | `simulate` | `--source FILE` `--target udp://HOST:PORT` | `--fps N` |
 
 ## eds compute
 
-| Subcommand | Required flags | Optional flags |
+| サブコマンド | 必須フラグ | オプションフラグ |
 |---|---|---|
 | `run` | `--input FILE` `--out FILE` | |
 
 ## eds evaluate
 
-| Subcommand | Required flags | Optional flags |
+| サブコマンド | 必須フラグ | オプションフラグ |
 |---|---|---|
 | `run` | `--input FILE` `--profile DIR` `--out FILE` | |
 
 ## eds profile
 
-| Subcommand | Required flags | Optional flags |
+| サブコマンド | 必須フラグ | オプションフラグ |
 |---|---|---|
 | `validate` | `--profile DIR` | |
 | `list` | `--profile DIR` | |
 
 ## eds assess
 
-| Subcommand | Required flags | Optional flags |
+| サブコマンド | 必須フラグ | オプションフラグ |
 |---|---|---|
-| `run` | `--input FILE` `--out FILE` | `--history FILE` (repeatable) `--window-sec N` |
+| `run` | `--input FILE` `--out FILE` | `--history FILE`（繰り返し可能）`--window-sec N` |
 
 ## eds explain
 
-| Subcommand | Required flags | Optional flags |
+| サブコマンド | 必須フラグ | オプションフラグ |
 |---|---|---|
 | `run` | `--input FILE` `--n N` `--out FILE` | `--pick severity\|time\|random` `--llm-url URL` `--model NAME` `--profile DIR` |
 
 ## eds report
 
-| Subcommand | Required flags | Optional flags |
+| サブコマンド | 必須フラグ | オプションフラグ |
 |---|---|---|
 | `generate` | `--events FILE` `--assessment FILE` `--out FILE` | `--site-name STR` `--period STR` `--chain-valid` `--format md\|pdf` |
 | `validate` | `--events FILE` `--assessment FILE` | |
 
 ## eds document
 
-| Subcommand | Required flags | Optional flags |
+| サブコマンド | 必須フラグ | オプションフラグ |
 |---|---|---|
 | `fill` | `--input FILE` `--template NAME` `--out FILE` | `--llm-url URL` `--confidence-threshold FLOAT` |
 | `check` | `--input FILE` `--profile DIR` `--out FILE` | |
@@ -74,7 +73,7 @@ flag list directly from the binary.
 
 ## eds audit
 
-| Subcommand | Required flags | Optional flags |
+| サブコマンド | 必須フラグ | オプションフラグ |
 |---|---|---|
 | `keygen` | | `--out FILE` |
 | `inspect-key` | `--private-key-hex HEX` | `--out FILE` |

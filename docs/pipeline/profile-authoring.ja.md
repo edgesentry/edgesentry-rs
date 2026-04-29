@@ -1,20 +1,19 @@
-# Profile Authoring
+# プロファイル作成
 
-A profile is a directory that tells the pipeline which rules to enforce and provides the
-regulatory text used to ground LLM explanations.
+プロファイルは、パイプラインに適用するルールを指示し、LLM の説明を根拠付けるために使用される規制テキストを提供するディレクトリです。
 
-## Directory layout
+## ディレクトリ構造
 
 ```
 profiles/my-profile/
-  rules.json        -- rule definitions (required)
+  rules.json        -- ルール定義（必須）
   kb/
-    RULE_ID.txt     -- one KB snippet per rule (required for eds explain run --profile)
+    RULE_ID.txt     -- ルールごとに1つの KB スニペット（eds explain run --profile に必須）
 ```
 
-## rules.json format
+## rules.json 形式
 
-A JSON array of rule objects. Three condition types are supported:
+ルールオブジェクトの JSON 配列です。3種類の条件タイプがサポートされています：
 
 ```json
 [
@@ -40,21 +39,19 @@ A JSON array of rule objects. Three condition types are supported:
 ]
 ```
 
-| Field | Required | Description |
+| フィールド | 必須 | 説明 |
 |-------|----------|-------------|
-| `rule_id` | yes | Unique identifier; must match the KB filename if grounding is used |
-| `condition` | yes | `distance < N`, `ttc < N`, or `zone_member` |
-| `severity` | yes | `LOW`, `MEDIUM`, `HIGH`, or `CRITICAL` |
-| `regulation` | yes | Exact regulation clause cited in the RiskEvent |
-| `zone` | for `zone_member` only | Polygon vertices as `[x, y]` pairs (metres, local coordinate system) |
+| `rule_id` | はい | 一意の識別子；根拠付けを使用する場合は KB ファイル名と一致する必要がある |
+| `condition` | はい | `distance < N`、`ttc < N`、または `zone_member` |
+| `severity` | はい | `LOW`、`MEDIUM`、`HIGH`、または `CRITICAL` |
+| `regulation` | はい | RiskEvent に引用される正確な規制条項 |
+| `zone` | `zone_member` のみ | `[x, y]` ペアとしての多角形の頂点（メートル、ローカル座標系） |
 
-## KB snippets
+## KB スニペット
 
-For each rule, create a plain-text file at `kb/<RULE_ID>.txt` containing the verbatim
-regulatory text. The LLM uses this as the authoritative reference when generating explanations.
-Grounding checks that the LLM cites a section reference (e.g. `§3.1`) present in the snippet.
+各ルールについて、`kb/<RULE_ID>.txt` に逐語的な規制テキストを含むプレーンテキストファイルを作成してください。LLM は説明を生成する際にこれを権威ある参照として使用します。根拠付けは LLM がスニペット内に存在するセクション参照（例：`§3.1`）を引用していることを確認します。
 
-Example (`kb/TTC_ALERT.txt`):
+例（`kb/TTC_ALERT.txt`）：
 
 ```
 Site Safety Procedure §3.2 -- Time-to-Collision Emergency Stop
@@ -68,10 +65,10 @@ TTC is computed as: TTC = current_distance / closing_speed
 ...
 ```
 
-## Document compliance rules format
+## ドキュメントコンプライアンスのルール形式
 
-For the document compliance pipeline (`eds document check`), `rules.json` uses a different schema --
-it operates on document fields rather than physics measurements:
+ドキュメントコンプライアンスパイプライン（`eds document check`）では、`rules.json` は異なるスキーマを使用します ──
+物理計測値ではなくドキュメントフィールドで動作します：
 
 ```json
 [
@@ -92,26 +89,26 @@ it operates on document fields rather than physics measurements:
 ]
 ```
 
-| Check type | Fires when |
+| チェックタイプ | 発火条件 |
 |---|---|
-| `not_expired` | Field value is a date (YYYY-MM-DD) that is before the current demo date |
-| `not_null` | Field is absent, empty, or flagged with confidence 0.0 |
-| `not_true` | Boolean field value is `"true"` |
+| `not_expired` | フィールド値が現在のデモ日付より前の日付（YYYY-MM-DD）である |
+| `not_null` | フィールドが存在しない、空、または信頼度 0.0 でフラグが立っている |
+| `not_true` | ブール型フィールドの値が `"true"` である |
 
-## Validation
+## 検証
 
 ```bash
 eds profile validate --profile profiles/my-profile
 eds profile list     --profile profiles/my-profile
 ```
 
-`validate` checks that `rules.json` parses correctly and all condition strings are valid.
-`list` prints the rule IDs defined in the profile.
+`validate` は `rules.json` が正しく解析され、すべての条件文字列が有効であることを確認します。
+`list` はプロファイルで定義されたルール ID を表示します。
 
-## Bundled profiles
+## バンドルされたプロファイル
 
-| Profile path | Domain | Rules |
+| プロファイルパス | ドメイン | ルール |
 |---|---|---|
-| `crates/edgesentry-profile/fixtures/demo` | Warehouse safety | PROXIMITY_ALERT, TTC_ALERT, EXCLUSION_ZONE_BREACH |
-| `crates/edgesentry-profile/fixtures/sg-port-compliance` | Singapore port compliance | BWM_D2_EXPIRED, QUARANTINE_PRENOTIFICATION, DG_RESTRICTION, CREW_DOC_VALIDITY |
-| `crates/edgesentry-profile/fixtures/sg-maritime-security` | Maritime security | RESTRICTED_ZONE_APPROACH, AIS_TRACK_GAP |
+| `crates/edgesentry-profile/fixtures/demo` | 倉庫安全 | PROXIMITY_ALERT, TTC_ALERT, EXCLUSION_ZONE_BREACH |
+| `crates/edgesentry-profile/fixtures/sg-port-compliance` | シンガポール港コンプライアンス | BWM_D2_EXPIRED, QUARANTINE_PRENOTIFICATION, DG_RESTRICTION, CREW_DOC_VALIDITY |
+| `crates/edgesentry-profile/fixtures/sg-maritime-security` | 海事セキュリティ | RESTRICTED_ZONE_APPROACH, AIS_TRACK_GAP |

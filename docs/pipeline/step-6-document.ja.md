@@ -1,11 +1,10 @@
-# Step 6 - Document
+# ステップ 6 - 文書化
 
-Format pipeline results into human-readable outputs: a Markdown safety report for the
-safety monitoring pipeline, or a filled port-entry HTML document for the document compliance pipeline.
+パイプラインの結果を人間が読める形式に変換します：安全監視パイプライン用の Markdown 安全レポート、またはドキュメントコンプライアンスパイプライン用の入力済みポート入港 HTML ドキュメント。
 
 ---
 
-## Safety monitoring report
+## 安全監視レポート
 
 ### eds report generate
 
@@ -15,24 +14,24 @@ eds report generate --events <FILE> --assessment <FILE> --out <FILE>
                     [--format md|pdf]
 ```
 
-| Flag | Default | Description |
+| フラグ | デフォルト | 説明 |
 |------|---------|-------------|
-| `--events` | | RiskEvent JSONL file (from `eds evaluate run`) |
-| `--assessment` | | Assessment JSONL file (from `eds assess run`) |
-| `--site-name` | | Optional site name included in the report header |
-| `--period` | | Optional reporting period string, e.g. `"April 2026"` |
-| `--chain-valid` | | If set, adds a "Chain integrity: PASS" line to the report |
-| `--format` | `md` | Output format: `md` (Markdown) or `pdf` (A4 PDF via printpdf) |
-| `--out` | | Output file path |
+| `--events` | | RiskEvent JSONL ファイル（`eds evaluate run` から） |
+| `--assessment` | | Assessment JSONL ファイル（`eds assess run` から） |
+| `--site-name` | | レポートヘッダに含まれるオプションのサイト名 |
+| `--period` | | オプションのレポート期間文字列（例：`"April 2026"`） |
+| `--chain-valid` | | 設定すると、レポートに「Chain integrity: PASS」行を追加 |
+| `--format` | `md` | 出力形式：`md`（Markdown）または `pdf`（printpdf による A4 PDF） |
+| `--out` | | 出力ファイルパス |
 
-The report contains:
+レポートには以下が含まれます：
 
-- Summary table: event count broken down by severity
-- Risk Events by Rule table: rule, count, severity, exact regulation citation
-- Entity Correlations section (if any entity pair appeared in multiple events)
-- Trend Analysis section: Stable / Rising / Falling with a brief interpretation
+- サマリーテーブル：重大度別のイベント数
+- ルール別リスクイベントテーブル：ルール、件数、重大度、正確な規制引用
+- エンティティ相関セクション（エンティティペアが複数のイベントに現れた場合）
+- トレンド分析セクション：Stable / Rising / Falling と簡単な解釈
 
-**PDF output**: When `--format pdf` is specified, the output is a binary A4 PDF (Helvetica font, printpdf 0.7). The file must have a `.pdf` extension. Open in any PDF viewer or print directly.
+**PDF 出力**：`--format pdf` が指定された場合、出力はバイナリ A4 PDF（Helvetica フォント、printpdf 0.7）です。ファイルには `.pdf` 拡張子が必要です。任意の PDF ビューアで開くか、直接印刷できます。
 
 ### eds report validate
 
@@ -40,31 +39,30 @@ The report contains:
 eds report validate --events <FILE> --assessment <FILE>
 ```
 
-Exits 0 if both files are non-empty and parseable. Exits non-zero with an error message
-otherwise. Use as a pre-flight check before generating a report.
+両方のファイルが空でなく解析可能であれば 0 で終了します。そうでなければ、エラーメッセージとともに非ゼロで終了します。レポート生成前の事前チェックとして使用します。
 
 ---
 
-## Document compliance - fill and render
+## ドキュメントコンプライアンス - 入力とレンダリング
 
 ### eds document fill
 
-Map DocumentEntity fields to a document template and flag any missing or low-confidence fields.
+DocumentEntity フィールドをドキュメントテンプレートにマッピングし、欠損または低信頼度のフィールドにフラグを立てます。
 
 ```
 eds document fill --input <FILE> --template <NAME> --out <FILE>
                   [--llm-url <URL>] [--confidence-threshold <FLOAT>]
 ```
 
-| Flag | Default | Description |
+| フラグ | デフォルト | 説明 |
 |------|---------|-------------|
-| `--input` | | DocumentEntity JSONL file (from `eds parse maritime`) |
-| `--template` | | Template name: `fal-form-1`, `fal-form-5`, or `sg-port-entry` |
-| `--llm-url` | | LLM server URL for AI-derived fields (optional) |
-| `--confidence-threshold` | 0.5 | Fields below this confidence are flagged |
-| `--out` | | Output FilledDocument JSONL file |
+| `--input` | | DocumentEntity JSONL ファイル（`eds parse maritime` から） |
+| `--template` | | テンプレート名：`fal-form-1`、`fal-form-5`、または `sg-port-entry` |
+| `--llm-url` | | AI 導出フィールド用の LLM サーバー URL（オプション） |
+| `--confidence-threshold` | 0.5 | この信頼度を下回るフィールドにフラグを立てる |
+| `--out` | | 出力 FilledDocument JSONL ファイル |
 
-Output schema (`eds.filled-document`):
+出力スキーマ（`eds.filled-document`）：
 
 ```json
 {"voyage_id":"V001","template":"fal-form-1","review_required":false,
@@ -74,21 +72,19 @@ Output schema (`eds.filled-document`):
  }}
 ```
 
-`review_required: true` if any field is flagged. Export is blocked until all flagged fields
-are resolved by a human reviewer.
+いずれかのフィールドにフラグが立つと `review_required: true` になります。フラグが立ったすべてのフィールドが人間のレビュアーによって解決されるまでエクスポートはブロックされます。
 
 ### eds document check
 
-Check filled document fields against a compliance rule set.
+入力済みドキュメントフィールドをコンプライアンスルールセットと照合します。
 
 ```
 eds document check --input <FILE> --profile <DIR> --out <FILE>
 ```
 
-Loads `<profile>/rules.json` (document compliance format) and emits a `ComplianceAlert` for
-each rule that fails.
+`<profile>/rules.json`（ドキュメントコンプライアンス形式）を読み込み、失敗した各ルールについて `ComplianceAlert` を出力します。
 
-Output schema (`eds.compliance-alert`):
+出力スキーマ（`eds.compliance-alert`）：
 
 ```json
 {"rule_id":"BWM_D2_EXPIRED","severity":"HIGH","field":"bwm_certificate_expiry",
@@ -97,22 +93,20 @@ Output schema (`eds.compliance-alert`):
  "voyage_id":"V002"}
 ```
 
-A `HIGH` severity alert blocks document export.
+`HIGH` 重大度のアラートはドキュメントのエクスポートをブロックします。
 
 ### eds document gen
 
-Render a filled document into HTML using an embedded template.
+組み込みテンプレートを使用して入力済みドキュメントを HTML にレンダリングします。
 
 ```
 eds document gen --input <FILE> --template <NAME> --out <FILE>
 ```
 
-| Template name | Form |
+| テンプレート名 | フォーム |
 |---|---|
-| `fal-form-1` | FAL Form 1 - General Declaration (IMO) |
-| `fal-form-5` | FAL Form 5 - Crew List (IMO) |
-| `sg-port-entry` | Singapore MPA Port+ package |
+| `fal-form-1` | FAL Form 1 - 一般申告書（IMO） |
+| `fal-form-5` | FAL Form 5 - 乗組員名簿（IMO） |
+| `sg-port-entry` | シンガポール MPA Port+ パッケージ |
 
-Templates are embedded in the `eds` binary. Each `{{FIELD_NAME}}` placeholder is replaced
-with the corresponding field value from the FilledDocument. The output is a self-contained
-HTML file that can be printed to PDF via a browser print dialog.
+テンプレートは `eds` バイナリに埋め込まれています。各 `{{FIELD_NAME}}` プレースホルダーは FilledDocument の対応するフィールド値で置き換えられます。出力はブラウザの印刷ダイアログから PDF に印刷できる自己完結型の HTML ファイルです。
