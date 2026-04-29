@@ -19,7 +19,7 @@
 !.env.example
 
 # mdBook build output
-docs/book/
+
 
 # Local docs preview site (scripts/preview_docs.sh)
 _site/
@@ -47,4 +47,5 @@ lift_inspection_records.json
 crates/edgesentry-bridge/examples/c_integration/c_integration_test
 
 _inputs/
-docs/pipeline/en/book/
+site/
+docs/book/
