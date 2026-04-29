@@ -1,0 +1,15 @@
+[package]
+name = "edgesentry-image-utils"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Shared image-processing utilities — ONNX and OpenCV behind feature flags"
+
+[features]
+default = []
+onnx = []
+opencv = []
+
+[dependencies]
+serde = { workspace = true }

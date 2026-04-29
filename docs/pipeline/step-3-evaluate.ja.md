@@ -1,18 +1,18 @@
-# Step 3 - Evaluate
+# ステップ 3 - 評価
 
-Compare measurements against the rules in a profile. Each rule breach produces a `RiskEvent`.
+プロファイル内のルールに対して計測値を比較します。各ルール違反は `RiskEvent` を生成します。
 
 ```
 eds evaluate run --input <FILE> --profile <DIR> --out <FILE>
 ```
 
-| Flag | Description |
+| フラグ | 説明 |
 |------|-------------|
-| `--input` | Input EntityFrame JSONL file |
-| `--profile` | Profile directory containing `rules.json` |
-| `--out` | Output RiskEvent JSONL file |
+| `--input` | 入力 EntityFrame JSONL ファイル |
+| `--profile` | `rules.json` を含むプロファイルディレクトリ |
+| `--out` | 出力 RiskEvent JSONL ファイル |
 
-## RiskEvent schema
+## RiskEvent スキーマ
 
 ```json
 {"eds_schema":"eds.risk-event","version":"0.1"}
@@ -27,36 +27,36 @@ eds evaluate run --input <FILE> --profile <DIR> --out <FILE>
 }
 ```
 
-| Field | Type | Description |
+| フィールド | 型 | 説明 |
 |-------|------|-------------|
-| `rule_id` | string | Identifier matching the rule in `rules.json` |
-| `severity` | enum | `LOW`, `MEDIUM`, `HIGH`, or `CRITICAL` |
-| `regulation` | string | Exact regulation clause from the profile |
-| `entity_ids` | string[] | Entities involved (two for proximity/TTC, one for zone) |
-| `measured_value` | float | The physics measurement that breached the threshold |
-| `threshold` | float | The threshold value from the rule |
-| `timestamp_ms` | integer | Frame timestamp |
+| `rule_id` | 文字列 | `rules.json` のルールに一致する識別子 |
+| `severity` | 列挙型 | `LOW`、`MEDIUM`、`HIGH`、または `CRITICAL` |
+| `regulation` | 文字列 | プロファイルからの正確な規制条項 |
+| `entity_ids` | 文字列[] | 関与するエンティティ（近接/TTC は2つ、ゾーンは1つ） |
+| `measured_value` | 浮動小数点 | 閾値を超えた物理計測値 |
+| `threshold` | 浮動小数点 | ルールからの閾値 |
+| `timestamp_ms` | 整数 | フレームのタイムスタンプ |
 
-## Rule condition types
+## ルール条件タイプ
 
-Three condition types are supported in `rules.json`:
+`rules.json` では3種類の条件タイプがサポートされています：
 
-| Condition syntax | Fires when |
+| 条件の構文 | 発火条件 |
 |---|---|
-| `distance < N` | Euclidean distance between any two entities drops below N metres |
-| `ttc < N` | Time-to-collision between any two approaching entities drops below N seconds |
-| `zone_member` | Any entity's position falls inside the polygon defined by the `zone` field |
+| `distance < N` | 任意の2つのエンティティ間のユークリッド距離が N メートルを下回る |
+| `ttc < N` | 接近中の任意の2つのエンティティ間の衝突時間が N 秒を下回る |
+| `zone_member` | 任意のエンティティの位置が `zone` フィールドで定義された多角形の内側に入る |
 
-See [Profile Authoring](profile-authoring.md) for the full `rules.json` format.
+完全な `rules.json` 形式については、[プロファイル作成](profile-authoring.ja.md)を参照してください。
 
-## Profile management
+## プロファイル管理
 
-Validate and inspect a profile without running the pipeline:
+パイプラインを実行せずにプロファイルを検証・検査する：
 
 ```bash
-# Check that rules.json is valid and KB files are present
+# rules.json が有効で KB ファイルが存在することを確認
 eds profile validate --profile crates/edgesentry-profile/fixtures/demo
 
-# List rule IDs defined in the profile
+# プロファイルで定義されたルール ID を一覧表示
 eds profile list --profile crates/edgesentry-profile/fixtures/demo
 ```

@@ -1,25 +1,30 @@
 #!/usr/bin/env bash
-# local_demo.sh — Phase 1 + 2 pipeline demo
+# local_demo.sh — Full pipeline demo (Phases 1-3)
 #
-# Walks through the full edgesentry-rs pipeline using the forklift approach
+# Walks through the complete edgesentry-rs pipeline using the forklift approach
 # fixture and the demo profile. No external services required.
 #
 # Usage:
 #   ./scripts/local_demo.sh              # interactive (pause between stages)
 #   ./scripts/local_demo.sh --no-pause   # CI / non-interactive
+#   ./scripts/local_demo.sh --skip-explain  # skip LLM stage
 #
 # Pipeline:
-#   ① eds ingest replay    CSV → EntityFrame JSONL
-#   ② eds compute run      EntityFrame → Measurement JSONL
-#   ③ eds evaluate run     EntityFrame + profile → RiskEvent JSONL
-#   ④ eds assess run       RiskEvent → Assessment JSONL
-#   ⑤ eds explain run      RiskEvent → Explanation JSONL  (requires LLM server)
-#   ⑥ eds audit sign       RiskEvent → AuditRecord JSONL
-#   ⑦ eds audit verify     chain integrity check
+#   Stage 1  eds ingest replay    CSV → EntityFrame JSONL
+#   Stage 2  eds compute run      EntityFrame → Measurement JSONL
+#   Stage 3  eds evaluate run     EntityFrame + profile → RiskEvent JSONL
+#   Stage 4  eds assess run       RiskEvent → Assessment JSONL
+#   Stage 5  eds explain run      RiskEvent → Explanation JSONL  (requires LLM server)
+#   Stage 6  eds report generate  Events + Assessment → Markdown report
+#   Stage 7  eds report generate  Events + Assessment → PDF report
+#   Stage 8  eds audit sign       RiskEvents → AuditRecord chain
+#   Stage 9  eds audit verify     chain integrity check
+#   Stage 10 eds scenario generate  synthetic CSV fixture
+#   Stage 11 eds parse document     JSON document → EntityFrame JSONL
 #
 # Prerequisites:
 #   cargo build (done automatically)
-#   For stage ⑤: a running llama-server on http://localhost:8080
+#   For stage 5: a running llama-server on http://localhost:8080
 #                Start with:  ./scripts/run_llama.sh   (if available)
 #                Skip with:   --skip-explain
 
@@ -55,8 +60,12 @@ MEASUREMENTS_JSONL="$OUT/measurements.jsonl"
 EVENTS_JSONL="$OUT/events.jsonl"
 ASSESSMENT_JSONL="$OUT/assessment.jsonl"
 EXPLANATIONS_JSONL="$OUT/explanations.jsonl"
+REPORT_MD="$OUT/report.md"
+REPORT_PDF="$OUT/report.pdf"
 AUDIT_JSONL="$OUT/audit.jsonl"
 CHAIN_STATE="$OUT/chain.state"
+SCENARIO_CSV="$OUT/scenario.csv"
+PARSED_JSONL="$OUT/parsed.jsonl"
 
 # ── Flags ────────────────────────────────────────────────────────────────────
 NO_PAUSE=false
@@ -229,8 +238,46 @@ else
   pause "Stage 5 complete"
 fi
 
-# ── Stage 6: Seal ────────────────────────────────────────────────────────────
-bold "━━ Stage 6 — Seal (RiskEvents → AuditRecord chain)"
+# ── Stage 6: Report (Markdown) ───────────────────────────────────────────────
+bold "━━ Stage 6 — Report (Events + Assessment → Markdown)"
+dim  "  Command: eds report generate --format md"
+dim  "  Output:  report.md"
+echo ""
+
+"$BIN" report generate \
+  --events "$EVENTS_JSONL" \
+  --assessment "$ASSESSMENT_JSONL" \
+  --site-name "Demo Warehouse A" \
+  --period "$(date '+%B %Y')" \
+  --out "$REPORT_MD"
+
+green "  ✓ Markdown report written"
+dim   "  Preview (first 5 lines):"
+head -5 "$REPORT_MD" | while IFS= read -r line; do dim "    $line"; done
+
+pause "Stage 6 complete"
+
+# ── Stage 7: Report (PDF) ─────────────────────────────────────────────────────
+bold "━━ Stage 7 — Report (Events + Assessment → PDF)"
+dim  "  Command: eds report generate --format pdf"
+dim  "  Output:  report.pdf"
+echo ""
+
+"$BIN" report generate \
+  --events "$EVENTS_JSONL" \
+  --assessment "$ASSESSMENT_JSONL" \
+  --site-name "Demo Warehouse A" \
+  --period "$(date '+%B %Y')" \
+  --format pdf \
+  --out "$REPORT_PDF"
+
+PDF_SIZE=$(wc -c < "$REPORT_PDF" | tr -d ' ')
+green "  ✓ PDF report written ($PDF_SIZE bytes)"
+
+pause "Stage 7 complete"
+
+# ── Stage 8: Seal ────────────────────────────────────────────────────────────
+bold "━━ Stage 8 — Seal (RiskEvents → AuditRecord chain)"
 dim  "  Command: eds audit sign-record (per-event, chained via prev_hash)"
 dim  "  Key:     demo Ed25519 key (all 0x01 bytes — not for production)"
 dim  "  Output:  audit.jsonl"
@@ -249,10 +296,10 @@ CHAIN_FILE="$OUT/chain.json"
 RECORD_COUNT=$(python3 -c "import json; print(len(json.load(open('$CHAIN_FILE'))))" 2>/dev/null || echo "?")
 green "  ✓ $RECORD_COUNT audit records sealed into chain"
 
-pause "Stage 6 complete"
+pause "Stage 8 complete"
 
-# ── Stage 7: Verify chain ────────────────────────────────────────────────────
-bold "━━ Stage 7 — Verify audit chain"
+# ── Stage 9: Verify chain ────────────────────────────────────────────────────
+bold "━━ Stage 9 — Verify audit chain"
 dim  "  Command: eds audit verify-chain"
 echo ""
 
@@ -265,7 +312,42 @@ else
   dim "  (no audit records to verify)"
 fi
 
-pause "Stage 7 complete"
+pause "Stage 9 complete"
+
+# ── Stage 10: Scenario generate ──────────────────────────────────────────────
+bold "━━ Stage 10 — Scenario generate (synthetic CSV fixture)"
+dim  "  Command: eds scenario generate"
+dim  "  Output:  scenario.csv"
+echo ""
+
+"$BIN" scenario generate \
+  --frames 10 \
+  --entities 2 \
+  --out "$SCENARIO_CSV"
+
+SCENARIO_ROWS=$(( $(wc -l < "$SCENARIO_CSV" | tr -d ' ') - 1 ))
+green "  ✓ $SCENARIO_ROWS entity rows written"
+dim   "  Header: $(head -1 "$SCENARIO_CSV")"
+
+pause "Stage 10 complete"
+
+# ── Stage 11: Parse document ──────────────────────────────────────────────────
+bold "━━ Stage 11 — Parse document (JSON → EntityFrame JSONL)"
+dim  "  Command: eds parse document"
+dim  "  Input:   sample_document.json"
+dim  "  Output:  parsed.jsonl"
+echo ""
+
+SAMPLE_DOC="$ROOT/crates/edgesentry-parse/fixtures/sample_document.json"
+"$BIN" parse document \
+  --source "$SAMPLE_DOC" \
+  --out "$PARSED_JSONL"
+
+PARSED_FRAMES=$(( $(wc -l < "$PARSED_JSONL" | tr -d ' ') - 1 ))
+green "  ✓ $PARSED_FRAMES EntityFrame(s) written"
+dim   "  Schema: $(head -1 "$PARSED_JSONL")"
+
+pause "Stage 11 complete"
 
 # ── Summary ──────────────────────────────────────────────────────────────────
 echo ""
@@ -274,11 +356,15 @@ bold "  Demo complete"
 bold "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 dim "  Pipeline:"
-dim "  ① ingest replay   → $FRAME_COUNT frames"
-dim "  ② compute run     → $MEAS_COUNT measurements"
-dim "  ③ evaluate run    → $EVENT_COUNT risk events"
-dim "  ④ assess run      → trend analysis"
-[[ "$SKIP_EXPLAIN" == "false" ]] && dim "  ⑤ explain run     → LLM explanations" || dim "  ⑤ explain run     → skipped"
-dim "  ⑥ audit sign      → sealed chain"
-dim "  ⑦ audit verify    → chain integrity"
+dim "  Stage 1   ingest replay   → $FRAME_COUNT frames"
+dim "  Stage 2   compute run     → $MEAS_COUNT measurements"
+dim "  Stage 3   evaluate run    → $EVENT_COUNT risk events"
+dim "  Stage 4   assess run      → trend analysis"
+[[ "$SKIP_EXPLAIN" == "false" ]] && dim "  Stage 5   explain run     → LLM explanations" || dim "  Stage 5   explain run     → skipped"
+dim "  Stage 6   report (md)     → Markdown report"
+dim "  Stage 7   report (pdf)    → PDF report"
+dim "  Stage 8   audit sign      → sealed chain"
+dim "  Stage 9   audit verify    → chain integrity"
+dim "  Stage 10  scenario gen    → $SCENARIO_ROWS synthetic entity rows"
+dim "  Stage 11  parse document  → $PARSED_FRAMES EntityFrame(s)"
 echo ""

@@ -1,15 +1,12 @@
-# Step 7 - Seal
+# ステップ 7 - 封印
 
-Sign each record and chain it to the previous one using BLAKE3 + Ed25519. A tampered record
-breaks the chain, which `eds audit verify-chain` detects immediately.
+BLAKE3 + Ed25519 を使用して各レコードに署名し、前のレコードにチェーン化します。改ざんされたレコードはチェーンを壊し、`eds audit verify-chain` が即座に検出します。
 
-The `edgesentry-audit` crate is the implementation; see its dedicated book for full detail
-on key management, deployment, and threat model. This page covers the CLI commands used
-in the Phase 1-3 pipeline demos.
+`edgesentry-audit` クレートが実装です。鍵管理、デプロイメント、脅威モデルの詳細については専用の本を参照してください。このページでは、フェーズ 1-3 パイプラインデモで使用される CLI コマンドを説明します。
 
-## Demo audit chain
+## デモ監査チェーン
 
-Generate a pre-built lift-inspection chain for demo purposes:
+デモ目的の事前構築されたリフト点検チェーンを生成します：
 
 ```
 eds audit demo-lift-inspection
@@ -21,43 +18,39 @@ eds audit demo-lift-inspection
   [--payloads-file <FILE>]
 ```
 
-| Flag | Default | Description |
+| フラグ | デフォルト | 説明 |
 |------|---------|-------------|
-| `--device-id` | `lift-01` | Device identifier embedded in each record |
-| `--private-key-hex` | `0101...01` | Ed25519 private key as 64 hex characters |
-| `--out-file` | `lift_inspection_records.json` | Output JSON array of AuditRecord |
-| `--start-timestamp-ms` | `1700000000000` | Timestamp of the first record |
-| `--payloads-file` | | Optional: write raw payloads as hex strings (for demo-ingest) |
+| `--device-id` | `lift-01` | 各レコードに埋め込まれるデバイス識別子 |
+| `--private-key-hex` | `0101...01` | 64 文字の16進数で表した Ed25519 秘密鍵 |
+| `--out-file` | `lift_inspection_records.json` | AuditRecord の JSON 配列の出力ファイル |
+| `--start-timestamp-ms` | `1700000000000` | 最初のレコードのタイムスタンプ |
+| `--payloads-file` | | オプション：生のペイロードを16進文字列として書き込む（demo-ingest 用） |
 
-The demo key (`0101...01` repeated 32 bytes) is for local testing only. Generate a real
-keypair with `eds audit keygen` before any production deployment.
+デモ鍵（`0101...01` 32バイト繰り返し）はローカルテスト専用です。本番デプロイメントの前に `eds audit keygen` で実際の鍵ペアを生成してください。
 
-## Verify a chain
+## チェーンの検証
 
 ```
 eds audit verify-chain --records-file <FILE>
 ```
 
-Reads the JSON array of AuditRecord, recomputes each BLAKE3 hash, verifies each Ed25519
-signature, and confirms that `prev_hash` in record N matches the hash of record N-1. Exits
-0 on success; exits 1 with a specific error message on any failure.
+AuditRecord の JSON 配列を読み込み、各 BLAKE3 ハッシュを再計算し、各 Ed25519 署名を検証し、レコード N の `prev_hash` がレコード N-1 のハッシュと一致することを確認します。成功時は 0 で終了し、失敗時は特定のエラーメッセージとともに 1 で終了します。
 
-## Key management
+## 鍵管理
 
 ```bash
-# Generate a new Ed25519 keypair
+# 新しい Ed25519 鍵ペアを生成
 eds audit keygen [--out <FILE>]
 
-# Derive public key from an existing private key
+# 既存の秘密鍵から公開鍵を導出
 eds audit inspect-key --private-key-hex <HEX> [--out <FILE>]
 ```
 
-Store private keys in a secrets manager or hardware security module for production use.
-The public key can be distributed freely -- it is only used for verification.
+本番環境では秘密鍵をシークレットマネージャーまたはハードウェアセキュリティモジュールに保存してください。公開鍵は自由に配布できます ── 検証にのみ使用されます。
 
-## AuditRecord structure
+## AuditRecord の構造
 
-Each record contains:
+各レコードには以下が含まれます：
 
 ```json
 {
@@ -70,5 +63,4 @@ Each record contains:
 }
 ```
 
-The chain starts with `prev_hash` all zeros for the first record. Any insertion, deletion,
-or modification of any field invalidates all signatures from that record onward.
+チェーンは最初のレコードの `prev_hash` がすべてゼロから始まります。任意のフィールドへの挿入、削除、または変更は、そのレコード以降のすべての署名を無効にします。

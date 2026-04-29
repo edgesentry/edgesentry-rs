@@ -2,8 +2,8 @@
 
 Real-time digital twin audit platform for infrastructure inspection.
 
-- **Repository:** [github.com/edgesentry/edgesentry-inspect](https://github.com/edgesentry/edgesentry-inspect)
-- **Documentation:** [edgesentry.github.io/edgesentry-inspect](https://edgesentry.github.io/edgesentry-inspect/)
+- **Repository:** [github.com/edgesentry/edgesentry-rs](https://github.com/edgesentry/edgesentry-rs)
+- **Documentation:** [edgesentry.github.io/edgesentry-rs/inspect/introduction/](https://edgesentry.github.io/edgesentry-rs/inspect/introduction/)
 
 ## What it does
 

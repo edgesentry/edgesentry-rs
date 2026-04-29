@@ -1,23 +1,23 @@
-# Quickstart - Document Compliance
+# クイックスタート - ドキュメントコンプライアンス
 
-End-to-end walkthrough of the document compliance pipeline using the bundled voyage fixtures.
-Three test cases are covered: TC1 (clean pass), TC2 (BWM certificate expired), TC3 (low confidence).
+付属の航海フィクスチャを使用したドキュメントコンプライアンスパイプラインのエンドツーエンドウォークスルーです。
+3つのテストケースがカバーされています：TC1（正常通過）、TC2（BWM 証明書期限切れ）、TC3（低信頼度）。
 
-## Prerequisites
+## 前提条件
 
 ```bash
 cargo build -p eds
 ```
 
-No LLM server required. All steps work offline.
+LLM サーバーは不要です。すべてのステップはオフラインで動作します。
 
-## Fixtures
+## フィクスチャ
 
 ```
 crates/edgesentry-document/fixtures/
-  voyage_V001_compliant.csv      -- TC1: clean vessel
-  voyage_V002_bwm_expired.csv    -- TC2: BWM D-2 certificate expired
-  voyage_V003_low_confidence.csv -- TC3: missing crew_count and cargo HS code
+  voyage_V001_compliant.csv      -- TC1: 正常な船舶
+  voyage_V002_bwm_expired.csv    -- TC2: BWM D-2 証明書の有効期限切れ
+  voyage_V003_low_confidence.csv -- TC3: crew_count と cargo HS コードが欠損
 
 crates/edgesentry-profile/fixtures/sg-port-compliance/
   rules.json                     -- BWM_D2_EXPIRED, QUARANTINE_PRENOTIFICATION,
@@ -29,39 +29,38 @@ crates/edgesentry-profile/fixtures/sg-port-compliance/
     CREW_DOC_VALIDITY.txt
 ```
 
-## TC1 - Compliant voyage
+## TC1 - コンプライアント航海
 
 ```bash
-# Step 1 - Ingest (parse maritime CSV)
+# ステップ 1 - 取込（海事 CSV の解析）
 eds parse maritime \
   --source crates/edgesentry-document/fixtures/voyage_V001_compliant.csv \
   --out /tmp/entity.jsonl
 
-# Step 3 - Evaluate (fill document fields)
+# ステップ 3 - 評価（ドキュメントフィールドの入力）
 eds document fill \
   --input /tmp/entity.jsonl \
   --template fal-form-1 \
   --out /tmp/filled.jsonl
-# review_required: false -- all fields confidence 0.95
+# review_required: false -- すべてのフィールドの信頼度 0.95
 
-# Step 3 cont. - Check compliance rules
+# ステップ 3 続き - コンプライアンスルールの確認
 eds document check \
   --input /tmp/filled.jsonl \
   --profile crates/edgesentry-profile/fixtures/sg-port-compliance \
   --out /tmp/alerts.jsonl
-# 0 compliance alerts
+# 0件のコンプライアンスアラート
 
-# Step 6 - Document (render HTML)
+# ステップ 6 - 文書化（HTML のレンダリング）
 eds document gen \
   --input /tmp/filled.jsonl \
   --template fal-form-1 \
   --out /tmp/fal-form-1.html
 ```
 
-Open `fal-form-1.html` in a browser to review the filled FAL Form 1. Print to PDF via the
-browser print dialog.
+ブラウザで `fal-form-1.html` を開いて、入力済みの FAL Form 1 を確認してください。ブラウザの印刷ダイアログから PDF に印刷できます。
 
-## TC2 - BWM certificate expired
+## TC2 - BWM 証明書期限切れ
 
 ```bash
 eds parse maritime \
@@ -79,7 +78,7 @@ eds document check \
   --out /tmp/alerts_v002.jsonl
 ```
 
-Expected alert in `alerts_v002.jsonl`:
+`alerts_v002.jsonl` の期待されるアラート：
 
 ```json
 {"rule_id":"BWM_D2_EXPIRED","severity":"HIGH","field":"bwm_certificate_expiry",
@@ -88,9 +87,9 @@ Expected alert in `alerts_v002.jsonl`:
  "voyage_id":"V002"}
 ```
 
-A HIGH severity alert blocks export. The vessel cannot proceed until the BWM certificate is renewed.
+HIGH 重大度のアラートはエクスポートをブロックします。BWM 証明書が更新されるまで、船舶は進めません。
 
-## TC3 - Low confidence (missing fields)
+## TC3 - 低信頼度（フィールド欠損）
 
 ```bash
 eds parse maritime \
@@ -103,14 +102,12 @@ eds document fill \
   --out /tmp/filled_v003.jsonl
 ```
 
-`filled_v003.jsonl` will have `review_required: true`. The fields `CREW_COUNT` and `CARGO_HS_CODE`
-are missing from the source CSV and receive `confidence: 0.0, flagged: true`. A human reviewer
-must supply the correct values before the document can be submitted.
+`filled_v003.jsonl` は `review_required: true` となります。`CREW_COUNT` および `CARGO_HS_CODE` フィールドはソース CSV から欠落しており、`confidence: 0.0, flagged: true` を受け取ります。ドキュメントを提出する前に、人間のレビュアーが正しい値を入力する必要があります。
 
-## Available templates
+## 利用可能なテンプレート
 
-| Template name | Form |
+| テンプレート名 | フォーム |
 |---|---|
-| `fal-form-1` | FAL Form 1 - General Declaration (IMO) |
-| `fal-form-5` | FAL Form 5 - Crew List (IMO) |
-| `sg-port-entry` | Singapore MPA Port+ package |
+| `fal-form-1` | FAL Form 1 - 一般申告書（IMO） |
+| `fal-form-5` | FAL Form 5 - 乗組員名簿（IMO） |
+| `sg-port-entry` | シンガポール MPA Port+ パッケージ |

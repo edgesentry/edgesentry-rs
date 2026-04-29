@@ -29,6 +29,7 @@ mod explain;
 mod report;
 mod parse;
 mod document;
+mod scenario;
 
 use clap::{Parser, Subcommand};
 
@@ -100,6 +101,11 @@ enum Commands {
         #[command(subcommand)]
         command: document::DocumentCommand,
     },
+    /// Synthetic scenario generation and UDP simulation
+    Scenario {
+        #[command(subcommand)]
+        command: scenario::ScenarioCommand,
+    },
 }
 
 fn main() {
@@ -117,6 +123,7 @@ fn main() {
         Commands::Report { command } => report::run(command),
         Commands::Parse { command } => parse::run(command),
         Commands::Document { command } => document::run(command),
+        Commands::Scenario { command } => scenario::run(command),
     };
 
     if let Err(e) = result {

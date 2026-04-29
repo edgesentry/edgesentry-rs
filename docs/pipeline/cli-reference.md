@@ -15,6 +15,16 @@ flag list directly from the binary.
 | Subcommand | Required flags | Optional flags |
 |---|---|---|
 | `maritime` | `--source FILE` `--out FILE` | |
+| `document` | `--source FILE` `--out FILE` | |
+| `form` | `--source FILE` `--out FILE` | |
+| `image` | `--source FILE` `--out FILE` | (stub -- requires `onnx` feature) |
+
+## eds scenario
+
+| Subcommand | Required flags | Optional flags |
+|---|---|---|
+| `generate` | `--out FILE` | `--entities N` `--frames N` `--seed N` `--scenario-type entity` |
+| `simulate` | `--source FILE` `--target udp://HOST:PORT` | `--fps N` |
 
 ## eds compute
 
@@ -51,7 +61,7 @@ flag list directly from the binary.
 
 | Subcommand | Required flags | Optional flags |
 |---|---|---|
-| `generate` | `--events FILE` `--assessment FILE` `--out FILE` | `--site-name STR` `--period STR` `--chain-valid` |
+| `generate` | `--events FILE` `--assessment FILE` `--out FILE` | `--site-name STR` `--period STR` `--chain-valid` `--format md\|pdf` |
 | `validate` | `--events FILE` `--assessment FILE` | |
 
 ## eds document

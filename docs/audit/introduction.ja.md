@@ -3,7 +3,7 @@
 **エッジインフラへの信頼と検証**
 
 - **リポジトリ:** [github.com/edgesentry/edgesentry-rs](https://github.com/edgesentry/edgesentry-rs)
-- **ドキュメント:** [edgesentry.github.io/edgesentry-rs/audit/ja/](https://edgesentry.github.io/edgesentry-rs/audit/ja/)
+- **ドキュメント:** [edgesentry.github.io/edgesentry-rs/audit/introduction/](https://edgesentry.github.io/edgesentry-rs/audit/introduction/)
 
 ## なぜこのプロジェクトが必要か
 

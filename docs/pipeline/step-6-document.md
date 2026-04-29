@@ -12,16 +12,18 @@ safety monitoring pipeline, or a filled port-entry HTML document for the documen
 ```
 eds report generate --events <FILE> --assessment <FILE> --out <FILE>
                     [--site-name <NAME>] [--period <STR>] [--chain-valid]
+                    [--format md|pdf]
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--events` | RiskEvent JSONL file (from `eds evaluate run`) |
-| `--assessment` | Assessment JSONL file (from `eds assess run`) |
-| `--site-name` | Optional site name included in the report header |
-| `--period` | Optional reporting period string, e.g. `"April 2026"` |
-| `--chain-valid` | If set, adds a "Chain integrity: PASS" line to the report |
-| `--out` | Output Markdown file |
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--events` | | RiskEvent JSONL file (from `eds evaluate run`) |
+| `--assessment` | | Assessment JSONL file (from `eds assess run`) |
+| `--site-name` | | Optional site name included in the report header |
+| `--period` | | Optional reporting period string, e.g. `"April 2026"` |
+| `--chain-valid` | | If set, adds a "Chain integrity: PASS" line to the report |
+| `--format` | `md` | Output format: `md` (Markdown) or `pdf` (A4 PDF via printpdf) |
+| `--out` | | Output file path |
 
 The report contains:
 
@@ -29,6 +31,8 @@ The report contains:
 - Risk Events by Rule table: rule, count, severity, exact regulation citation
 - Entity Correlations section (if any entity pair appeared in multiple events)
 - Trend Analysis section: Stable / Rising / Falling with a brief interpretation
+
+**PDF output**: When `--format pdf` is specified, the output is a binary A4 PDF (Helvetica font, printpdf 0.7). The file must have a `.pdf` extension. Open in any PDF viewer or print directly.
 
 ### eds report validate
 

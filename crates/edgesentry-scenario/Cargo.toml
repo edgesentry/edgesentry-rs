@@ -1,10 +1,10 @@
 [package]
-name = "edgesentry-parse"
+name = "edgesentry-scenario"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Maritime structured data parsing — CSV/Parquet → DocumentEntity JSONL"
+description = "Synthetic scenario generation — CSV fixtures and UDP simulation"
 
 [dependencies]
 edgesentry-ingest = { path = "../edgesentry-ingest" }

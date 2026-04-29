@@ -1,26 +1,24 @@
 # EdgeSentry
 
-EdgeSentry is a collection of reusable Rust crates and a unified CLI (`eds`) for building
-sensor-to-seal compliance pipelines.
+EdgeSentry は、センサーから封印までのコンプライアンスパイプラインを構築するための再利用可能な Rust クレート群と統合 CLI（`eds`）のコレクションです。
 
-## Seven-step pipeline
+## 7ステップパイプライン
 
-Any domain that needs to capture real-world data, check it against regulations, explain
-deviations, and produce a tamper-evident record fits the same pattern:
+現実のデータを取得し、規制と照合し、逸脱を説明し、改ざん検知可能な記録を生成する必要があるあらゆるドメインに、同じパターンが適用されます。
 
-| Step | Role | Crate | CLI |
+| ステップ | 役割 | クレート | CLI |
 |------|------|-------|-----|
-| 1 - Ingest | Capture sensor data or parse documents | `edgesentry-ingest` / `edgesentry-parse` | `eds ingest` / `eds parse` |
-| 2 - Compute | Apply physics and geometry operations | `edgesentry-compute` | `eds compute` |
-| 3 - Evaluate | Compare measurements against rules | `edgesentry-evaluate` | `eds evaluate` |
-| 4 - Assess | Find patterns across evaluation results | `edgesentry-assess` | `eds assess` |
-| 5 - Explain | Generate grounded plain-language text | `edgesentry-explain` | `eds explain` |
-| 6 - Document | Format results into reports or documents | `edgesentry-report` / `edgesentry-document` | `eds report` / `eds document` |
-| 7 - Seal | Sign and chain records for tamper detection | `edgesentry-audit` | `eds audit` |
+| 1 - 取込 | センサーデータの取得またはドキュメントの解析 | `edgesentry-ingest` / `edgesentry-parse` | `eds ingest` / `eds parse` |
+| 2 - 計算 | 物理・ジオメトリ演算の適用 | `edgesentry-compute` | `eds compute` |
+| 3 - 評価 | ルールに対する計測値の比較 | `edgesentry-evaluate` | `eds evaluate` |
+| 4 - 分析 | 評価結果からパターンを発見 | `edgesentry-assess` | `eds assess` |
+| 5 - 説明 | 根拠に基づいた平易なテキストの生成 | `edgesentry-explain` | `eds explain` |
+| 6 - 文書化 | 結果をレポートまたはドキュメントに整形 | `edgesentry-report` / `edgesentry-document` | `eds report` / `eds document` |
+| 7 - 封印 | 改ざん検知のためのレコードの署名とチェーン化 | `edgesentry-audit` | `eds audit` |
 
-## Quick links
+## クイックリンク
 
-- [Pipeline documentation](introduction.md)
-- [Quickstart - Safety Monitoring](quickstart-safety-monitoring.md)
-- [Quickstart - Document Compliance](quickstart-document-compliance.md)
-- [CLI Reference](cli-reference.md)
+- [パイプラインドキュメント](introduction.ja.md)
+- [クイックスタート - 安全監視](quickstart-safety-monitoring.ja.md)
+- [クイックスタート - ドキュメントコンプライアンス](quickstart-document-compliance.ja.md)
+- [CLIリファレンス](cli-reference.ja.md)

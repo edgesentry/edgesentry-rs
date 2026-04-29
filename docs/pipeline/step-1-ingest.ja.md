@@ -1,24 +1,23 @@
-# Step 1 - Ingest
+# ステップ 1 - 取込
 
-Capture real-world data and normalise it into a schema the rest of the pipeline understands.
-Two sub-commands cover structured continuous data (sensor streams); one covers structured
-document data (maritime voyage records).
+現実のデータを取得し、パイプラインの残りの部分が理解できるスキーマに正規化します。
+2つのサブコマンドが構造化された継続データ（センサーストリーム）をカバーし、1つが構造化ドキュメントデータ（海事航海記録）をカバーします。
 
 ## eds ingest replay
 
-Replay entity positions from a CSV file. Used for testing, CI, and offline demos.
+CSV ファイルからエンティティ位置を再生します。テスト、CI、およびオフラインデモに使用されます。
 
 ```
 eds ingest replay --source <FILE> [--profile <DIR>] --out <FILE>
 ```
 
-| Flag | Description |
+| フラグ | 説明 |
 |------|-------------|
-| `--source` | Input CSV file |
-| `--profile` | Profile directory (reserved for future use) |
-| `--out` | Output EntityFrame JSONL file |
+| `--source` | 入力 CSV ファイル |
+| `--profile` | プロファイルディレクトリ（将来の使用のために予約済み） |
+| `--out` | 出力 EntityFrame JSONL ファイル |
 
-**CSV format** (header required):
+**CSV 形式**（ヘッダ必須）：
 
 ```
 timestamp_ms,entity_id,entity_type,x,y,vx,vy
@@ -27,7 +26,7 @@ timestamp_ms,entity_id,entity_type,x,y,vx,vy
 1000,FL-01,forklift,24.0,8.0,-1.0,0.0
 ```
 
-**Output schema** (`eds.entity-frame`): one record per row in the CSV.
+**出力スキーマ**（`eds.entity-frame`）：CSV の各行に1レコード。
 
 ```json
 {"eds_schema":"eds.entity-frame","version":"0.1"}
@@ -36,36 +35,35 @@ timestamp_ms,entity_id,entity_type,x,y,vx,vy
 
 ## eds ingest stream
 
-Stream entity positions from a live UDP source. Used for real-time deployment.
+ライブ UDP ソースからエンティティ位置をストリームします。リアルタイムデプロイメントに使用されます。
 
 ```
 eds ingest stream --source <udp://HOST:PORT> --profile <DIR> --out <FILE>
 ```
 
-| Flag | Description |
+| フラグ | 説明 |
 |------|-------------|
-| `--source` | UDP address, e.g. `udp://127.0.0.1:9000` |
-| `--profile` | Profile directory |
-| `--out` | Output EntityFrame JSONL file |
+| `--source` | UDP アドレス（例：`udp://127.0.0.1:9000`） |
+| `--profile` | プロファイルディレクトリ |
+| `--out` | 出力 EntityFrame JSONL ファイル |
 
-Reads JSON-encoded entity packets from UDP and writes them to the output JSONL file until
-the process is interrupted. Designed for piping into `eds evaluate run` in a live monitoring loop.
+UDP から JSON エンコードされたエンティティパケットを読み込み、プロセスが中断されるまで出力 JSONL ファイルに書き込みます。ライブ監視ループで `eds evaluate run` にパイプするために設計されています。
 
 ## eds parse maritime
 
-Parse structured maritime voyage data from CSV into `DocumentEntity` JSONL.
-Used as the ingest step for the document compliance pipeline.
+CSV から構造化された海事航海データを `DocumentEntity` JSONL に解析します。
+ドキュメントコンプライアンスパイプラインの取込ステップとして使用されます。
 
 ```
 eds parse maritime --source <FILE> --out <FILE>
 ```
 
-| Flag | Description |
+| フラグ | 説明 |
 |------|-------------|
-| `--source` | Input maritime voyage CSV file |
-| `--out` | Output DocumentEntity JSONL file |
+| `--source` | 入力海事航海 CSV ファイル |
+| `--out` | 出力 DocumentEntity JSONL ファイル |
 
-**CSV format** (header required):
+**CSV 形式**（ヘッダ必須）：
 
 ```
 voyage_id,vessel_name,vessel_imo,flag_state,port_of_arrival,arrival_date,
@@ -73,9 +71,9 @@ cargo_description,cargo_hs_code,crew_count,gross_tonnage,
 bwm_certificate_expiry,dangerous_goods,quarantine_status
 ```
 
-Empty cells become `null` in the output. Boolean fields accept `true`/`false`/`1`/`0`.
+空のセルは出力では `null` になります。ブール型フィールドは `true`/`false`/`1`/`0` を受け付けます。
 
-**Output schema** (`eds.document-entity`):
+**出力スキーマ**（`eds.document-entity`）：
 
 ```json
 {"eds_schema":"eds.document-entity","version":"0.1"}
@@ -85,3 +83,39 @@ Empty cells become `null` in the output. Boolean fields accept `true`/`false`/`1
  "crew_count":23,"gross_tonnage":45000.0,"bwm_certificate_expiry":"2027-03-01",
  "dangerous_goods":false,"quarantine_status":"CLEAR","crew_nationalities":null}
 ```
+
+## eds parse document / form
+
+構造化された JSON ドキュメントまたはフォームを `EntityFrame` JSONL に解析し、`eds evaluate run` で直接使用できます。
+
+```
+eds parse document --source <FILE> --out <FILE>
+eds parse form     --source <FILE> --out <FILE>
+```
+
+`document` と `form` は同等です ── どちらも `entities` 配列を持つ JSON オブジェクトを受け付けます。
+
+**入力形式**（`crates/edgesentry-parse/fixtures/sample_document.json`）：
+
+```json
+{
+  "site": "Demo Warehouse A",
+  "recorded_at": "2026-04-30T09:00:00Z",
+  "entities": [
+    {"id": "FL-01", "type": "Forklift",    "x": 10.0, "y": 8.0, "vx": -1.0, "vy": 0.0, "timestamp_ms": 0},
+    {"id": "W-03",  "type": "Person", "x": 5.0,  "y": 8.0, "vx": 0.0,  "vy": 0.0, "timestamp_ms": 0}
+  ]
+}
+```
+
+**出力スキーマ**（`eds.entity-frame`） ── `eds ingest replay` と同じで、`eds evaluate run` に直接フィードされます。
+
+## eds parse image
+
+スタブ ── コンパイル時に `onnx` フィーチャーフラグを有効にする必要があります。
+
+```
+eds parse image --source <FILE> --out <FILE>
+```
+
+空の `eds.entity-frame` JSONL を書き込み、警告を表示します。`onnx` フィーチャーが有効になっている場合、完全な ONNX ベースのオブジェクト検出が `edgesentry-image-utils` に実装されます。

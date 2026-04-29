@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::io::BufWriter;
 
 use edgesentry_assess::{Assessment, EntityCorrelation, RiskTrend};
 use edgesentry_evaluate::{RiskEvent, Severity};
@@ -181,6 +182,104 @@ pub fn render_markdown(report: &Report) -> String {
     out
 }
 
+/// Render `report` as a minimal A4 PDF and return the raw bytes.
+pub fn render_pdf(report: &Report) -> Vec<u8> {
+    use printpdf::{BuiltinFont, Mm, PdfDocument};
+
+    let (doc, page1, layer1) =
+        PdfDocument::new("EdgeSentry Safety Report", Mm(210.0_f32), Mm(297.0_f32), "Layer 1");
+    let current_layer = doc.get_page(page1).get_layer(layer1);
+
+    let font = doc.add_builtin_font(BuiltinFont::Helvetica).unwrap();
+    let font_bold = doc.add_builtin_font(BuiltinFont::HelveticaBold).unwrap();
+
+    // Cursor starts near top of page; y decreases as we add lines.
+    let mut y = 277.0_f32;
+    let left = 15.0_f32;
+
+    // Helper: write one text line (font, size, x, y in mm).
+    macro_rules! line {
+        ($fnt:expr, $size:expr, $x:expr, $y:expr, $text:expr) => {
+            current_layer.use_text($text, $size as f32, Mm($x), Mm($y), &$fnt);
+        };
+    }
+
+    // Title
+    line!(font_bold, 18.0_f32, left, y, "EdgeSentry Safety Report");
+    y -= 10.0;
+
+    // Metadata
+    let site = report.site_name.clone().unwrap_or_else(|| "-".to_string());
+    let period = report.report_period.clone().unwrap_or_else(|| "-".to_string());
+    line!(font, 10.0_f32, left, y, format!("Site: {site}"));
+    y -= 6.0;
+    line!(font, 10.0_f32, left, y, format!("Period: {period}"));
+    y -= 6.0;
+    line!(font, 10.0_f32, left, y, format!("Generated: {} (UTC unix ms)", report.generated_at_ms));
+    y -= 10.0;
+
+    // Summary heading
+    line!(font_bold, 14.0_f32, left, y, "Summary");
+    y -= 8.0;
+    line!(font, 10.0_f32, left, y, format!("Critical: {}", report.event_summary.critical));
+    y -= 6.0;
+    line!(font, 10.0_f32, left, y, format!("High: {}", report.event_summary.high));
+    y -= 6.0;
+    line!(font, 10.0_f32, left, y, format!("Medium: {}", report.event_summary.medium));
+    y -= 6.0;
+    line!(font, 10.0_f32, left, y, format!("Low: {}", report.event_summary.low));
+    y -= 6.0;
+    line!(font, 10.0_f32, left, y, format!("Total: {}", report.event_summary.total));
+    y -= 10.0;
+
+    // Risk Events by Rule
+    line!(font_bold, 14.0_f32, left, y, "Risk Events by Rule");
+    y -= 8.0;
+    for row in &report.rule_frequencies {
+        let text = format!(
+            "{} - {} events - {} - {}",
+            row.rule_id, row.count, row.severity_str, row.regulation
+        );
+        line!(font, 10.0_f32, left, y, text);
+        y -= 6.0;
+        if y < 20.0 {
+            break;
+        }
+    }
+    y -= 4.0;
+
+    // Trend
+    if y > 20.0 {
+        line!(font_bold, 14.0_f32, left, y, "Trend");
+        y -= 8.0;
+        let trend_label = match report.trend {
+            RiskTrend::Stable => "Stable",
+            RiskTrend::Rising => "Rising",
+            RiskTrend::Falling => "Falling",
+        };
+        line!(font, 10.0_f32, left, y, format!("Risk trend: {trend_label}"));
+        y -= 10.0;
+    }
+
+    // Entity Correlations
+    if !report.entity_correlations.is_empty() && y > 20.0 {
+        line!(font_bold, 14.0_f32, left, y, "Entity Correlations");
+        y -= 8.0;
+        for row in &report.entity_correlations {
+            let pair = row.entity_ids.join(", ");
+            line!(font, 10.0_f32, left, y, format!("{pair} - {} event(s)", row.event_count));
+            y -= 6.0;
+            if y < 20.0 {
+                break;
+            }
+        }
+    }
+
+    let mut buf = BufWriter::new(Vec::new());
+    doc.save(&mut buf).expect("PDF save failed");
+    buf.into_inner().expect("BufWriter flush failed")
+}
+
 pub fn validate(events: &[RiskEvent], assessment: &Assessment) -> Result<(), String> {
     if events.is_empty() {
         return Err("no events provided".to_string());
@@ -253,6 +352,18 @@ mod tests {
         assert!(md.contains("## Trend Analysis"));
         assert!(!md.contains("## Audit Chain"));
         assert!(!md.contains("## Entity Correlations"));
+    }
+
+    #[test]
+    fn render_pdf_returns_non_empty_bytes() {
+        let events = vec![make_event("RULE_X", Severity::High)];
+        let assessment = assess(&events, None);
+        let config = ReportConfig { site_name: Some("Site A".to_string()), report_period: Some("2026-Q2".to_string()), chain_valid: None };
+        let report = generate_report(&events, &assessment, config);
+        let bytes = render_pdf(&report);
+        assert!(!bytes.is_empty(), "PDF bytes should not be empty");
+        // PDF files start with the %PDF magic bytes
+        assert!(bytes.starts_with(b"%PDF"), "PDF should start with %PDF header");
     }
 
     #[test]

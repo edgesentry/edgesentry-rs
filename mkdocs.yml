@@ -7,6 +7,15 @@ edit_uri: edit/main/docs/
 
 docs_dir: docs
 
+extra:
+  alternate:
+    - name: English
+      link: /edgesentry-rs/
+      lang: en
+    - name: Japanese
+      link: /edgesentry-rs/ja/
+      lang: ja
+
 theme:
   name: material
   language: en
@@ -57,7 +66,7 @@ plugins:
             Threat Model: 脅威モデル
             Operations Runbook: 運用ランブック
             Traceability: トレーサビリティ
-            Inspect: インスペクト
+            Inspect: 検査
             Background: 背景
             Requirements: 要件
             Scenarios: シナリオ
@@ -93,6 +102,7 @@ nav:
       - Step 5 - Explain: pipeline/step-5-explain.md
       - Step 6 - Document: pipeline/step-6-document.md
       - Step 7 - Seal: pipeline/step-7-seal.md
+    - Scenario: pipeline/scenario.md
     - Profile Authoring: pipeline/profile-authoring.md
     - CLI Reference: pipeline/cli-reference.md
   - Audit:

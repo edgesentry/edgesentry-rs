@@ -85,3 +85,39 @@ Empty cells become `null` in the output. Boolean fields accept `true`/`false`/`1
  "crew_count":23,"gross_tonnage":45000.0,"bwm_certificate_expiry":"2027-03-01",
  "dangerous_goods":false,"quarantine_status":"CLEAR","crew_nationalities":null}
 ```
+
+## eds parse document / form
+
+Parse a structured JSON document or form into `EntityFrame` JSONL, consumable directly by `eds evaluate run`.
+
+```
+eds parse document --source <FILE> --out <FILE>
+eds parse form     --source <FILE> --out <FILE>
+```
+
+`document` and `form` are equivalent — both accept a JSON object with an `entities` array.
+
+**Input format** (`crates/edgesentry-parse/fixtures/sample_document.json`):
+
+```json
+{
+  "site": "Demo Warehouse A",
+  "recorded_at": "2026-04-30T09:00:00Z",
+  "entities": [
+    {"id": "FL-01", "type": "Forklift",    "x": 10.0, "y": 8.0, "vx": -1.0, "vy": 0.0, "timestamp_ms": 0},
+    {"id": "W-03",  "type": "Person", "x": 5.0,  "y": 8.0, "vx": 0.0,  "vy": 0.0, "timestamp_ms": 0}
+  ]
+}
+```
+
+**Output schema** (`eds.entity-frame`) — same as `eds ingest replay`, feeds directly into `eds evaluate run`.
+
+## eds parse image
+
+Stub — requires the `onnx` feature flag to be enabled at compile time.
+
+```
+eds parse image --source <FILE> --out <FILE>
+```
+
+Writes an empty `eds.entity-frame` JSONL and prints a warning. Full ONNX-based object detection will be implemented in `edgesentry-image-utils` when the `onnx` feature is enabled.

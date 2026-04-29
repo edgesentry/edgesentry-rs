@@ -1,15 +1,22 @@
 use clap::Subcommand;
 use std::fs;
+use std::path::Path;
 use std::path::PathBuf;
 
 use edgesentry_assess::Assessment;
 use edgesentry_evaluate::RiskEvent;
 use edgesentry_ingest::jsonl::JsonlReader;
-use edgesentry_report::{generate_report, render_markdown, validate, ReportConfig};
+use edgesentry_report::{generate_report, render_markdown, render_pdf, validate, ReportConfig};
+
+#[derive(Debug, Clone, clap::ValueEnum, PartialEq)]
+pub enum ReportFormat {
+    Md,
+    Pdf,
+}
 
 #[derive(Debug, Subcommand)]
 pub enum ReportCommand {
-    /// Generate a Markdown safety report from events and assessment.
+    /// Generate a Markdown or PDF safety report from events and assessment.
     Generate {
         #[arg(long)]
         events: PathBuf,
@@ -21,6 +28,9 @@ pub enum ReportCommand {
         period: Option<String>,
         #[arg(long)]
         chain_valid: bool,
+        /// Output format: md (default) or pdf
+        #[arg(long, value_enum, default_value = "md")]
+        format: ReportFormat,
         #[arg(long)]
         out: PathBuf,
     },
@@ -35,8 +45,8 @@ pub enum ReportCommand {
 
 pub fn run(cmd: ReportCommand) -> Result<(), Box<dyn std::error::Error>> {
     match cmd {
-        ReportCommand::Generate { events, assessment, site_name, period, chain_valid, out } => {
-            run_generate(&events, &assessment, site_name, period, chain_valid, &out)
+        ReportCommand::Generate { events, assessment, site_name, period, chain_valid, format, out } => {
+            run_generate(&events, &assessment, site_name, period, chain_valid, format, &out)
         }
         ReportCommand::Validate { events, assessment } => {
             run_validate(&events, &assessment)
@@ -44,7 +54,7 @@ pub fn run(cmd: ReportCommand) -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-fn read_events(path: &PathBuf) -> Result<Vec<RiskEvent>, Box<dyn std::error::Error>> {
+fn read_events(path: &Path) -> Result<Vec<RiskEvent>, Box<dyn std::error::Error>> {
     let file = fs::File::open(path)?;
     let mut reader = JsonlReader::open(file)
         .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
@@ -55,7 +65,7 @@ fn read_events(path: &PathBuf) -> Result<Vec<RiskEvent>, Box<dyn std::error::Err
     Ok(events)
 }
 
-fn read_assessment(path: &PathBuf) -> Result<Assessment, Box<dyn std::error::Error>> {
+fn read_assessment(path: &Path) -> Result<Assessment, Box<dyn std::error::Error>> {
     let file = fs::File::open(path)?;
     let mut reader = JsonlReader::open(file)
         .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
@@ -68,12 +78,13 @@ fn read_assessment(path: &PathBuf) -> Result<Assessment, Box<dyn std::error::Err
 }
 
 fn run_generate(
-    events_path: &PathBuf,
-    assessment_path: &PathBuf,
+    events_path: &Path,
+    assessment_path: &Path,
     site_name: Option<String>,
     period: Option<String>,
     chain_valid_flag: bool,
-    out: &PathBuf,
+    format: ReportFormat,
+    out: &Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let events = read_events(events_path)?;
     let assessment = read_assessment(assessment_path)?;
@@ -82,16 +93,26 @@ fn run_generate(
     let config = ReportConfig { site_name, report_period: period, chain_valid };
 
     let report = generate_report(&events, &assessment, config);
-    let md = render_markdown(&report);
 
-    fs::write(out, md)?;
-    eprintln!("report generate: {} event(s) → {}", events.len(), out.display());
+    match format {
+        ReportFormat::Pdf => {
+            let bytes = render_pdf(&report);
+            fs::write(out, bytes)?;
+            eprintln!("report generate: {} event(s) → {} (PDF)", events.len(), out.display());
+        }
+        ReportFormat::Md => {
+            let md = render_markdown(&report);
+            fs::write(out, md)?;
+            eprintln!("report generate: {} event(s) → {}", events.len(), out.display());
+        }
+    }
+
     Ok(())
 }
 
 fn run_validate(
-    events_path: &PathBuf,
-    assessment_path: &PathBuf,
+    events_path: &Path,
+    assessment_path: &Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let events = read_events(events_path)?;
     let assessment = read_assessment(assessment_path)?;

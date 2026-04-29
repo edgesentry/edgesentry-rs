@@ -2,8 +2,8 @@
 
 インフラ点検向けリアルタイム・デジタルツイン監査プラットフォーム。
 
-- **リポジトリ:** [github.com/edgesentry/edgesentry-inspect](https://github.com/edgesentry/edgesentry-inspect)
-- **ドキュメント:** [edgesentry.github.io/edgesentry-inspect](https://edgesentry.github.io/edgesentry-inspect/)
+- **リポジトリ:** [github.com/edgesentry/edgesentry-rs](https://github.com/edgesentry/edgesentry-rs)
+- **ドキュメント:** [edgesentry.github.io/edgesentry-rs/inspect/introduction/](https://edgesentry.github.io/edgesentry-rs/inspect/introduction/)
 
 ## 仕組み
 

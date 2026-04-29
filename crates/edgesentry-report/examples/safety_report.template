@@ -1,0 +1,3 @@
+# EdgeSentry Safety Report Template v1
+# Required fields: site_name, period, events (JSONL), assessment (JSONL)
+# Output: PDF
