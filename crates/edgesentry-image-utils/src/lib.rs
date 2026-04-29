@@ -15,11 +15,10 @@ pub mod cv {
 
 /// Returns the set of enabled features for diagnostic purposes.
 pub fn enabled_features() -> Vec<&'static str> {
-    #[allow(unused_mut)]
-    let mut features: Vec<&'static str> = Vec::new();
-    #[cfg(feature = "onnx")]
-    features.push("onnx");
-    #[cfg(feature = "opencv")]
-    features.push("opencv");
-    features
+    vec![
+        #[cfg(feature = "onnx")]
+        "onnx",
+        #[cfg(feature = "opencv")]
+        "opencv",
+    ]
 }
