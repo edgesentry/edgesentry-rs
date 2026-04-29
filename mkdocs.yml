@@ -7,6 +7,15 @@ edit_uri: edit/main/docs/
 
 docs_dir: docs
 
+extra:
+  alternate:
+    - name: English
+      link: /edgesentry-rs/
+      lang: en
+    - name: Japanese
+      link: /edgesentry-rs/ja/
+      lang: ja
+
 theme:
   name: material
   language: en
