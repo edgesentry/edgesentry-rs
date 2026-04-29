@@ -194,7 +194,7 @@ See [Demo Pipeline](demo.md) for the full walkthrough.
 
 The ISO 19650 information container schema (BIM status transitions, conformant payload, third-party BIM tool interoperability) is implemented in the edgesentry-rs crate, not here.
 
-See **[edgesentry-audit roadmap — Milestone 2.7](../../audit/en/src/roadmap.md)** for the implementation plan.
+See **[edgesentry-audit roadmap — Milestone 2.7](../audit/roadmap.md)** for the implementation plan.
 
 ---
 

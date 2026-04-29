@@ -157,7 +157,7 @@ ISO 19650 defines the framework for managing information over the whole life cyc
 - Structured BIM status transitions: WIP → Shared → Published, with signed state change records
 - Conformant metadata fields (revision, suitability, classification) mapped to the existing hash-chain record format
 - Interoperability documentation for third-party BIM tool integration
-- This milestone is the audit-crate implementation of the ISO 19650 layer described in the [Inspect roadmap](../../inspect/en/src/roadmap.md)
+- This milestone is the audit-crate implementation of the ISO 19650 layer described in the [Inspect roadmap](../inspect/roadmap.md)
 
 ---
 

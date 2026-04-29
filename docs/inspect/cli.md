@@ -157,7 +157,7 @@ dir          = "out"
 threshold_mm = 10.0
 ```
 
-See [`config.example.toml`](../../../../crates/edgesentry-inspect/config.example.toml) for a fully annotated example.
+See `crates/edgesentry-inspect/config.example.toml` for a fully annotated example.
 
 ---
 
