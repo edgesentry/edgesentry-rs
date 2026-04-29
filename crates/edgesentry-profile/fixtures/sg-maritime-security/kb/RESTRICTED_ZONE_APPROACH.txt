@@ -1,0 +1,22 @@
+Restricted Zone Approach — Singapore Port Limits
+
+The Maritime and Port Authority of Singapore (MPA) designates restricted zones around
+critical maritime infrastructure including naval bases, oil terminals, and desalination plants.
+
+Clearance requirements:
+- Commercial vessels must maintain minimum 0.5 NM clearance from all restricted zone boundaries
+- Clearance measured from nearest point of the restricted zone perimeter
+- No unauthorised entry permitted regardless of vessel size or flag state
+
+Restricted zone categories:
+- Naval and military zones: Tuas Naval Base, Changi Naval Base
+- Petrochemical terminals: Jurong Island exclusion areas
+- Water intake zones: PUB desalination plant perimeters
+
+Enforcement:
+- Singapore Police Coast Guard (PCG) actively patrols restricted zone boundaries
+- Vessels approaching within 0.5 NM are hailed by VHF Channel 16
+- Entry without authorisation is a criminal offence under the Maritime and Port Authority Act
+
+Reference: MPA Port Marine Notice No. 79 of 2020
+Maritime and Port Authority of Singapore Act (Cap. 170A)

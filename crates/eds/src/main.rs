@@ -26,6 +26,9 @@ mod compute;
 mod evaluate;
 mod assess;
 mod explain;
+mod report;
+mod parse;
+mod document;
 
 use clap::{Parser, Subcommand};
 
@@ -82,6 +85,21 @@ enum Commands {
         #[command(subcommand)]
         command: explain::ExplainCommand,
     },
+    /// Markdown safety report generation and validation
+    Report {
+        #[command(subcommand)]
+        command: report::ReportCommand,
+    },
+    /// Maritime structured data parsing — CSV → DocumentEntity JSONL
+    Parse {
+        #[command(subcommand)]
+        command: parse::ParseCommand,
+    },
+    /// Document compliance — fill, check, and render port entry documents
+    Document {
+        #[command(subcommand)]
+        command: document::DocumentCommand,
+    },
 }
 
 fn main() {
@@ -96,6 +114,9 @@ fn main() {
         Commands::Evaluate { command } => evaluate::run(command),
         Commands::Assess { command } => assess::run(command),
         Commands::Explain { command } => explain::run(command),
+        Commands::Report { command } => report::run(command),
+        Commands::Parse { command } => parse::run(command),
+        Commands::Document { command } => document::run(command),
     };
 
     if let Err(e) = result {

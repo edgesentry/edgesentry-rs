@@ -1191,6 +1191,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "edgesentry-document"
+version = "0.2.0"
+dependencies = [
+ "edgesentry-evaluate",
+ "edgesentry-parse",
+ "serde",
+ "serde_json",
+ "ureq",
+]
+
+[[package]]
 name = "edgesentry-evaluate"
 version = "0.2.0"
 dependencies = [
@@ -1241,6 +1252,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "edgesentry-parse"
+version = "0.2.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "edgesentry-profile"
 version = "0.2.0"
 dependencies = [
@@ -1248,6 +1267,16 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+]
+
+[[package]]
+name = "edgesentry-report"
+version = "0.2.0"
+dependencies = [
+ "edgesentry-assess",
+ "edgesentry-evaluate",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1267,11 +1296,14 @@ dependencies = [
  "edgesentry-assess",
  "edgesentry-audit",
  "edgesentry-compute",
+ "edgesentry-document",
  "edgesentry-evaluate",
  "edgesentry-explain",
  "edgesentry-ingest",
  "edgesentry-inspect",
+ "edgesentry-parse",
  "edgesentry-profile",
+ "edgesentry-report",
  "edgesentry-store",
  "hex",
  "rcgen",

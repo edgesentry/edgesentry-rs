@@ -1,0 +1,2 @@
+voyage_id,vessel_name,vessel_imo,flag_state,port_of_arrival,arrival_date,cargo_description,cargo_hs_code,crew_count,gross_tonnage,bwm_certificate_expiry,dangerous_goods,quarantine_status
+V003,MV Venture,IMO5555555,PHL,SGSIN,2026-06-20,goods,,,28000,2027-01-15,false,CLEAR
