@@ -1157,7 +1157,7 @@ dependencies = [
  "hyper-util",
  "postcard",
  "postgres",
- "rand 0.8.6",
+ "rand 0.9.4",
  "rcgen",
  "reqwest",
  "rumqttc",
@@ -1178,7 +1178,7 @@ dependencies = [
  "cbindgen",
  "ed25519-dalek",
  "edgesentry-audit",
- "rand 0.8.6",
+ "rand 0.9.4",
 ]
 
 [[package]]
