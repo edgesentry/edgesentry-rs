@@ -642,7 +642,7 @@ fn serve_tls_accepts_valid_record_returns_202() {
     let cert = rcgen::generate_simple_self_signed(vec!["localhost".to_string()])
         .expect("rcgen self-signed cert");
     std::fs::write(&cert_path, cert.cert.pem()).expect("write cert");
-    std::fs::write(&key_path, cert.key_pair.serialize_pem()).expect("write key");
+    std::fs::write(&key_path, cert.signing_key.serialize_pem()).expect("write key");
 
     let signing_key = SigningKey::from_bytes(&[2u8; 32]);
     let pub_hex = hex::encode(signing_key.verifying_key().to_bytes());
