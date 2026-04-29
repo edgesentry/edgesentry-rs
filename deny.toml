@@ -14,15 +14,6 @@ ignore = [
   # available via upstream; upgrading requires rustls to drop the dep.
   # No direct call-site exposure in our code.
   { id = "RUSTSEC-2025-0134", reason = "rustls-pemfile pulled in transitively by rustls 0.23 chain; no patch available. Functionality superseded by rustls-pki-types but not yet adopted by rustls." },
-  # RUSTSEC-2026-0049 / GHSA-pwjx-qhcg-rvj4: rustls-webpki CRL Distribution
-  # Point matching flaw (CVSS 4.4).  Patched in 0.103.10; no 0.102.x backport
-  # exists.  rumqttc 0.25.1 (latest, main branch) requires rustls-webpki ^0.102
-  # for its use-rustls-no-provider feature and has not updated this constraint.
-  # The TLS handshake itself uses rustls-webpki 0.103.10 via tokio-rustls 0.26;
-  # the 0.102.8 copy surfaces only as the WebPki error type in rumqttc.
-  # Exploitation requires a compromised trusted CA.  Unblock by upgrading rumqttc
-  # once it bumps rustls-webpki to ^0.103.
-  { id = "RUSTSEC-2026-0049", reason = "No 0.102.x patch for rustls-webpki; fix is in 0.103.10, which rumqttc 0.25.x does not yet accept (requires ^0.102). Tracking upstream." },
 ]
 
 [bans]

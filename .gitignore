@@ -38,7 +38,7 @@ tmp/
 sbom/
 
 # Generated demo data (eds inspect generate-fixtures)
-demo/
+/demo/
 
 # Local output artifacts (examples / manual runs)
 record*.json

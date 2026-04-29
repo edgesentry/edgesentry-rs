@@ -349,6 +349,170 @@ fn demo_lift_inspection_writes_payloads_file_when_requested() {
     assert_eq!(payloads.len(), 3, "expected 3 payloads");
 }
 
+// ── Phase 2: ingest / evaluate / assess / explain pipeline ───────────────────
+
+/// Resolve a path relative to the workspace root (two levels above this
+/// crate's Cargo.toml).
+fn workspace_path(rel: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join(rel)
+        .canonicalize()
+        .expect("workspace path must exist")
+}
+
+fn demo_fixture_csv() -> PathBuf {
+    workspace_path("crates/edgesentry-ingest/fixtures/forklift_approach.csv")
+}
+
+fn demo_profile_dir() -> PathBuf {
+    workspace_path("crates/edgesentry-profile/fixtures/demo")
+}
+
+#[test]
+fn ingest_replay_with_demo_fixture_exits_zero() {
+    let out_file = TmpFile::new("frames.jsonl");
+    let out = eds()
+        .args(["ingest", "replay",
+               "--source"]).arg(demo_fixture_csv())
+        .args(["--profile"]).arg(demo_profile_dir())
+        .args(["--out"]).arg(out_file.path())
+        .output()
+        .expect("eds ingest replay");
+
+    assert!(out.status.success(), "exit: {:?}\n{}", out.status, stderr(&out));
+    assert!(out_file.path().exists(), "output file not created");
+
+    let content = fs::read_to_string(out_file.path()).unwrap();
+    let mut lines = content.lines();
+    let header: serde_json::Value = serde_json::from_str(lines.next().unwrap()).unwrap();
+    assert_eq!(header["eds_schema"], "eds.entity-frame", "wrong schema header");
+    assert!(lines.count() > 0, "no entity frames written");
+}
+
+#[test]
+fn evaluate_run_on_demo_fixture_produces_risk_events() {
+    let frames = TmpFile::new("frames_eval.jsonl");
+    let events = TmpFile::new("events_eval.jsonl");
+
+    // ingest
+    let r = eds()
+        .args(["ingest", "replay", "--source"]).arg(demo_fixture_csv())
+        .args(["--profile"]).arg(demo_profile_dir())
+        .args(["--out"]).arg(frames.path())
+        .output().unwrap();
+    assert!(r.status.success(), "ingest failed: {}", stderr(&r));
+
+    // evaluate
+    let out = eds()
+        .args(["evaluate", "run", "--input"]).arg(frames.path())
+        .args(["--profile"]).arg(demo_profile_dir())
+        .args(["--out"]).arg(events.path())
+        .output()
+        .expect("eds evaluate run");
+
+    assert!(out.status.success(), "exit: {:?}\n{}", out.status, stderr(&out));
+
+    let content = fs::read_to_string(events.path()).unwrap();
+    let mut lines = content.lines();
+    let header: serde_json::Value = serde_json::from_str(lines.next().unwrap()).unwrap();
+    assert_eq!(header["eds_schema"], "eds.risk-event");
+
+    let event_lines: Vec<&str> = lines.collect();
+    assert!(!event_lines.is_empty(), "demo fixture must produce at least one RiskEvent");
+
+    // verify the expected rule fires
+    let combined = event_lines.join("\n");
+    assert!(combined.contains("PROXIMITY_ALERT"), "PROXIMITY_ALERT must fire on the demo fixture");
+}
+
+#[test]
+fn assess_run_on_demo_events_produces_assessment() {
+    let frames  = TmpFile::new("frames_assess.jsonl");
+    let events  = TmpFile::new("events_assess.jsonl");
+    let assessment = TmpFile::new("assessment.jsonl");
+
+    // ingest → evaluate
+    let r = eds()
+        .args(["ingest", "replay", "--source"]).arg(demo_fixture_csv())
+        .args(["--profile"]).arg(demo_profile_dir())
+        .args(["--out"]).arg(frames.path()).output().unwrap();
+    assert!(r.status.success(), "ingest: {}", stderr(&r));
+
+    let r = eds()
+        .args(["evaluate", "run", "--input"]).arg(frames.path())
+        .args(["--profile"]).arg(demo_profile_dir())
+        .args(["--out"]).arg(events.path()).output().unwrap();
+    assert!(r.status.success(), "evaluate: {}", stderr(&r));
+
+    // assess
+    let out = eds()
+        .args(["assess", "run", "--input"]).arg(events.path())
+        .args(["--out"]).arg(assessment.path())
+        .output()
+        .expect("eds assess run");
+
+    assert!(out.status.success(), "exit: {:?}\n{}", out.status, stderr(&out));
+
+    let content = fs::read_to_string(assessment.path()).unwrap();
+    let mut lines = content.lines();
+    let header: serde_json::Value = serde_json::from_str(lines.next().unwrap()).unwrap();
+    assert_eq!(header["eds_schema"], "eds.assessment");
+
+    let body: serde_json::Value =
+        serde_json::from_str(lines.next().expect("assessment body line missing")).unwrap();
+    assert!(body["event_count"].as_u64().unwrap_or(0) > 0, "event_count must be > 0");
+    assert!(body.get("trend").is_some(), "assessment must contain a trend field");
+}
+
+#[test]
+fn assess_run_window_sec_filters_events() {
+    // Create a synthetic events JSONL with two events far apart in time.
+    // A 1-second window should include only the newest event.
+    let events_file = TmpFile::new("events_window.jsonl");
+    let assessment  = TmpFile::new("assessment_window.jsonl");
+
+    let header = r#"{"eds_schema":"eds.risk-event","version":"0.1"}"#;
+    let old_event = r#"{"rule_id":"PROXIMITY_ALERT","severity":"HIGH","regulation":"§1","entity_ids":["A","B"],"measured_value":3.0,"threshold":5.0,"timestamp_ms":1000}"#;
+    let new_event = r#"{"rule_id":"PROXIMITY_ALERT","severity":"HIGH","regulation":"§1","entity_ids":["A","B"],"measured_value":3.0,"threshold":5.0,"timestamp_ms":60000}"#;
+    fs::write(events_file.path(), format!("{header}\n{old_event}\n{new_event}\n")).unwrap();
+
+    let out = eds()
+        .args(["assess", "run",
+               "--input"]).arg(events_file.path())
+        .args(["--window-sec", "1",
+               "--out"]).arg(assessment.path())
+        .output()
+        .expect("eds assess run --window-sec");
+
+    assert!(out.status.success(), "{}", stderr(&out));
+    let content = fs::read_to_string(assessment.path()).unwrap();
+    let body: serde_json::Value = serde_json::from_str(content.lines().nth(1).unwrap()).unwrap();
+    assert_eq!(body["event_count"].as_u64(), Some(1), "window-sec=1 must retain only the newest event");
+}
+
+#[test]
+fn explain_run_help_lists_expected_flags() {
+    let out = eds().args(["explain", "run", "--help"]).output().expect("eds explain run --help");
+    assert!(out.status.success(), "{}", stderr(&out));
+    let help = stdout(&out);
+    assert!(help.contains("--input"),   "must list --input");
+    assert!(help.contains("--out"),     "must list --out");
+    assert!(help.contains("--n"),       "must list --n");
+    assert!(help.contains("--pick"),    "must list --pick");
+    assert!(help.contains("--llm-url"), "must list --llm-url");
+    assert!(help.contains("--profile"), "must list --profile");
+}
+
+#[test]
+fn ingest_stream_help_lists_expected_flags() {
+    let out = eds().args(["ingest", "stream", "--help"]).output().expect("eds ingest stream --help");
+    assert!(out.status.success(), "{}", stderr(&out));
+    let help = stdout(&out);
+    assert!(help.contains("--profile"), "must list --profile");
+    assert!(help.contains("--out"),     "must list --out");
+}
+
 // ── server commands ───────────────────────────────────────────────────────────
 
 /// Bind an ephemeral port, drop the listener, and return the address string.

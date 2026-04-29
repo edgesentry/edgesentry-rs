@@ -8,18 +8,24 @@
 //! eds audit sign-record --device-id dev-01 ...
 //! eds audit verify-chain --records-file records.json
 //! eds ingest replay --source FILE --out FILE
+//! eds ingest stream --source udp://HOST:PORT --profile DIR --out FILE
 //! eds profile validate --profile DIR
 //! eds profile list --profile DIR
 //! eds compute run --input FILE --out FILE
 //! eds evaluate run --input FILE --profile DIR --out FILE
+//! eds assess run --input FILE --out FILE [--history FILE...] [--window-sec N]
+//! eds explain run --input FILE --n N --out FILE [--pick severity|time|random] [--llm-url URL] [--model MODEL]
 //! ```
 
 mod audit;
 mod inspect;
 mod ingest;
+mod ingest_stream;
 mod profile;
 mod compute;
 mod evaluate;
+mod assess;
+mod explain;
 
 use clap::{Parser, Subcommand};
 
@@ -46,7 +52,7 @@ enum Commands {
         #[command(subcommand)]
         command: Box<audit::AuditCommand>,
     },
-    /// Entity data ingestion — CSV replay and JSONL output
+    /// Entity data ingestion — CSV replay and live UDP streaming
     Ingest {
         #[command(subcommand)]
         command: ingest::IngestCommand,
@@ -66,6 +72,16 @@ enum Commands {
         #[command(subcommand)]
         command: evaluate::EvaluateCommand,
     },
+    /// Trend and correlation analysis of RiskEvents
+    Assess {
+        #[command(subcommand)]
+        command: assess::AssessCommand,
+    },
+    /// LLM-powered plain-language explanations for RiskEvents
+    Explain {
+        #[command(subcommand)]
+        command: explain::ExplainCommand,
+    },
 }
 
 fn main() {
@@ -78,6 +94,8 @@ fn main() {
         Commands::Profile { command } => profile::run(command),
         Commands::Compute { command } => compute::run(command),
         Commands::Evaluate { command } => evaluate::run(command),
+        Commands::Assess { command } => assess::run(command),
+        Commands::Explain { command } => explain::run(command),
     };
 
     if let Err(e) = result {
