@@ -1,0 +1,116 @@
+site_name: edgesentry-rs
+site_description: Reusable Rust crates and CLI for sensor-to-seal compliance pipelines.
+site_url: https://edgesentry.github.io/edgesentry-rs/
+repo_url: https://github.com/edgesentry/edgesentry-rs
+repo_name: edgesentry/edgesentry-rs
+edit_uri: edit/main/docs/
+
+docs_dir: docs
+
+theme:
+  name: material
+  language: en
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - content.action.edit
+    - content.code.copy
+
+plugins:
+  - search
+  - i18n:
+      docs_structure: suffix
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+        - locale: ja
+          name: Japanese
+          build: true
+          nav_translations:
+            Home: ホーム
+            Pipeline: パイプライン
+            Introduction: はじめに
+            Architecture: アーキテクチャ
+            Quickstarts: クイックスタート
+            Safety Monitoring: 安全監視
+            Document Compliance: ドキュメントコンプライアンス
+            Steps: パイプラインステップ
+            Profile Authoring: プロファイル作成
+            CLI Reference: CLIリファレンス
+            Audit: 監査
+            Concepts: コンセプト
+            Quickstart: クイックスタート
+            Key Management: 鍵管理
+            Deployment: デプロイメント
+            Threat Model: 脅威モデル
+            Operations Runbook: 運用ランブック
+            Traceability: トレーサビリティ
+            Inspect: インスペクト
+            Background: 背景
+            Requirements: 要件
+            Scenarios: シナリオ
+
+extra_javascript:
+  - https://unpkg.com/mermaid@10/dist/mermaid.min.js
+
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - tables
+  - admonition
+
+nav:
+  - Home: index.md
+  - Pipeline:
+    - Introduction: pipeline/introduction.md
+    - Architecture: pipeline/architecture.md
+    - Quickstarts:
+      - Safety Monitoring: pipeline/quickstart-safety-monitoring.md
+      - Document Compliance: pipeline/quickstart-document-compliance.md
+    - Steps:
+      - Step 1 - Ingest: pipeline/step-1-ingest.md
+      - Step 2 - Compute: pipeline/step-2-compute.md
+      - Step 3 - Evaluate: pipeline/step-3-evaluate.md
+      - Step 4 - Assess: pipeline/step-4-assess.md
+      - Step 5 - Explain: pipeline/step-5-explain.md
+      - Step 6 - Document: pipeline/step-6-document.md
+      - Step 7 - Seal: pipeline/step-7-seal.md
+    - Profile Authoring: pipeline/profile-authoring.md
+    - CLI Reference: pipeline/cli-reference.md
+  - Audit:
+    - Introduction: audit/introduction.md
+    - Concepts: audit/concepts.md
+    - Architecture: audit/architecture.md
+    - Quickstart: audit/quickstart.md
+    - CLI Reference: audit/cli.md
+    - Key Management: audit/key_management.md
+    - Deployment: audit/deployment.md
+    - Threat Model: audit/threat_model.md
+    - Operations Runbook: audit/operations.md
+    - Traceability: audit/traceability.md
+    - SBOM: audit/sbom.md
+  - Inspect:
+    - Introduction: inspect/introduction.md
+    - Background: inspect/background.md
+    - Requirements: inspect/requirements.md
+    - Scenarios: inspect/scenarios.md
+    - Architecture: inspect/architecture.md
+    - CLI Reference: inspect/cli.md

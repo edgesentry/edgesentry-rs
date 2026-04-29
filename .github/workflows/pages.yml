@@ -1,10 +1,11 @@
 name: Pages
 
 on:
-  workflow_run:
-    workflows: ["CI"]
+  push:
     branches: ["main"]
-    types: [completed]
+    paths:
+      - "docs/pipeline/**"
+      - "mkdocs.yml"
   workflow_dispatch:
 
 permissions:
@@ -14,45 +15,27 @@ permissions:
 
 jobs:
   build:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
-      - name: Setup Rust
-        run: rustup update stable && rustup default stable
-      - name: Cache Rust artifacts
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7  # v5
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
-          path: |
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
-      - name: Install mdBook
-        run: cargo install mdbook --locked
-      - name: Build audit docs (EN)
-        run: mdbook build docs/audit/en/
-      - name: Build audit docs (JA)
-        run: mdbook build docs/audit/ja/
-      - name: Build inspect docs (EN)
-        run: mdbook build docs/inspect/en/
-      - name: Build inspect docs (JA)
-        run: mdbook build docs/inspect/ja/
-      - name: Build API docs (cargo doc)
-        run: cargo doc --workspace --no-deps --locked
-        env:
-          RUSTDOCFLAGS: "--cfg docsrs"
-      - name: Copy hub index pages
+          python-version: "3.12"
+
+      - name: Install MkDocs dependencies
         run: |
-          cp -r docs/hub/. docs/book/
-          cp -r target/doc/. docs/book/api/
-      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa  # v3
+          python -m pip install --upgrade pip
+          pip install "mkdocs>=1.5,<2.0" "mkdocs-material>=9.5,<9.6" "mkdocs-static-i18n>=1.3,<2.0"
+
+      - name: Build docs
+        run: mkdocs build --strict
+
+      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b  # v4
         with:
-          path: docs/book/
+          path: site/
 
   deploy:
     needs: build
