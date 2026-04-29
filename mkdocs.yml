@@ -62,6 +62,9 @@ plugins:
             Requirements: 要件
             Scenarios: シナリオ
 
+extra_javascript:
+  - https://unpkg.com/mermaid@10/dist/mermaid.min.js
+
 markdown_extensions:
   - pymdownx.superfences:
       custom_fences:

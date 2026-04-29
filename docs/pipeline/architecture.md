@@ -3,7 +3,7 @@
 ## Pipeline flow
 
 ```mermaid
-flowchart LR
+flowchart TD
     SRC1["CSV / UDP\nentity stream"]
     SRC2["voyage CSV\ndocument data"]
 
