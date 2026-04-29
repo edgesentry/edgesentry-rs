@@ -86,7 +86,7 @@ pub fn generate_report(events: &[RiskEvent], assessment: &Assessment, config: Re
             regulation,
         })
         .collect();
-    rule_frequencies.sort_by(|a, b| b.count.cmp(&a.count));
+    rule_frequencies.sort_by_key(|r| std::cmp::Reverse(r.count));
 
     let entity_correlations: Vec<EntityCorrelationRow> = assessment
         .correlated_entities
