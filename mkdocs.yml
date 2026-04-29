@@ -93,6 +93,7 @@ nav:
       - Step 5 - Explain: pipeline/step-5-explain.md
       - Step 6 - Document: pipeline/step-6-document.md
       - Step 7 - Seal: pipeline/step-7-seal.md
+    - Scenario: pipeline/scenario.md
     - Profile Authoring: pipeline/profile-authoring.md
     - CLI Reference: pipeline/cli-reference.md
   - Audit:

@@ -1,3 +1,7 @@
+use std::collections::HashMap;
+
+use edgesentry_ingest::csv_replay::EntityFrame;
+use edgesentry_ingest::entity::{Entity, EntityClass, Vec2};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -96,6 +100,99 @@ pub fn parse_maritime_csv(reader: impl std::io::Read) -> Result<Vec<DocumentEnti
     Ok(entities)
 }
 
+/// A structured document — key-value pairs extracted from any source.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParsedDocument {
+    pub source: String,
+    pub fields: HashMap<String, serde_json::Value>,
+}
+
+/// Parse a JSON document file into a ParsedDocument.
+///
+/// Reads a JSON object from reader, stores all fields in `fields`.
+/// `source` is set to "json".
+pub fn parse_document_json(reader: impl std::io::Read) -> Result<ParsedDocument, String> {
+    let mut bytes = Vec::new();
+    let mut r = reader;
+    std::io::Read::read_to_end(&mut r, &mut bytes).map_err(|e| format!("read error: {e}"))?;
+    let value: serde_json::Value =
+        serde_json::from_slice(&bytes).map_err(|e| format!("JSON parse error: {e}"))?;
+    let obj = value
+        .as_object()
+        .ok_or_else(|| "expected a JSON object at top level".to_string())?;
+    let fields: HashMap<String, serde_json::Value> = obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+    Ok(ParsedDocument { source: "json".to_string(), fields })
+}
+
+/// Map a string entity type name to an `EntityClass`.
+fn entity_class_from_str(s: &str) -> EntityClass {
+    match s.to_lowercase().as_str() {
+        "forklift" => EntityClass::Forklift,
+        "reachstacker" | "reach_stacker" => EntityClass::ReachStacker,
+        "terminaltractor" | "terminal_tractor" => EntityClass::TerminalTractor,
+        "vessel" | "ship" => EntityClass::Vessel,
+        _ => EntityClass::Person,
+    }
+}
+
+/// Convert a ParsedDocument to EntityFrames for use with `eds evaluate`.
+///
+/// Looks for fields:
+/// - `"entities"` (array of `{id, type, x, y, vx, vy, timestamp_ms}`)
+/// - or individual entity fields `entity_id`, `x`, `y`, etc. for a single entity.
+///
+/// If neither is present, returns an empty `Vec`.
+pub fn document_to_entity_frames(doc: &ParsedDocument) -> Vec<EntityFrame> {
+    if let Some(arr) = doc.fields.get("entities").and_then(|v| v.as_array()) {
+        // Group by timestamp_ms.
+        let mut ts_map: std::collections::BTreeMap<u64, Vec<Entity>> = std::collections::BTreeMap::new();
+        for item in arr {
+            let id = item.get("id").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
+            let entity_type = item.get("type").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let x = item.get("x").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+            let y = item.get("y").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+            let vx = item.get("vx").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+            let vy = item.get("vy").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+            let timestamp_ms = item.get("timestamp_ms").and_then(|v| v.as_u64()).unwrap_or(0);
+            let class = entity_class_from_str(entity_type);
+            let entity = Entity {
+                id,
+                class,
+                position: Vec2::new(x, y),
+                velocity: Vec2::new(vx, vy),
+                timestamp_ms,
+            };
+            ts_map.entry(timestamp_ms).or_default().push(entity);
+        }
+        return ts_map
+            .into_iter()
+            .map(|(ts, entities)| EntityFrame { timestamp_ms: ts, entities })
+            .collect();
+    }
+
+    // Fall back to single-entity fields.
+    if let Some(entity_id) = doc.fields.get("entity_id").and_then(|v| v.as_str()) {
+        let entity_type = doc.fields.get("entity_type").and_then(|v| v.as_str()).unwrap_or("unknown");
+        let x = doc.fields.get("x").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+        let y = doc.fields.get("y").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+        let vx = doc.fields.get("vx").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+        let vy = doc.fields.get("vy").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+        let timestamp_ms = doc.fields.get("timestamp_ms").and_then(|v| v.as_u64()).unwrap_or(0);
+        let class = entity_class_from_str(entity_type);
+        let entity = Entity {
+            id: entity_id.to_string(),
+            class,
+            position: Vec2::new(x, y),
+            velocity: Vec2::new(vx, vy),
+            timestamp_ms,
+        };
+        let frame = EntityFrame { timestamp_ms, entities: vec![entity] };
+        return vec![frame];
+    }
+
+    Vec::new()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -125,5 +222,48 @@ V002,MV Star,,MYS,SGSIN,2026-06-18,Steel coils,7208,,32000,2026-04-30,true,QUARA
         assert_eq!(v002.vessel_imo, None);
         assert_eq!(v002.crew_count, None);
         assert_eq!(v002.dangerous_goods, Some(true));
+    }
+
+    const SAMPLE_DOCUMENT_JSON: &str = r#"{
+  "site": "Demo Warehouse A",
+  "recorded_at": "2026-04-30T09:00:00Z",
+  "entities": [
+    {"id": "FL-01", "type": "forklift", "x": 10.0, "y": 8.0, "vx": -1.0, "vy": 0.0, "timestamp_ms": 0},
+    {"id": "W-03",  "type": "pedestrian", "x": 5.0, "y": 8.0, "vx": 0.0, "vy": 0.0, "timestamp_ms": 0}
+  ]
+}"#;
+
+    #[test]
+    fn parse_document_json_parses_sample() {
+        let doc = parse_document_json(SAMPLE_DOCUMENT_JSON.as_bytes()).unwrap();
+        assert_eq!(doc.source, "json");
+        assert!(doc.fields.contains_key("site"));
+        assert!(doc.fields.contains_key("entities"));
+    }
+
+    #[test]
+    fn document_to_entity_frames_correct_count() {
+        let doc = parse_document_json(SAMPLE_DOCUMENT_JSON.as_bytes()).unwrap();
+        let frames = document_to_entity_frames(&doc);
+        // Both entities share timestamp_ms = 0, so one frame with 2 entities.
+        assert_eq!(frames.len(), 1);
+        assert_eq!(frames[0].entities.len(), 2);
+    }
+
+    #[test]
+    fn document_to_entity_frames_entity_ids() {
+        let doc = parse_document_json(SAMPLE_DOCUMENT_JSON.as_bytes()).unwrap();
+        let frames = document_to_entity_frames(&doc);
+        let ids: Vec<&str> = frames[0].entities.iter().map(|e| e.id.as_str()).collect();
+        assert!(ids.contains(&"FL-01"));
+        assert!(ids.contains(&"W-03"));
+    }
+
+    #[test]
+    fn document_to_entity_frames_empty_when_no_entities() {
+        let json = r#"{"site": "X"}"#;
+        let doc = parse_document_json(json.as_bytes()).unwrap();
+        let frames = document_to_entity_frames(&doc);
+        assert!(frames.is_empty());
     }
 }

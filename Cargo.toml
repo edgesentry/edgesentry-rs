@@ -14,6 +14,8 @@ members = [
   "crates/edgesentry-report",
   "crates/edgesentry-parse",
   "crates/edgesentry-document",
+  "crates/edgesentry-image-utils",
+  "crates/edgesentry-scenario",
 ]
 resolver = "2"
 
