@@ -72,5 +72,5 @@ rusqlite = { version = "0.31", optional = true }
 
 [dev-dependencies]
 reqwest = { version = "0.12", features = ["json", "blocking", "rustls-tls"], default-features = false }
-rcgen = "0.13"
+rcgen = "0.14"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "net"] }
