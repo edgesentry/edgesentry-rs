@@ -1,19 +1,19 @@
-# Architecture
+# アーキテクチャ
 
-## Pipeline flow
+## パイプラインフロー
 
 ```mermaid
-flowchart LR
-    SRC1["CSV / UDP\nentity stream"]
-    SRC2["voyage CSV\ndocument data"]
+flowchart TD
+    SRC1["CSV / UDP\nエンティティストリーム"]
+    SRC2["航海 CSV\nドキュメントデータ"]
 
-    ING["Step 1 - Ingest\neds ingest replay\neds ingest stream\neds parse maritime"]
-    COM["Step 2 - Compute\neds compute run"]
-    EVA["Step 3 - Evaluate\neds evaluate run"]
-    ASS["Step 4 - Assess\neds assess run"]
-    EXP["Step 5 - Explain\neds explain run"]
-    DOC["Step 6 - Document\neds report generate\neds document fill/check/gen"]
-    SEA["Step 7 - Seal\neds audit"]
+    ING["ステップ 1 - 取込\neds ingest replay\neds ingest stream\neds parse maritime"]
+    COM["ステップ 2 - 計算\neds compute run"]
+    EVA["ステップ 3 - 評価\neds evaluate run"]
+    ASS["ステップ 4 - 分析\neds assess run"]
+    EXP["ステップ 5 - 説明\neds explain run"]
+    DOC["ステップ 6 - 文書化\neds report generate\neds document fill/check/gen"]
+    SEA["ステップ 7 - 封印\neds audit"]
 
     SRC1 --> ING
     SRC2 --> ING
@@ -26,51 +26,51 @@ flowchart LR
     DOC --> SEA
 ```
 
-## Stage outputs
+## ステージ出力
 
-Each stage writes a headed JSONL file consumed by the next:
+各ステージはヘッダ付き JSONL ファイルを書き出し、次のステージが読み込みます。
 
-| Stage output | Schema name | Consumed by |
+| ステージ出力 | スキーマ名 | 読み込み先 |
 |---|---|---|
-| `eds ingest replay / stream` | `eds.entity-frame` | `eds compute`, `eds evaluate` |
+| `eds ingest replay / stream` | `eds.entity-frame` | `eds compute`、`eds evaluate` |
 | `eds parse maritime` | `eds.document-entity` | `eds document fill` |
-| `eds compute run` | `eds.measurement` | (reference; evaluate reads entity-frame directly) |
-| `eds evaluate run` | `eds.risk-event` | `eds assess`, `eds report generate` |
+| `eds compute run` | `eds.measurement` | （参照用。evaluate は entity-frame を直接読み込む） |
+| `eds evaluate run` | `eds.risk-event` | `eds assess`、`eds report generate` |
 | `eds assess run` | `eds.assessment` | `eds report generate` |
 | `eds explain run` | `eds.explanation` | `eds report generate` |
-| `eds document fill` | `eds.filled-document` | `eds document check`, `eds document gen` |
-| `eds document check` | `eds.compliance-alert` | reviewed by operator |
-| `eds report generate` | Markdown file | human review, PDF conversion |
-| `eds document gen` | HTML file | browser / PDF print |
+| `eds document fill` | `eds.filled-document` | `eds document check`、`eds document gen` |
+| `eds document check` | `eds.compliance-alert` | オペレーターによる確認 |
+| `eds report generate` | Markdown ファイル | 人によるレビュー、PDF 変換 |
+| `eds document gen` | HTML ファイル | ブラウザ / PDF 印刷 |
 
-## Crate map
+## クレートマップ
 
 ```
-edgesentry-ingest      CSV replay, UDP stream, JsonlReader/JsonlWriter
-edgesentry-parse       Maritime CSV → DocumentEntity
-edgesentry-compute     euclidean_distance, relative_velocity, time_to_collision,
-                       braking_distance, zone_membership
-edgesentry-evaluate    Rule DSL (distance/ttc/zone_member), RiskEvent
-edgesentry-profile     rules.json loader and validator
-edgesentry-store       EventStore trait + InMemoryStore (used internally by assess)
-edgesentry-assess      Trend detection, rule frequency, entity correlation
-edgesentry-explain     LlmClient (OpenAI-compat), KnowledgeBase, Explainer
-edgesentry-report      Markdown report generator
-edgesentry-document    FilledDocument, ComplianceAlert, HTML template renderer
-edgesentry-audit       BLAKE3 hash chain + Ed25519 signatures
-edgesentry-bridge      C/C++ FFI bridge for edgesentry-audit
+edgesentry-ingest      CSV リプレイ、UDP ストリーム、JsonlReader/JsonlWriter
+edgesentry-parse       航海 CSV → DocumentEntity
+edgesentry-compute     euclidean_distance、relative_velocity、time_to_collision、
+                       braking_distance、zone_membership
+edgesentry-evaluate    ルール DSL（distance/ttc/zone_member）、RiskEvent
+edgesentry-profile     rules.json ローダーとバリデーター
+edgesentry-store       EventStore トレイト + InMemoryStore（assess が内部使用）
+edgesentry-assess      トレンド検出、ルール頻度、エンティティ相関
+edgesentry-explain     LlmClient（OpenAI 互換）、KnowledgeBase、Explainer
+edgesentry-report      Markdown レポートジェネレーター
+edgesentry-document    FilledDocument、ComplianceAlert、HTML テンプレートレンダラー
+edgesentry-audit       BLAKE3 ハッシュチェーン + Ed25519 署名
+edgesentry-bridge      edgesentry-audit の C/C++ FFI ブリッジ
 ```
 
-## Domain examples
+## ドメイン別の適用例
 
-The same seven steps apply across domains — only the data and profiles differ:
+7 つのステップはドメインを問わず共通です。データとプロファイルのみが異なります。
 
-| Step | Safety Monitoring | Document Compliance |
+| ステップ | 安全監視 | ドキュメントコンプライアンス |
 |---|---|---|
-| Step 1 - Ingest | `eds ingest replay` -- forklift/pedestrian positions | `eds parse maritime` -- voyage CSV |
-| Step 2 - Compute | Distance, TTC, braking distance | (not applicable -- document fields, not physics) |
-| Step 3 - Evaluate | Safety rules: PROXIMITY_ALERT, TTC_ALERT, EXCLUSION_ZONE_BREACH | Compliance rules: BWM_D2_EXPIRED, DG_RESTRICTION |
-| Step 4 - Assess | Rising alert frequency, entity correlation | (not yet implemented) |
-| Step 5 - Explain | LLM explanation with regulation citation | (not yet implemented) |
-| Step 6 - Document | `eds report generate` -- Markdown safety report | `eds document gen` -- FAL Form 1 HTML |
-| Step 7 - Seal | `eds audit demo-lift-inspection` | (future: `eds audit sign-document`) |
+| ステップ 1 - 取込 | `eds ingest replay` -- フォークリフト/歩行者の位置 | `eds parse maritime` -- 航海 CSV |
+| ステップ 2 - 計算 | 距離、TTC、制動距離 | （対象外 -- ドキュメントフィールド、物理演算なし） |
+| ステップ 3 - 評価 | 安全ルール: PROXIMITY_ALERT、TTC_ALERT、EXCLUSION_ZONE_BREACH | コンプライアンスルール: BWM_D2_EXPIRED、DG_RESTRICTION |
+| ステップ 4 - 分析 | アラート頻度の上昇、エンティティ相関 | （未実装） |
+| ステップ 5 - 説明 | 規制引用付き LLM 説明 | （未実装） |
+| ステップ 6 - 文書化 | `eds report generate` -- Markdown 安全レポート | `eds document gen` -- FAL Form 1 HTML |
+| ステップ 7 - 封印 | `eds audit demo-lift-inspection` | （将来: `eds audit sign-document`） |
