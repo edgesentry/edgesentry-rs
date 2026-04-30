@@ -25,7 +25,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BIN="$ROOT/target/debug/eds"
 FIXTURES="$ROOT/crates/edgesentry-document/fixtures"
-PROFILE="$ROOT/crates/edgesentry-profile/fixtures/sg-port-compliance/rules.json"
+PROFILE="$ROOT/crates/edgesentry-profile/fixtures/sg-port-compliance"
 TMPDIR_LOCAL="$(mktemp -d /tmp/eds_demo_doc_XXXXXX)"
 trap 'rm -rf "$TMPDIR_LOCAL"' EXIT
 
@@ -66,7 +66,7 @@ echo "    $(wc -l < "$TMPDIR_LOCAL/filled1.jsonl") line(s) in filled1.jsonl"
 
 step "eds document check  →  compliance alerts"
 "$BIN" document check --input "$TMPDIR_LOCAL/filled1.jsonl" \
-  --rules "$PROFILE" --out "$TMPDIR_LOCAL/alerts1.jsonl"
+  --profile "$PROFILE" --out "$TMPDIR_LOCAL/alerts1.jsonl"
 ALERT_COUNT=$(python3 -c "
 import sys
 lines = [l for l in open('$TMPDIR_LOCAL/alerts1.jsonl') if l.strip() and not l.startswith('{\"eds_schema')]
@@ -100,7 +100,7 @@ step "eds parse maritime + eds document fill"
 
 step "eds document check  →  compliance alerts (expect BWM_D2_EXPIRED HIGH)"
 "$BIN" document check --input "$TMPDIR_LOCAL/filled2.jsonl" \
-  --rules "$PROFILE" --out "$TMPDIR_LOCAL/alerts2.jsonl" && \
+  --profile "$PROFILE" --out "$TMPDIR_LOCAL/alerts2.jsonl" && \
   python3 -c "
 import json, sys
 lines = [l for l in open('$TMPDIR_LOCAL/alerts2.jsonl') if l.strip() and not l.startswith('{\"eds_schema')]
