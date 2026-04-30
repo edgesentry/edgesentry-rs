@@ -1,0 +1,15 @@
+# Singapore port AIS fixture — MMSI=563012345 approaching restricted zone
+# Port reference: lat=1.2640, lon=103.8200 (Pasir Panjang Terminal)
+# SOG=5.0 knots, COG=0° (heading north), ~30s apart
+#
+# Port-local y positions:
+#   sentence 1: y ≈ -278m  (outside zone; zone starts at y=+200m)
+#   sentence 2: y ≈ -167m
+#   sentence 3: y =    0m  (reference point)
+#   sentence 4: y ≈ +200m  (at zone boundary)
+#   sentence 5: y ≈ +389m  (inside restricted zone — triggers RESTRICTED_ZONE_APPROACH)
+!AIVDM,1,1,,A,18HsRv@00j7K@100f<a000000000,0*1C
+!AIVDM,1,1,,A,18HsRv@00j7K@100f>w000000000,0*08
+!AIVDM,1,1,,A,18HsRv@00j7K@100fBP000000000,0*53
+!AIVDM,1,1,,A,18HsRv@00j7K@100fFf000000000,0*61
+!AIVDM,1,1,,A,18HsRv@00j7K@100fJe000000000,0*6E

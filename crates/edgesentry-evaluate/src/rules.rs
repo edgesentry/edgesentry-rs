@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use edgesentry_ingest::entity::{Entity, Vec2};
+use edgesentry_ingest::entity::{Entity, EntityClass, Vec2};
 use edgesentry_compute::{euclidean_distance, relative_velocity, time_to_collision, zone_membership};
 
 // ── Public types ──────────────────────────────────────────────────────────────
@@ -23,6 +23,8 @@ pub enum Condition {
     TtcLt(f32),
     /// Fire when any entity's position is inside the given polygon.
     ZoneMember(Vec<Vec2>),
+    /// Fire when an AisGap entity's gap duration (velocity.x in seconds) exceeds threshold.
+    AisGapGt(f32),
 }
 
 #[derive(Debug, Clone)]
@@ -98,6 +100,10 @@ fn parse_condition(s: &str, zone: Option<Vec<[f32; 2]>>) -> Result<Condition, St
         let t: f32 = rest.trim().parse().map_err(|_| format!("invalid threshold in '{s}'"))?;
         return Ok(Condition::TtcLt(t));
     }
+    if let Some(rest) = s.strip_prefix("ais_gap > ") {
+        let t: f32 = rest.trim().parse().map_err(|_| format!("invalid threshold in '{s}'"))?;
+        return Ok(Condition::AisGapGt(t));
+    }
     Err(format!("unknown condition expression: '{s}'"))
 }
 
@@ -164,6 +170,21 @@ pub fn evaluate(rules: &[Rule], entities: &[Entity], timestamp_ms: u64) -> Vec<R
                             entity_ids: vec![entity.id.clone()],
                             measured_value: 1.0,
                             threshold: 0.0,
+                            timestamp_ms,
+                        });
+                    }
+                }
+            }
+            Condition::AisGapGt(threshold) => {
+                for entity in entities {
+                    if entity.class == EntityClass::AisGap && entity.velocity.x > *threshold {
+                        events.push(RiskEvent {
+                            rule_id: rule.rule_id.clone(),
+                            severity: rule.severity.clone(),
+                            regulation: rule.regulation.clone(),
+                            entity_ids: vec![entity.id.clone()],
+                            measured_value: entity.velocity.x,
+                            threshold: *threshold,
                             timestamp_ms,
                         });
                     }
@@ -408,5 +429,123 @@ mod tests {
         assert!((evt.measured_value - 3.2).abs() < 1e-4);
         assert_eq!(evt.severity, Severity::High);
         assert!(evt.regulation.contains("§3.1"));
+    }
+
+    // ── evaluate — AisGapGt ───────────────────────────────────────────────
+
+    const AIS_RULES_JSON: &str = r#"[
+        {"rule_id":"AIS_TRACK_GAP","condition":"ais_gap > 480","severity":"CRITICAL","regulation":"SOLAS V/19"}
+    ]"#;
+
+    fn ais_gap_entity(id: &str, gap_s: f32) -> Entity {
+        Entity {
+            id: id.into(),
+            class: EntityClass::AisGap,
+            position: Vec2::new(0.0, 0.0),
+            velocity: Vec2::new(gap_s, 0.0),
+            timestamp_ms: 0,
+        }
+    }
+
+    #[test]
+    fn load_ais_gap_condition_parses_threshold() {
+        let rules = load_rules(AIS_RULES_JSON).unwrap();
+        assert_eq!(rules.len(), 1);
+        match &rules[0].condition {
+            Condition::AisGapGt(t) => assert!((*t - 480.0).abs() < 1e-5),
+            other => panic!("expected AisGapGt, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn evaluate_ais_gap_fires_when_gap_exceeds_threshold() {
+        let rules = load_rules(AIS_RULES_JSON).unwrap();
+        // gap_s=600 > threshold=480 → must fire
+        let entities = vec![ais_gap_entity("563012345", 600.0)];
+        let events = evaluate(&rules, &entities, 0);
+        assert!(events.iter().any(|e| e.rule_id == "AIS_TRACK_GAP"),
+            "AIS_TRACK_GAP should fire when gap > threshold");
+        let evt = events.iter().find(|e| e.rule_id == "AIS_TRACK_GAP").unwrap();
+        assert!((evt.measured_value - 600.0).abs() < 1e-3);
+        assert!((evt.threshold - 480.0).abs() < 1e-3);
+        assert_eq!(evt.severity, Severity::Critical);
+    }
+
+    #[test]
+    fn evaluate_ais_gap_no_fire_when_gap_below_threshold() {
+        let rules = load_rules(AIS_RULES_JSON).unwrap();
+        // gap_s=300 < threshold=480 → must not fire
+        let entities = vec![ais_gap_entity("563012345", 300.0)];
+        let events = evaluate(&rules, &entities, 0);
+        assert!(!events.iter().any(|e| e.rule_id == "AIS_TRACK_GAP"),
+            "AIS_TRACK_GAP should NOT fire when gap < threshold");
+    }
+
+    #[test]
+    fn evaluate_ais_gap_no_fire_for_vessel_entity() {
+        let rules = load_rules(AIS_RULES_JSON).unwrap();
+        // A Vessel entity (not AisGap) must not trigger the AisGapGt rule
+        let entities = vec![entity("563012345", 0.0, 0.0, 600.0, 0.0)];
+        let events = evaluate(&rules, &entities, 0);
+        assert!(!events.iter().any(|e| e.rule_id == "AIS_TRACK_GAP"),
+            "AIS_TRACK_GAP must not fire for a non-AisGap entity");
+    }
+
+    #[test]
+    fn evaluate_sg_maritime_rules_load_correctly() {
+        // The sg-maritime-security rules.json must load without errors
+        let rules_json = include_str!(
+            "../../edgesentry-profile/fixtures/sg-maritime-security/rules.json"
+        );
+        let rules = load_rules(rules_json).expect("sg-maritime-security rules.json must parse");
+        assert_eq!(rules.len(), 2);
+        assert_eq!(rules[0].rule_id, "RESTRICTED_ZONE_APPROACH");
+        assert_eq!(rules[1].rule_id, "AIS_TRACK_GAP");
+        match &rules[0].condition {
+            Condition::ZoneMember(p) => assert_eq!(p.len(), 4),
+            other => panic!("expected ZoneMember, got {other:?}"),
+        }
+        match &rules[1].condition {
+            Condition::AisGapGt(t) => assert!((*t - 480.0).abs() < 1e-3),
+            other => panic!("expected AisGapGt, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn evaluate_sg_zone_fires_for_vessel_inside() {
+        let rules_json = include_str!(
+            "../../edgesentry-profile/fixtures/sg-maritime-security/rules.json"
+        );
+        let rules = load_rules(rules_json).unwrap();
+        // Position at (0, 400) — inside polygon [[-300,200],[300,200],[300,700],[-300,700]]
+        let vessel = Entity {
+            id: "563012345".into(),
+            class: EntityClass::Vessel,
+            position: Vec2::new(0.0, 400.0),
+            velocity: Vec2::new(0.0, 0.0),
+            timestamp_ms: 0,
+        };
+        let events = evaluate(&rules, &[vessel], 0);
+        assert!(events.iter().any(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH"),
+            "RESTRICTED_ZONE_APPROACH should fire for vessel at (0,400)");
+    }
+
+    #[test]
+    fn evaluate_sg_zone_no_fire_for_vessel_outside() {
+        let rules_json = include_str!(
+            "../../edgesentry-profile/fixtures/sg-maritime-security/rules.json"
+        );
+        let rules = load_rules(rules_json).unwrap();
+        // Position at (0, -278) — outside zone (south of y=+200m boundary)
+        let vessel = Entity {
+            id: "563012345".into(),
+            class: EntityClass::Vessel,
+            position: Vec2::new(0.0, -278.0),
+            velocity: Vec2::new(0.0, 0.0),
+            timestamp_ms: 0,
+        };
+        let events = evaluate(&rules, &[vessel], 0);
+        assert!(!events.iter().any(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH"),
+            "RESTRICTED_ZONE_APPROACH must not fire for vessel south of zone");
     }
 }

@@ -48,11 +48,15 @@ pub enum EntityClass {
     Vessel,
     /// Walking person — modelled as stopping instantly (conservative)
     Person,
+    /// Synthetic entity emitted when an AIS vessel has not been heard for > threshold seconds.
+    /// `velocity.x` encodes the gap duration in seconds; `velocity.y` is 0.
+    AisGap,
 }
 
 impl EntityClass {
     /// Maximum service-brake deceleration in m/s².
     /// Person returns f32::INFINITY (stops instantly — safest assumption).
+    /// AisGap is a synthetic marker and uses 0.0 (not applicable).
     pub fn deceleration_ms2(&self) -> f32 {
         match self {
             EntityClass::Forklift => 1.5,
@@ -60,6 +64,7 @@ impl EntityClass {
             EntityClass::TerminalTractor => 2.0,
             EntityClass::Vessel => 0.05,
             EntityClass::Person => f32::INFINITY,
+            EntityClass::AisGap => 0.0,
         }
     }
 }
