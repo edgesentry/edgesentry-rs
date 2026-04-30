@@ -776,7 +776,8 @@ fn build_filled_document(csv: &std::path::Path) -> (TmpFile, TmpFile) {
 #[test]
 fn sign_document_exits_zero_and_writes_audit_record() {
     let (_entity, filled) = build_filled_document(&voyage_v001_csv());
-    let record = TmpFile::new("record.json");
+    let n = FILE_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let record = TmpFile::new(&format!("record_{n}.json"));
 
     let out = eds()
         .args(["audit", "sign-document", "--payload"])
@@ -802,7 +803,8 @@ fn sign_document_exits_zero_and_writes_audit_record() {
 #[test]
 fn verify_document_prints_verified_for_matching_payload() {
     let (_entity, filled) = build_filled_document(&voyage_v001_csv());
-    let record = TmpFile::new("record.json");
+    let n = FILE_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let record = TmpFile::new(&format!("record_{n}.json"));
 
     eds().args(["audit", "sign-document", "--payload"])
         .arg(filled.path())
@@ -829,7 +831,8 @@ fn verify_document_exits_nonzero_when_payload_not_in_chain() {
     // Sign V001, then try to verify V002 against that chain — must fail.
     let (_e1, filled_v001) = build_filled_document(&voyage_v001_csv());
     let (_e2, filled_v002) = build_filled_document(&voyage_v002_csv());
-    let record = TmpFile::new("record.json");
+    let n = FILE_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let record = TmpFile::new(&format!("record_{n}.json"));
 
     eds().args(["audit", "sign-document", "--payload"])
         .arg(filled_v001.path())
@@ -851,8 +854,9 @@ fn verify_document_exits_nonzero_when_payload_not_in_chain() {
 fn sign_document_chains_sequence_and_prev_hash() {
     let (_e1, filled_v001) = build_filled_document(&voyage_v001_csv());
     let (_e2, filled_v002) = build_filled_document(&voyage_v002_csv());
-    let chain1 = TmpFile::new("chain1.json");
-    let chain2 = TmpFile::new("chain2.json");
+    let n = FILE_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let chain1 = TmpFile::new(&format!("chain1_{n}.json"));
+    let chain2 = TmpFile::new(&format!("chain2_{n}.json"));
 
     // Sign V001 — sequence 1.
     eds().args(["audit", "sign-document", "--payload"])
