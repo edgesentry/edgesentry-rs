@@ -7,7 +7,10 @@ use std::{
     fs,
     path::PathBuf,
     process::{Command, Output},
+    sync::atomic::{AtomicUsize, Ordering},
 };
+
+static FILE_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -726,4 +729,167 @@ fn missing_required_arg_exits_nonzero() {
         .output()
         .expect("sign-record missing --device-id");
     assert!(!out.status.success());
+}
+
+// ── sign-document / verify-document ──────────────────────────────────────────
+
+fn voyage_v001_csv() -> PathBuf {
+    workspace_path("crates/edgesentry-document/fixtures/voyage_V001_compliant.csv")
+}
+
+fn voyage_v002_csv() -> PathBuf {
+    workspace_path("crates/edgesentry-document/fixtures/voyage_V002_bwm_expired.csv")
+}
+
+/// Run `eds parse maritime` + `eds document fill` and return the resulting
+/// `filled.jsonl` temp file. The intermediate `entity.jsonl` is cleaned up
+/// when the returned `TmpFile` pair is dropped.
+///
+/// Uses the thread ID in filenames to avoid collisions between parallel tests.
+fn build_filled_document(csv: &std::path::Path) -> (TmpFile, TmpFile) {
+    let n = FILE_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let tid = format!("{:?}", std::thread::current().id())
+        .replace("ThreadId(", "").replace(")", "");
+    let entity = TmpFile::new(&format!("entity_{tid}_{n}.jsonl"));
+    let filled = TmpFile::new(&format!("filled_{tid}_{n}.jsonl"));
+
+    let parse_out = eds()
+        .args(["parse", "maritime", "--source"])
+        .arg(csv)
+        .arg("--out").arg(entity.path())
+        .output()
+        .expect("eds parse maritime");
+    assert!(parse_out.status.success(), "parse failed: {}", stderr(&parse_out));
+
+    let fill_out = eds()
+        .args(["document", "fill", "--input"])
+        .arg(entity.path())
+        .args(["--template", "fal-form-1", "--out"])
+        .arg(filled.path())
+        .output()
+        .expect("eds document fill");
+    assert!(fill_out.status.success(), "fill failed: {}", stderr(&fill_out));
+
+    (entity, filled)
+}
+
+#[test]
+fn sign_document_exits_zero_and_writes_audit_record() {
+    let (_entity, filled) = build_filled_document(&voyage_v001_csv());
+    let n = FILE_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let record = TmpFile::new(&format!("record_{n}.json"));
+
+    let out = eds()
+        .args(["audit", "sign-document", "--payload"])
+        .arg(filled.path())
+        .args(["--key", PRIV_HEX, "--out"])
+        .arg(record.path())
+        .output()
+        .expect("eds audit sign-document");
+
+    assert!(out.status.success(), "sign-document failed: {}", stderr(&out));
+    assert!(stdout(&out).contains("SIGNED"), "stdout must say SIGNED");
+    assert!(stdout(&out).contains("1 document record"), "must report 1 record");
+
+    // Output must be valid JSON array of AuditRecord(s).
+    let content = fs::read_to_string(record.path()).expect("read record.json");
+    let records: Vec<serde_json::Value> = serde_json::from_str(&content)
+        .expect("record.json must be a JSON array");
+    assert_eq!(records.len(), 1);
+    assert!(records[0]["payload_hash"].is_array(), "payload_hash must be present");
+    assert_eq!(records[0]["sequence"].as_u64(), Some(1));
+}
+
+#[test]
+fn verify_document_prints_verified_for_matching_payload() {
+    let (_entity, filled) = build_filled_document(&voyage_v001_csv());
+    let n = FILE_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let record = TmpFile::new(&format!("record_{n}.json"));
+
+    eds().args(["audit", "sign-document", "--payload"])
+        .arg(filled.path())
+        .args(["--key", PRIV_HEX, "--out"]).arg(record.path())
+        .output().expect("sign-document");
+
+    let out = eds()
+        .args(["audit", "verify-document", "--payload"])
+        .arg(filled.path())
+        .args(["--chain"]).arg(record.path())
+        .output()
+        .expect("eds audit verify-document");
+
+    assert!(out.status.success(), "verify-document failed: {}", stderr(&out));
+    let s = stdout(&out);
+    assert!(s.contains("VERIFIED"), "must print VERIFIED");
+    assert!(s.contains("V001"), "must include voyage_id");
+    assert!(s.contains("fal-form-1"), "must include template");
+    assert!(s.contains("VESSEL_NAME"), "must list field confidence");
+}
+
+#[test]
+fn verify_document_exits_nonzero_when_payload_not_in_chain() {
+    // Sign V001, then try to verify V002 against that chain — must fail.
+    let (_e1, filled_v001) = build_filled_document(&voyage_v001_csv());
+    let (_e2, filled_v002) = build_filled_document(&voyage_v002_csv());
+    let n = FILE_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let record = TmpFile::new(&format!("record_{n}.json"));
+
+    eds().args(["audit", "sign-document", "--payload"])
+        .arg(filled_v001.path())
+        .args(["--key", PRIV_HEX, "--out"]).arg(record.path())
+        .output().expect("sign-document");
+
+    let out = eds()
+        .args(["audit", "verify-document", "--payload"])
+        .arg(filled_v002.path())  // different document
+        .args(["--chain"]).arg(record.path())
+        .output()
+        .expect("eds audit verify-document mismatch");
+
+    assert!(!out.status.success(), "must exit non-zero when not found");
+    assert!(stderr(&out).contains("NOT FOUND"), "must print NOT FOUND");
+}
+
+#[test]
+fn sign_document_chains_sequence_and_prev_hash() {
+    let (_e1, filled_v001) = build_filled_document(&voyage_v001_csv());
+    let (_e2, filled_v002) = build_filled_document(&voyage_v002_csv());
+    let n = FILE_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let chain1 = TmpFile::new(&format!("chain1_{n}.json"));
+    let chain2 = TmpFile::new(&format!("chain2_{n}.json"));
+
+    // Sign V001 — sequence 1.
+    eds().args(["audit", "sign-document", "--payload"])
+        .arg(filled_v001.path())
+        .args(["--key", PRIV_HEX, "--out"]).arg(chain1.path())
+        .output().expect("sign V001");
+
+    // Sign V002 continuing from chain1 — sequence must be 2.
+    let out = eds()
+        .args(["audit", "sign-document", "--payload"])
+        .arg(filled_v002.path())
+        .args(["--key", PRIV_HEX, "--chain"]).arg(chain1.path())
+        .args(["--out"]).arg(chain2.path())
+        .output()
+        .expect("sign V002 chained");
+
+    assert!(out.status.success(), "{}", stderr(&out));
+
+    let records: Vec<serde_json::Value> =
+        serde_json::from_str(&fs::read_to_string(chain2.path()).unwrap()).unwrap();
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0]["sequence"].as_u64(), Some(2), "chained record must have sequence 2");
+
+    // prev_record_hash must NOT be all zeros (i.e. it was taken from chain1).
+    let prev: Vec<u8> = serde_json::from_value(records[0]["prev_record_hash"].clone()).unwrap();
+    assert_ne!(prev, vec![0u8; 32], "prev_record_hash must reference chain1 record");
+
+    // Both V001 and V002 must now be verifiable against their own chains.
+    let v = eds()
+        .args(["audit", "verify-document", "--payload"])
+        .arg(filled_v002.path())
+        .args(["--chain"]).arg(chain2.path())
+        .output().expect("verify V002");
+    assert!(v.status.success(), "V002 must verify: {}", stderr(&v));
+    assert!(stdout(&v).contains("V002"), "must show V002 voyage_id");
 }

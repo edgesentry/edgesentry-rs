@@ -3,6 +3,68 @@ use std::collections::HashMap;
 use edgesentry_parse::DocumentEntity;
 use serde::{Deserialize, Serialize};
 
+/// Payload sealed into the audit chain for a generated compliance document.
+///
+/// Constructed from a [`FilledDocument`] immediately before signing.
+/// Contains no raw sensor data or document content — only structured metadata
+/// sufficient to prove what was generated and with what confidence.
+///
+/// `timestamp_ms` is intentionally absent: it is a property of the signing event
+/// stored in [`AuditRecord::timestamp_ms`], not of the document content. This
+/// ensures the same payload hash can be recomputed from the same [`FilledDocument`]
+/// at any point in time for verification.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocumentAuditPayload {
+    pub record_type: String,
+    pub voyage_id: String,
+    pub template_id: String,
+    /// AI-generated or direct value for each field, sorted by key for determinism.
+    pub ai_field_values: Vec<(String, String)>,
+    /// Confidence score (0.0–1.0) per field, sorted by key for determinism.
+    pub confidence_flags: Vec<(String, f64)>,
+    /// Fields below the confidence threshold that required human review.
+    pub fields_flagged: Vec<String>,
+    pub review_required: bool,
+}
+
+/// Build a [`DocumentAuditPayload`] from a [`FilledDocument`].
+///
+/// All map fields are sorted by key to ensure deterministic serialisation —
+/// the same [`FilledDocument`] always produces the same BLAKE3 hash.
+pub fn build_audit_payload(doc: &FilledDocument) -> DocumentAuditPayload {
+    let mut ai_field_values: Vec<(String, String)> = doc
+        .fields
+        .iter()
+        .map(|(k, v)| (k.clone(), v.value.clone()))
+        .collect();
+    ai_field_values.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let mut confidence_flags: Vec<(String, f64)> = doc
+        .fields
+        .iter()
+        .map(|(k, v)| (k.clone(), v.confidence))
+        .collect();
+    confidence_flags.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let mut fields_flagged: Vec<String> = doc
+        .fields
+        .iter()
+        .filter(|(_, v)| v.flagged)
+        .map(|(k, _)| k.clone())
+        .collect();
+    fields_flagged.sort();
+
+    DocumentAuditPayload {
+        record_type: "document".to_string(),
+        voyage_id: doc.voyage_id.clone(),
+        template_id: doc.template.clone(),
+        ai_field_values,
+        confidence_flags,
+        fields_flagged,
+        review_required: doc.review_required,
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum FieldSource {
     Direct,
@@ -249,5 +311,59 @@ mod tests {
         assert!(rendered.contains("MV Test"));
         assert!(rendered.contains("23"));
         assert!(!rendered.contains("{{VESSEL_NAME}}"));
+    }
+
+    #[test]
+    fn build_audit_payload_voyage_and_template() {
+        let entity = make_entity("V001", Some("2027-03-01"), Some(23));
+        let doc = fill(&entity, "fal-form-1", None, 0.5).unwrap();
+        let payload = build_audit_payload(&doc);
+        assert_eq!(payload.record_type, "document");
+        assert_eq!(payload.voyage_id, "V001");
+        assert_eq!(payload.template_id, "fal-form-1");
+        assert!(!payload.review_required);
+        assert!(payload.fields_flagged.is_empty());
+    }
+
+    #[test]
+    fn build_audit_payload_fields_sorted_for_determinism() {
+        let entity = make_entity("V001", Some("2027-03-01"), Some(23));
+        let doc = fill(&entity, "fal-form-1", None, 0.5).unwrap();
+        let p1 = build_audit_payload(&doc);
+        let p2 = build_audit_payload(&doc);
+        // Same input must produce identical serialisation every call.
+        let b1 = serde_json::to_vec(&p1).unwrap();
+        let b2 = serde_json::to_vec(&p2).unwrap();
+        assert_eq!(b1, b2, "payload serialisation must be deterministic");
+        // Keys must be sorted.
+        let keys: Vec<&str> = p1.ai_field_values.iter().map(|(k, _)| k.as_str()).collect();
+        let mut sorted = keys.clone();
+        sorted.sort();
+        assert_eq!(keys, sorted, "ai_field_values must be sorted by key");
+    }
+
+    #[test]
+    fn build_audit_payload_flags_low_confidence_fields() {
+        let entity = make_entity("V003", Some("2027-03-01"), None); // crew_count missing
+        let doc = fill(&entity, "fal-form-1", None, 0.5).unwrap();
+        let payload = build_audit_payload(&doc);
+        assert!(payload.review_required);
+        assert!(payload.fields_flagged.contains(&"CREW_COUNT".to_string()));
+        // Confidence for flagged field is 0.0
+        let crew_conf = payload.confidence_flags.iter()
+            .find(|(k, _)| k == "CREW_COUNT")
+            .map(|(_, v)| *v);
+        assert_eq!(crew_conf, Some(0.0));
+    }
+
+    #[test]
+    fn build_audit_payload_is_json_serialisable() {
+        let entity = make_entity("V001", Some("2027-03-01"), Some(23));
+        let doc = fill(&entity, "fal-form-1", None, 0.5).unwrap();
+        let payload = build_audit_payload(&doc);
+        let json = serde_json::to_string(&payload).unwrap();
+        let round_tripped: DocumentAuditPayload = serde_json::from_str(&json).unwrap();
+        assert_eq!(round_tripped.voyage_id, payload.voyage_id);
+        assert_eq!(round_tripped.template_id, payload.template_id);
     }
 }
