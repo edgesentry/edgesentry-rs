@@ -1,7 +1,7 @@
 # Quickstart - Safety Monitoring
 
 End-to-end walkthrough of the safety monitoring pipeline using the bundled forklift approach fixture.
-The full automated version of this walkthrough is `scripts/local_demo.sh`.
+The full automated version of this walkthrough is `scripts/run_local_demo.sh`.
 
 ## Prerequisites
 

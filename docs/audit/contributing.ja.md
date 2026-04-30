@@ -179,7 +179,7 @@ cargo deny check advisories bans licenses sources
 
 ## main とのコンフリクトを避ける
 
-コンフリクトは、フィーチャーブランチが main から分岐した後、同じファイルに触れる他の PR が main にマージされると発生します。このリポジトリで最もコンフリクトしやすいファイルは`scripts/local_demo.sh`・`docs/src/demo.md`・`.github/copilot-instructions.md`です。
+コンフリクトは、フィーチャーブランチが main から分岐した後、同じファイルに触れる他の PR が main にマージされると発生します。このリポジトリで最もコンフリクトしやすいファイルは`scripts/run_local_demo.sh`・`docs/src/demo.md`・`.github/copilot-instructions.md`です。
 
 **作業開始前に**
 
@@ -217,7 +217,7 @@ git push --force-with-lease origin <your-branch>
 
 | ファイル | 頻繁にコンフリクトする理由 |
 |------|----------------------|
-| `scripts/local_demo.sh` | 複数の PR がステップを追加したりデモフローを再構成したりする |
+| `scripts/run_local_demo.sh` | 複数の PR がステップを追加したりデモフローを再構成したりする |
 | `docs/src/demo.md` | デモスクリプトの変更を反映する |
 | `.github/copilot-instructions.md` | 新しいモジュールやサンプルが追加されるたびに構造セクションが更新される |
 | `crates/edgesentry-rs/examples/lift_inspection_flow.rs` | クイックスタートの改善とロール境界の両方の作業で触れられる |

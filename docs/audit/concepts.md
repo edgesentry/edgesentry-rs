@@ -102,7 +102,7 @@ This separation keeps evidence metadata and payload storage independently manage
 
 ### 10.2 Interactive local demo (DB/MinIO required)
 
-- Run: `bash scripts/local_demo.sh`
+- Run: `bash scripts/run_local_demo.sh`
 - End-to-end flow with PostgreSQL + MinIO + CLI
 - Shows persisted audit records and operation logs
 

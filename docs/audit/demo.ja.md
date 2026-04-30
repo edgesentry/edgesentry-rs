@@ -33,7 +33,7 @@ EdgeSentry-RS は 3 つの明確なロールを中心に設計されています
 エンドツーエンドデモを実行：
 
 ```bash
-bash scripts/local_demo.sh
+bash scripts/run_local_demo.sh
 ```
 
 スクリプトは各ステップの後に一時停止し、 Enter キー（または`OK`）を押すまで次のステップへ進みません。

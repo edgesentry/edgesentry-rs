@@ -102,7 +102,7 @@
 
 ### 10.2 インタラクティブローカルデモ（ DB/MinIO 必要）
 
-- 実行：`bash scripts/local_demo.sh`
+- 実行：`bash scripts/run_local_demo.sh`
 - PostgreSQL + MinIO + CLI を使ったエンドツーエンドのフロー
 - 永続化された監査レコードと操作ログを確認できる
 
