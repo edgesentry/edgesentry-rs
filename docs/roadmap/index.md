@@ -110,7 +110,7 @@ These items are required to demonstrate the full end-to-end pipeline.
 ## Medium-term work — edge / cloud split
 
 **Architecture:** edge seals raw `MeasurementRecord`; cloud evaluates to `EvaluatedRecord`.
-The full design is in `_inputs/edge_cloud_pipeline.md`.
+The full design is in [edge-cloud-implementation.md](../pipeline/edge-cloud-implementation.md).
 
 ### New types in `edgesentry-evaluate`
 
@@ -238,6 +238,6 @@ Files without a header record are treated as version-unknown and produce a warni
 - `docs/pipeline/` — step-by-step pipeline documentation
 - `docs/audit/roadmap.md` — audit crate compliance roadmap (CLS / JC-STAR)
 - `docs/inspect/roadmap.md` — inspect crate roadmap (3D deviation, IFC)
-- `_inputs/edge_cloud_pipeline.md` — edge/cloud split design detail
+- `docs/pipeline/edge-cloud-implementation.md` — edge/cloud split: Rust types, CLI design, profile split, build order
 - `_inputs/mvp.md` — June 2026 submission scope and demo flows
 - `_inputs/migration_roadmap.md` — Phase 1–3 crate migration history
