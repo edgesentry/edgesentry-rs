@@ -70,6 +70,13 @@ plugins:
             Background: 背景
             Requirements: 要件
             Scenarios: シナリオ
+            Security: セキュリティ
+            Overview: 概要
+            Threat Model: 脅威モデル
+            Traceability: トレーサビリティ
+            SBOM: SBOM
+            Legal: 法的要件
+            Admissibility: 証拠能力
 
 extra_javascript:
   - https://unpkg.com/mermaid@10/dist/mermaid.min.js
@@ -113,10 +120,14 @@ nav:
     - CLI Reference: audit/cli.md
     - Key Management: audit/key_management.md
     - Deployment: audit/deployment.md
-    - Threat Model: audit/threat_model.md
     - Operations Runbook: audit/operations.md
-    - Traceability: audit/traceability.md
-    - SBOM: audit/sbom.md
+  - Security:
+    - Overview: security/index.md
+    - Threat Model: security/threat-model.md
+    - Traceability: security/cls-traceability.md
+    - SBOM: security/sbom.md
+  - Legal:
+    - Admissibility: legal/index.md
   - Inspect:
     - Introduction: inspect/introduction.md
     - Background: inspect/background.md
