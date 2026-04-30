@@ -1,4 +1,15 @@
 [
-  {"rule_id": "RESTRICTED_ZONE_APPROACH", "condition": "distance < 0.5", "severity": "HIGH", "regulation": "Maritime and Port Authority of Singapore (MPA) — Port Marine Notice No. 79 of 2020: Vessels must maintain 0.5 NM clearance from restricted zones"},
-  {"rule_id": "AIS_TRACK_GAP", "condition": "ais_gap > 480", "severity": "CRITICAL", "regulation": "SOLAS Chapter V Regulation 19 — AIS must be operational continuously. Gaps exceeding 8 minutes within port limits require immediate reporting"}
+  {
+    "rule_id": "RESTRICTED_ZONE_APPROACH",
+    "condition": "zone_member",
+    "zone": [[-300, 200], [300, 200], [300, 700], [-300, 700]],
+    "severity": "HIGH",
+    "regulation": "Maritime and Port Authority of Singapore (MPA) — Port Marine Notice No. 79 of 2020: Vessels must maintain 0.5 NM clearance from restricted zones"
+  },
+  {
+    "rule_id": "AIS_TRACK_GAP",
+    "condition": "ais_gap > 480",
+    "severity": "CRITICAL",
+    "regulation": "SOLAS Chapter V Regulation 19 — AIS must be operational continuously. Gaps exceeding 8 minutes within port limits require immediate reporting"
+  }
 ]
