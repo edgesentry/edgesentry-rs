@@ -36,6 +36,7 @@ edgesentry-report   = { path = "../edgesentry-report" }
 edgesentry-parse    = { path = "../edgesentry-parse" }
 edgesentry-document = { path = "../edgesentry-document" }
 edgesentry-scenario = { path = "../edgesentry-scenario" }
+blake3        = { workspace = true }
 clap          = { workspace = true }
 ed25519-dalek = { workspace = true }
 hex           = { workspace = true }

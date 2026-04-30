@@ -8,6 +8,8 @@ use edgesentry_audit::{
     parse_fixed_hex, sign_record, verify_chain_file, verify_chain_records, verify_record,
     write_record_json, write_records_json, AuditRecord,
 };
+use edgesentry_document::{build_audit_payload, FilledDocument};
+use edgesentry_ingest::jsonl::JsonlReader;
 
 #[derive(Debug, Subcommand)]
 pub enum AuditCommand {
@@ -115,6 +117,44 @@ pub enum AuditCommand {
         #[cfg(feature = "transport-mqtt-tls")]
         #[arg(long)]
         tls_ca_cert: Option<PathBuf>,
+    },
+    /// Sign a filled compliance document and produce a tamper-evident AuditRecord.
+    ///
+    /// Reads FilledDocument JSONL, builds a DocumentAuditPayload for each record,
+    /// serialises it to canonical JSON bytes, signs with Ed25519, and writes an
+    /// AuditRecord JSON array. Each document in the input produces one AuditRecord.
+    /// Records are chained: if --chain is provided the last record's hash is used
+    /// as prev_record_hash for the first new record.
+    SignDocument {
+        /// FilledDocument JSONL produced by `eds document fill`.
+        #[arg(long)]
+        payload: PathBuf,
+        /// Ed25519 private key hex (32 bytes = 64 hex chars).
+        #[arg(long)]
+        key: String,
+        /// Device / signer identifier written into the AuditRecord.
+        #[arg(long, default_value = "eds-document")]
+        device_id: String,
+        /// Existing AuditRecord JSON array to continue chaining from (optional).
+        #[arg(long)]
+        chain: Option<PathBuf>,
+        /// Output file for the new AuditRecord(s) JSON array.
+        #[arg(long)]
+        out: PathBuf,
+    },
+    /// Verify that a filled document matches its AuditRecord in the chain.
+    ///
+    /// Rebuilds the DocumentAuditPayload from FilledDocument JSONL, computes its
+    /// BLAKE3 hash, and finds the matching AuditRecord in the chain. Prints a
+    /// human-readable trace: voyage_id, template, fields, confidence, flagged
+    /// fields, timestamp. Exits non-zero if no matching record is found.
+    VerifyDocument {
+        /// FilledDocument JSONL to verify (same file passed to sign-document).
+        #[arg(long)]
+        payload: PathBuf,
+        /// AuditRecord JSON array to search (output of sign-document).
+        #[arg(long)]
+        chain: PathBuf,
     },
     #[cfg(all(feature = "s3", feature = "postgres"))]
     /// Ingest records into PostgreSQL + MinIO (requires s3,postgres features)
@@ -479,6 +519,112 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
             }
 
             println!("INGEST_COMPLETE: accepted={accepted} rejected={rejected}");
+        }
+
+        AuditCommand::SignDocument { payload, key, device_id, chain, out } => {
+            // Read existing chain to determine starting sequence and prev_hash.
+            let (mut sequence, mut prev_hash) = if let Some(ref chain_path) = chain {
+                let existing: Vec<AuditRecord> =
+                    serde_json::from_str(&std::fs::read_to_string(chain_path)?)?;
+                let seq = existing.last().map(|r| r.sequence + 1).unwrap_or(1);
+                let ph = existing.last().map(|r| r.hash()).unwrap_or(AuditRecord::zero_hash());
+                (seq, ph)
+            } else {
+                (1u64, AuditRecord::zero_hash())
+            };
+
+            // Read FilledDocument JSONL (skip schema header via JsonlReader).
+            let file = std::fs::File::open(&payload)?;
+            let mut reader = JsonlReader::open(file)
+                .map_err(|e| format!("JSONL open: {e}"))?;
+            let docs: Vec<FilledDocument> = reader
+                .records()
+                .collect::<Result<_, _>>()
+                .map_err(|e| Box::<dyn std::error::Error>::from(format!("JSONL read: {e}")))?;
+
+            let mut records: Vec<AuditRecord> = Vec::with_capacity(docs.len());
+            let timestamp_ms = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as u64)
+                .unwrap_or(0);
+
+            for doc in &docs {
+                let audit_payload = build_audit_payload(doc);
+                let payload_bytes = serde_json::to_vec(&audit_payload)?;
+                let object_ref = format!("document:{}/{}", doc.voyage_id, doc.template);
+                let record = sign_record(
+                    device_id.clone(),
+                    sequence,
+                    timestamp_ms,
+                    payload_bytes,
+                    prev_hash,
+                    object_ref,
+                    &key,
+                )?;
+                prev_hash = record.hash();
+                sequence += 1;
+                records.push(record);
+            }
+
+            write_records_json(&out, &records)?;
+            println!("SIGNED: {} document record(s) written to {}", records.len(), out.display());
+        }
+
+        AuditCommand::VerifyDocument { payload, chain } => {
+            // Read FilledDocument JSONL (skip schema header via JsonlReader).
+            let file = std::fs::File::open(&payload)?;
+            let mut reader = JsonlReader::open(file)
+                .map_err(|e| format!("JSONL open: {e}"))?;
+            let docs: Vec<FilledDocument> = reader
+                .records()
+                .collect::<Result<_, _>>()
+                .map_err(|e| Box::<dyn std::error::Error>::from(format!("JSONL read: {e}")))?;
+
+            // Read audit chain.
+            let chain_content = std::fs::read_to_string(&chain)?;
+            let records: Vec<AuditRecord> = serde_json::from_str(&chain_content)?;
+
+            let mut found_any = false;
+            for doc in &docs {
+                let audit_payload = build_audit_payload(doc);
+                let payload_bytes = serde_json::to_vec(&audit_payload)?;
+                let payload_hash = *blake3::hash(&payload_bytes).as_bytes();
+
+                let matched = records.iter().find(|r| r.payload_hash == payload_hash);
+                match matched {
+                    Some(record) => {
+                        found_any = true;
+                        println!("VERIFIED");
+                        println!("  voyage_id:       {}", audit_payload.voyage_id);
+                        println!("  template:        {}", audit_payload.template_id);
+                        println!("  timestamp_ms:    {}", record.timestamp_ms);
+                        println!("  sequence:        {}", record.sequence);
+                        println!("  device_id:       {}", record.device_id);
+                        println!("  review_required: {}", audit_payload.review_required);
+                        if !audit_payload.fields_flagged.is_empty() {
+                            println!("  fields_flagged:  {}", audit_payload.fields_flagged.join(", "));
+                        }
+                        println!("  field confidence:");
+                        for (field, conf) in &audit_payload.confidence_flags {
+                            let flag = if audit_payload.fields_flagged.contains(field) { " [FLAGGED]" } else { "" };
+                            println!("    {:<30} {:.2}{}", field, conf, flag);
+                        }
+                        println!("  payload_hash:    {}", hex::encode(record.payload_hash));
+                    }
+                    None => {
+                        eprintln!(
+                            "NOT FOUND: no AuditRecord matches voyage_id={} template={}",
+                            doc.voyage_id, doc.template
+                        );
+                        std::process::exit(2);
+                    }
+                }
+            }
+
+            if !found_any {
+                eprintln!("NO DOCUMENTS: payload file contained no FilledDocument records");
+                std::process::exit(2);
+            }
         }
     }
 
