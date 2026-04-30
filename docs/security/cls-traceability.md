@@ -11,12 +11,12 @@ Legend:
 
 ## SS 711:2025 Design Principles Coverage
 
-Singapore's national IoT standard SS 711:2025 defines four principles. See the [Roadmap](roadmap.md) for the full module mapping.
+Singapore's national IoT standard SS 711:2025 defines four principles. See the [Roadmap](../audit/roadmap.md) for the full module mapping.
 
 | Principle | SS 711:2025 Requirement | Status |
 |-----------|------------------------|--------|
 | Secure by Default | Unique device identity, signed OTA updates | ✅ `identity.rs`, `update.rs` |
-| Rigour in Defence | STRIDE threat model, tamper detection | ✅ Hash chain (`integrity.rs`) + [STRIDE threat model](threat_model.md) |
+| Rigour in Defence | STRIDE threat model, tamper detection | ✅ Hash chain (`integrity.rs`) + [STRIDE threat model](threat-model.md) |
 | Accountability | Audit trail, operation logs, RBAC design | ✅ `ingest/` (AuditLedger, OperationLog) |
 | Resiliency | Deny-by-default networking, DoS protection | ✅ `ingest/network_policy.rs` |
 
@@ -70,7 +70,7 @@ Singapore's national IoT standard SS 711:2025 defines four principles. See the [
 | Implementation | Public key registry: `IntegrityPolicyGate::register_device` ([`src/ingest/policy.rs:20`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/ingest/policy.rs#L20)) |
 | Implementation | Key generation CLI: `eds keygen` ([`src/lib.rs — generate_keypair`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/lib.rs)) |
 | Implementation | Key inspection CLI: `eds inspect-key` ([`src/lib.rs — inspect_key`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/lib.rs)) |
-| Implementation | Provisioning and rotation guidance: [Key Management](key_management.md) |
+| Implementation | Provisioning and rotation guidance: [Key Management](../audit/key_management.md) |
 | Note | HSM-backed key storage (CLS Level 4) is planned in [#54](https://github.com/edgesentry/edgesentry-rs/issues/54) |
 
 ---
