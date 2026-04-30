@@ -1,9 +1,6 @@
 # EdgeSentry-RS — Toolkit Roadmap
 
-EdgeSentry-RS is a Rust workspace providing a seven-step sensor-to-seal pipeline.
-Any domain that needs to capture real-world measurements, check them against rules,
-explain deviations in plain language, and produce a tamper-evident record fits the
-same pattern.
+EdgeSentry-RS is a Rust workspace providing a seven-step sensor-to-seal pipeline. Any domain that needs to capture real-world measurements, check them against rules, explain deviations in plain language, and produce a tamper-evident record fits the same pattern.
 
 This document tracks the implementation status of the full toolkit and the planned
 work ahead.
@@ -104,6 +101,37 @@ These items are required to demonstrate the full end-to-end pipeline.
 | [#303](https://github.com/edgesentry/edgesentry-rs/issues/303) | ARM64 cross-compile CI — `aarch64-unknown-linux-gnu` build job | Validates edge deployment claim |
 | [#18](https://github.com/edgesentry/edgesentry-rs/issues/18) | LLM runtime decision doc — Ollama vs llama.cpp vs MLX | Submission technical section |
 | [#301](https://github.com/edgesentry/edgesentry-rs/issues/301) | Confirm `eds parse maritime` uses CSV for MVP; defer Parquet | Scope clarity |
+
+---
+
+## Legal admissibility — `AuditRecord` hardening
+
+Full requirements analysis: [docs/legal/index.md](../legal/index.md).
+The two weakest points are the **trusted timestamp** and the missing **`software_version`** field.
+
+### Before June 2026 submission (P1)
+
+| Deliverable | Requirement addressed | Detail |
+|---|---|---|
+| Add `software_version: String` to `AuditRecord` | Requirement 6 — System integrity | Embed Git SHA at compile time via `env!("CARGO_PKG_VERSION")` + build metadata; satisfies Evidence Act s.116A "operating properly" |
+| Add `hash_alg: String` and `sig_alg: String` to `AuditRecord` | Requirement 7 — Retention / format longevity | Pin algorithm identifiers in the record; enables independent verification after 10+ years |
+| Document key registration process | Requirement 2 — Attribution | Public key → customer → edgesentry onboarding; stored with timestamp |
+| Document R2 upload timestamp as trusted anchor | Requirement 3 — Trusted timestamp (Phase 1) | Cloudflare `x-amz-date` is operator-independent; establishes "sealed before incident" argument |
+
+### Phase 2 — post-submission PoC (November 2026)
+
+| Deliverable | Requirement addressed | Detail |
+|---|---|---|
+| RFC 3161 TSA integration | Requirement 3 — Trusted timestamp (Phase 2) | Submit record hash to TSA (DigiCert/GlobalSign) on signing; store token alongside `AuditRecord` |
+| HSM / TPM key storage | Requirement 2 — Attribution (Phase 2) | Private key never extractable; satisfies CLS Level 4; tracked [#54](https://github.com/edgesentry/edgesentry-rs/issues/54) |
+| Partial chain export format | Requirement 4 — Completeness | Anchor record + proof of connection to root for time-range exports |
+
+### Before production / insurance partnership
+
+| Deliverable | Detail |
+|---|---|
+| External legal opinion | Singapore maritime law firm review of Evidence Act s.116A compliance |
+| P&I / H&M underwriter pilot | Confirm actual evidence requirements with one insurer |
 
 ---
 

@@ -36,7 +36,7 @@ crates/
     tests/                          # Integration tests
 scripts/
   run_unit_and_license_check.sh     # Unit tests + cargo-deny license check
-  local_demo.sh                     # Interactive local demo (requires Docker)
+  run_local_demo.sh                     # Interactive local demo (requires Docker)
 deny.toml                           # cargo-deny license policy
 docker-compose.local.yml            # PostgreSQL + MinIO for local demo
 ```

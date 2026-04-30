@@ -33,7 +33,7 @@ Prerequisites:
 Run end-to-end demo:
 
 ```bash
-bash scripts/local_demo.sh
+bash scripts/run_local_demo.sh
 ```
 
 The script pauses after each step and waits for Enter (or `OK`) before proceeding.

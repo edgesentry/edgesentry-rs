@@ -33,7 +33,7 @@ All tests must pass before any commit. No clippy warnings allowed.
 
 ### Running examples and demos
 - **[Library Usage](docs/audit/en/src/quickstart.md)** — run `cargo run -p edgesentry-audit --example lift_inspection_flow`; S3/MinIO backend switching
-- **[Interactive Demo](docs/audit/en/src/demo.md)** — run `bash scripts/local_demo.sh`; requires Docker (PostgreSQL + MinIO)
+- **[Interactive Demo](docs/audit/en/src/demo.md)** — run `bash scripts/run_local_demo.sh`; requires Docker (PostgreSQL + MinIO)
 
 ### Using the CLI
 - **[CLI Reference](docs/audit/en/src/cli.md)** — `sign-record`, `verify-record`, `verify-chain` commands with examples; lift inspection end-to-end scenario; tampering detection walkthrough
@@ -87,7 +87,7 @@ edgesentry-rs/
       en/src/            — inspect documentation (English)
       ja/src/            — inspect documentation (Japanese)
   scripts/
-    local_demo.sh        — end-to-end audit demo (Docker)
+    run_local_demo.sh        — end-to-end audit demo (Docker)
     preview_docs.sh      — build and serve all docs locally at localhost:8080/edgesentry-rs/
 ```
 

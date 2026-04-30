@@ -1,26 +1,30 @@
 #!/usr/bin/env bash
-# local_demo.sh — Full pipeline demo (Phases 1-3)
+# run_local_demo.sh — Full pipeline demo (Phases 1-3)
 #
 # Walks through the complete edgesentry-rs pipeline using the forklift approach
 # fixture and the demo profile. No external services required.
 #
 # Usage:
-#   ./scripts/local_demo.sh              # interactive (pause between stages)
-#   ./scripts/local_demo.sh --no-pause   # CI / non-interactive
-#   ./scripts/local_demo.sh --skip-explain  # skip LLM stage
+#   ./scripts/run_local_demo.sh              # interactive (pause between stages)
+#   ./scripts/run_local_demo.sh --no-pause   # CI / non-interactive
+#   ./scripts/run_local_demo.sh --skip-explain  # skip LLM stage
 #
 # Pipeline:
-#   Stage 1  eds ingest replay    CSV → EntityFrame JSONL
-#   Stage 2  eds compute run      EntityFrame → Measurement JSONL
-#   Stage 3  eds evaluate run     EntityFrame + profile → RiskEvent JSONL
-#   Stage 4  eds assess run       RiskEvent → Assessment JSONL
-#   Stage 5  eds explain run      RiskEvent → Explanation JSONL  (requires LLM server)
-#   Stage 6  eds report generate  Events + Assessment → Markdown report
-#   Stage 7  eds report generate  Events + Assessment → PDF report
-#   Stage 8  eds audit sign       RiskEvents → AuditRecord chain
-#   Stage 9  eds audit verify     chain integrity check
+#   Stage 1  eds ingest replay      CSV → EntityFrame JSONL
+#   Stage 2  eds compute run        EntityFrame → Measurement JSONL
+#   Stage 3  eds evaluate run       EntityFrame + profile → RiskEvent JSONL
+#   Stage 4  eds assess run         RiskEvent → Assessment JSONL
+#   Stage 5  eds explain run        RiskEvent → Explanation JSONL  (requires LLM server)
+#   Stage 6  eds report generate    Events + Assessment → Markdown report
+#   Stage 7  eds report generate    Events + Assessment → PDF report
+#   Stage 8  eds audit sign         RiskEvents → AuditRecord chain
+#   Stage 9  eds audit verify       chain integrity check
 #   Stage 10 eds scenario generate  synthetic CSV fixture
 #   Stage 11 eds parse document     JSON document → EntityFrame JSONL
+#   --- Document compliance audit chain (PIER71 TC4) ---
+#   Stage 12 V001 compliant voyage  parse → fill → check (0 alerts) → gen → sign-document → verify
+#   Stage 13 V002 BWM expired       parse → fill → check (HIGH alert) → sign-document (chain) → verify
+#   Stage 14 V003 low confidence    parse → fill (threshold 0.80, flagged fields) → sign-document → verify
 #
 # Prerequisites:
 #   cargo build (done automatically)
@@ -33,9 +37,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BIN="$ROOT/target/debug/eds"
 
-# ── Fixtures and profile ─────────────────────────────────────────────────────
+# ── Fixtures and profiles ────────────────────────────────────────────────────
 FIXTURE_CSV="$ROOT/crates/edgesentry-ingest/fixtures/forklift_approach.csv"
 PROFILE_DIR="$ROOT/crates/edgesentry-profile/fixtures/demo"
+MARITIME_PROFILE="$ROOT/crates/edgesentry-profile/fixtures/sg-port-compliance"
+DOC_FIXTURES="$ROOT/crates/edgesentry-document/fixtures"
 
 # Fall back to clarus repo if edgesentry-rs fixtures not yet present
 if [[ ! -f "$FIXTURE_CSV" ]]; then
@@ -66,6 +72,7 @@ AUDIT_JSONL="$OUT/audit.jsonl"
 CHAIN_STATE="$OUT/chain.state"
 SCENARIO_CSV="$OUT/scenario.csv"
 PARSED_JSONL="$OUT/parsed.jsonl"
+DOC_KEY=""          # populated at Stage 12 setup
 
 # ── Flags ────────────────────────────────────────────────────────────────────
 NO_PAUSE=false
@@ -349,6 +356,104 @@ dim   "  Schema: $(head -1 "$PARSED_JSONL")"
 
 pause "Stage 11 complete"
 
+# ── Stage 12: Document compliance — V001 compliant ───────────────────────────
+bold "━━ Stage 12 — Document audit chain: V001 compliant voyage"
+dim  "  Scenario: FAL Form 1, all fields present, no compliance alerts"
+echo ""
+
+# Generate a fresh keypair for the document audit chain
+DOC_KEYPAIR=$("$BIN" audit keygen)
+DOC_KEY=$(echo "$DOC_KEYPAIR" | python3 -c "import sys,json; print(json.load(sys.stdin)['private_key_hex'])")
+dim "  Keypair generated. private_key: ${DOC_KEY:0:16}…"
+echo ""
+
+ENTITY1="$OUT/doc_entity1.jsonl"
+FILLED1="$OUT/doc_filled1.jsonl"
+ALERTS1="$OUT/doc_alerts1.jsonl"
+HTML1="$OUT/fal-form-1.html"
+CHAIN1="$OUT/doc_chain1.json"
+
+dim "  eds parse maritime → entity1.jsonl"
+"$BIN" parse maritime --source "$DOC_FIXTURES/voyage_V001_compliant.csv" --out "$ENTITY1"
+
+dim "  eds document fill  → filled1.jsonl"
+"$BIN" document fill --input "$ENTITY1" --template fal-form-1 --out "$FILLED1"
+
+dim "  eds document check → alerts1.jsonl"
+"$BIN" document check --input "$FILLED1" --profile "$MARITIME_PROFILE" --out "$ALERTS1"
+ALERT1=$(python3 -c "
+import sys
+lines = [l for l in open('$ALERTS1') if l.strip() and not l.startswith('{\"eds_schema')]
+print(len(lines))
+" 2>/dev/null || echo 0)
+green "  ✓ compliance alerts: $ALERT1  (expected: 0)"
+
+dim "  eds document gen   → fal-form-1.html"
+"$BIN" document gen --input "$FILLED1" --template fal-form-1 --out "$HTML1"
+dim "    $(wc -c < "$HTML1") bytes rendered"
+
+dim "  eds audit sign-document → chain1.json (sequence 1)"
+"$BIN" audit sign-document --payload "$FILLED1" --key "$DOC_KEY" --out "$CHAIN1"
+green "  ✓ VERIFIED:"
+"$BIN" audit verify-document --payload "$FILLED1" --chain "$CHAIN1" | sed 's/^/    /'
+
+pause "Stage 12 complete"
+
+# ── Stage 13: Document compliance — V002 BWM expired ─────────────────────────
+bold "━━ Stage 13 — Document audit chain: V002 BWM certificate expired"
+dim  "  Scenario: BWM_D2_EXPIRED HIGH alert; chain continues from Stage 12"
+echo ""
+
+ENTITY2="$OUT/doc_entity2.jsonl"
+FILLED2="$OUT/doc_filled2.jsonl"
+ALERTS2="$OUT/doc_alerts2.jsonl"
+CHAIN2="$OUT/doc_chain2.json"
+
+dim "  eds parse maritime + document fill"
+"$BIN" parse maritime --source "$DOC_FIXTURES/voyage_V002_bwm_expired.csv" --out "$ENTITY2"
+"$BIN" document fill --input "$ENTITY2" --template fal-form-1 --out "$FILLED2"
+
+dim "  eds document check → compliance alerts"
+"$BIN" document check --input "$FILLED2" --profile "$MARITIME_PROFILE" --out "$ALERTS2"
+python3 -c "
+import json, sys
+lines = [l for l in open('$ALERTS2') if l.strip() and not l.startswith('{\"eds_schema')]
+for l in lines:
+    a = json.loads(l)
+    print(f'    [{a[\"severity\"]}] {a[\"rule_id\"]} — {a[\"regulation\"]}')
+" 2>/dev/null
+green "  ✓ BWM_D2_EXPIRED HIGH alert detected"
+
+dim "  eds audit sign-document → chain2.json (sequence 2, chained from Stage 12)"
+"$BIN" audit sign-document --payload "$FILLED2" --key "$DOC_KEY" \
+  --chain "$CHAIN1" --out "$CHAIN2"
+green "  ✓ VERIFIED:"
+"$BIN" audit verify-document --payload "$FILLED2" --chain "$CHAIN2" | sed 's/^/    /'
+
+pause "Stage 13 complete"
+
+# ── Stage 14: Document compliance — V003 low confidence ──────────────────────
+bold "━━ Stage 14 — Document audit chain: V003 low confidence cargo"
+dim  "  Scenario: CARGO_HS_CODE and CREW_COUNT flagged; review_required=true"
+echo ""
+
+ENTITY3="$OUT/doc_entity3.jsonl"
+FILLED3="$OUT/doc_filled3.jsonl"
+CHAIN3="$OUT/doc_chain3.json"
+
+dim "  eds parse maritime + document fill (--confidence-threshold 0.80)"
+"$BIN" parse maritime --source "$DOC_FIXTURES/voyage_V003_low_confidence.csv" --out "$ENTITY3"
+"$BIN" document fill --input "$ENTITY3" --template fal-form-1 \
+  --confidence-threshold 0.80 --out "$FILLED3"
+
+dim "  eds audit sign-document → chain3.json (sequence 3, chained from Stage 13)"
+"$BIN" audit sign-document --payload "$FILLED3" --key "$DOC_KEY" \
+  --chain "$CHAIN2" --out "$CHAIN3"
+green "  ✓ VERIFIED (flagged fields visible):"
+"$BIN" audit verify-document --payload "$FILLED3" --chain "$CHAIN3" | sed 's/^/    /'
+
+pause "Stage 14 complete"
+
 # ── Summary ──────────────────────────────────────────────────────────────────
 echo ""
 bold "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -367,4 +472,12 @@ dim "  Stage 8   audit sign      → sealed chain"
 dim "  Stage 9   audit verify    → chain integrity"
 dim "  Stage 10  scenario gen    → $SCENARIO_ROWS synthetic entity rows"
 dim "  Stage 11  parse document  → $PARSED_FRAMES EntityFrame(s)"
+dim "  Stage 12  doc audit V001  → compliant, $ALERT1 alerts, sequence 1 sealed"
+dim "  Stage 13  doc audit V002  → BWM_D2_EXPIRED HIGH, sequence 2 chained"
+dim "  Stage 14  doc audit V003  → flagged fields, review_required, sequence 3 chained"
+echo ""
+dim "  Three documents sealed into a tamper-evident chain:"
+dim "    sequence 1  V001 (compliant)           → $CHAIN1"
+dim "    sequence 2  V002 (BWM_D2_EXPIRED HIGH) → $CHAIN2"
+dim "    sequence 3  V003 (flagged fields)       → $CHAIN3"
 echo ""

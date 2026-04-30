@@ -179,7 +179,7 @@ If this check fails, inspect violating crates and update dependencies or the pol
 
 ## Avoiding Conflicts with Main
 
-Conflicts occur when a feature branch diverges from main while main receives other merged PRs that touch the same files. The highest-conflict files in this repo are `scripts/local_demo.sh`, `docs/src/demo.md`, and `.github/copilot-instructions.md`.
+Conflicts occur when a feature branch diverges from main while main receives other merged PRs that touch the same files. The highest-conflict files in this repo are `scripts/run_local_demo.sh`, `docs/src/demo.md`, and `.github/copilot-instructions.md`.
 
 **Before starting work**
 
@@ -217,7 +217,7 @@ git push --force-with-lease origin <your-branch>
 
 | File | Why it conflicts often |
 |------|----------------------|
-| `scripts/local_demo.sh` | Multiple PRs add steps or restructure the demo flow |
+| `scripts/run_local_demo.sh` | Multiple PRs add steps or restructure the demo flow |
 | `docs/src/demo.md` | Mirrors demo script changes |
 | `.github/copilot-instructions.md` | Structure section updated whenever new modules or examples are added |
 | `crates/edgesentry-rs/examples/lift_inspection_flow.rs` | Touched by both quickstart improvements and role-boundary work |
