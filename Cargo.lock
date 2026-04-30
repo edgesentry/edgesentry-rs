@@ -1379,6 +1379,7 @@ dependencies = [
 name = "eds"
 version = "0.2.0"
 dependencies = [
+ "blake3",
  "clap",
  "ed25519-dalek",
  "edgesentry-assess",
