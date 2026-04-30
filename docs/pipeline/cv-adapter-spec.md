@@ -7,15 +7,15 @@ maintained as a contingency for on-site PoC work.
 
 ---
 
-## Preferred path: MENOU
+## Preferred path: CV vendor partnership
 
 The CV adapter is not a core competency of edgesentry.
 Engineering effort is concentrated on the physics engine, rule evaluation,
 audit chain, and evidence infrastructure — not object detection.
 
-When a PoC site is confirmed, cooperation will be requested from
-**MENOU** ([menou.co.jp](https://menou.co.jp/home_en)), a specialist in
-industrial AI visual inspection with a proven track record in manufacturing environments.
+The preferred production architecture is to integrate with a specialist CV vendor
+whose detection model is already certified for industrial environments
+(port terminals, warehouses, construction sites).
 
 A vendor integration means:
 - Detection accuracy is the vendor's certified responsibility, not ours
@@ -75,10 +75,10 @@ Any CV adapter must produce `eds.entity-frame` JSONL, one record per timestamp:
 ## Interim solution: specula
 
 **Repository:** `edgesentry/specula`
-**Status:** fallback — used only if MENOU cooperation is not yet secured when an on-site PoC is required
+**Status:** fallback — used only if no CV vendor partnership is in place when an on-site PoC is required
 
 specula is a minimal in-house OSS-based CV adapter. It is not a production system and not a focus area.
-It exists to unblock on-site PoC work when vendor cooperation has not yet been arranged.
+It exists to unblock on-site PoC work when a vendor integration has not yet been arranged.
 Engineering effort is directed at the physics engine and audit chain, not at specula.
 
 ### Stack
