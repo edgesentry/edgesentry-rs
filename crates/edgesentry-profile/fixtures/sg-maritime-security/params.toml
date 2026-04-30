@@ -1,0 +1,7 @@
+# Singapore port reference point — Pasir Panjang Terminal area
+[reference_point]
+lat_deg = 1.2640
+lon_deg = 103.8200
+
+[ais_gap]
+threshold_s = 480
