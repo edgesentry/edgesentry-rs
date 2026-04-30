@@ -1,11 +1,9 @@
 # Legal Admissibility of Audit Logs — edgesentry-rs
 
-**Updated:** 2026-04-30  
-**Scope:** Maritime compliance, workplace safety, insurance claims — Singapore-primary, internationally relevant
+- **Updated:** 2026-04-30  
+- **Scope:** Maritime compliance, workplace safety, insurance claims — Singapore-primary, internationally relevant
 
-An audit log that cannot be admitted as evidence is commercially worthless.
-This document defines the seven requirements for legal admissibility, maps each
-to the current edgesentry-rs implementation, and identifies gaps with mitigations.
+An audit log that cannot be admitted as evidence is commercially worthless. This document defines the seven requirements for legal admissibility, maps each to the current edgesentry-rs implementation, and identifies gaps with mitigations.
 
 ---
 

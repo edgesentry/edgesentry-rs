@@ -1,9 +1,6 @@
 # EdgeSentry-RS — Toolkit Roadmap
 
-EdgeSentry-RS is a Rust workspace providing a seven-step sensor-to-seal pipeline.
-Any domain that needs to capture real-world measurements, check them against rules,
-explain deviations in plain language, and produce a tamper-evident record fits the
-same pattern.
+EdgeSentry-RS is a Rust workspace providing a seven-step sensor-to-seal pipeline. Any domain that needs to capture real-world measurements, check them against rules, explain deviations in plain language, and produce a tamper-evident record fits the same pattern.
 
 This document tracks the implementation status of the full toolkit and the planned
 work ahead.
