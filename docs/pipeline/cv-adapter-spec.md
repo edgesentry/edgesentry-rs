@@ -7,16 +7,20 @@ maintained as a contingency for on-site PoC work.
 
 ---
 
-## Preferred path: CV vendor partnership
+## Preferred path: MENOU
 
-The CV adapter is not a core competency of edgesentry. The preferred production
-architecture is to integrate with a specialist CV vendor whose detection model is
-already certified for industrial environments (port terminals, warehouses).
+The CV adapter is not a core competency of edgesentry.
+Engineering effort is concentrated on the physics engine, rule evaluation,
+audit chain, and evidence infrastructure — not object detection.
 
-A vendor integration reduces:
-- Model accuracy risk (vendor carries the liability for detection quality)
-- Regulatory exposure (low-confidence detections under industrial safety standards)
-- Engineering time (no internal training data collection or annotation pipeline)
+When a PoC site is confirmed, cooperation will be requested from
+**MENOU** ([menou.co.jp](https://menou.co.jp/home_en)), a specialist in
+industrial AI visual inspection with a proven track record in manufacturing environments.
+
+A vendor integration means:
+- Detection accuracy is the vendor's certified responsibility, not ours
+- Industrial safety standards are addressed by the vendor
+- We focus on what is differentiated: physics evaluation, regulatory mapping, audit infrastructure
 
 The vendor adapter only needs to implement the output contract below.
 The edgesentry-rs physics engine and audit chain are vendor-agnostic.
@@ -71,10 +75,11 @@ Any CV adapter must produce `eds.entity-frame` JSONL, one record per timestamp:
 ## Interim solution: specula
 
 **Repository:** `edgesentry/specula`
-**Status:** contingency — used only if no CV vendor partner is available for on-site PoC
+**Status:** fallback — used only if MENOU cooperation is not yet secured when an on-site PoC is required
 
-specula is a minimal OSS-based CV adapter. It is not a production system.
-It exists to unblock on-site PoC work when a vendor integration is not yet in place.
+specula is a minimal in-house OSS-based CV adapter. It is not a production system and not a focus area.
+It exists to unblock on-site PoC work when vendor cooperation has not yet been arranged.
+Engineering effort is directed at the physics engine and audit chain, not at specula.
 
 ### Stack
 
