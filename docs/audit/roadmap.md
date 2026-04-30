@@ -37,7 +37,7 @@ Singapore's national IoT standard SS 711:2025 (which replaces TR 64:2018 and und
 
 ## Implementation Mapping
 
-For the detailed clause-by-clause mapping of CLS / ETSI EN 303 645 / JC-STAR requirements to source code, see the [Compliance Traceability Matrix](traceability.md).
+For the detailed clause-by-clause mapping of CLS / ETSI EN 303 645 / JC-STAR requirements to source code, see the [Compliance Traceability Matrix](../security/cls-traceability.md).
 
 ---
 
@@ -69,7 +69,7 @@ Deliver a software reference implementation that satisfies Singapore CLS Level 2
 
 ### Milestone 1.3: Compliance Mapping v1.0 ✅ Implemented
 
-- Traceability matrix mapping Singapore CLS/iM8 clauses to source code: [Compliance Traceability Matrix](traceability.md)
+- Traceability matrix mapping Singapore CLS/iM8 clauses to source code: [Compliance Traceability Matrix](../security/cls-traceability.md)
 
 ### Milestone 1.4: SBOM + Vendor Disclosure Checklist ✅ Implemented
 
@@ -78,7 +78,7 @@ IMDA's IoT Cyber Security Guide requires a vendor disclosure checklist as CLS Le
 - CycloneDX JSON SBOM generated for all crates and published with each GitHub Release
 - Vendor disclosure checklist responses documented for all five categories
 - Responses mapped to implementation in the traceability matrix
-- See [SBOM and Vendor Disclosure](sbom.md) and [#92](https://github.com/edgesentry/edgesentry-rs/issues/92)
+- See [SBOM and Vendor Disclosure](../security/sbom.md) and [#92](https://github.com/edgesentry/edgesentry-rs/issues/92)
 
 ### Milestone 1.5: Transport Layer, Async Ingest & Offline Buffer ✅ Implemented
 
@@ -93,9 +93,9 @@ IMDA's IoT Cyber Security Guide requires a vendor disclosure checklist as CLS Le
 
 CLS Level 3 assessors expect recorded design artifacts, not just code. SS 711:2025 requires STRIDE-based threat modelling of all attack surfaces (API, communication, storage).
 
-- STRIDE threat model covering: Spoofing (device identity), Tampering (audit records), Repudiation (operation logs), Information Disclosure (payload storage), Denial of Service (network policy), Elevation of Privilege (ingest gate) — see [`docs/src/threat_model.md`](threat_model.md)
+- STRIDE threat model covering: Spoofing (device identity), Tampering (audit records), Repudiation (operation logs), Information Disclosure (payload storage), Denial of Service (network policy), Elevation of Privilege (ingest gate) — see [`docs/src/threat_model.md`](../security/threat-model.md)
 - Binary analysis evidence confirming no known CVEs in shipped crates (`cargo-audit`, `cargo-deny`)
-- Threat model mitigations linked to traceability matrix entries — see [`docs/src/traceability.md`](traceability.md) (Rigour in Defence updated ✅)
+- Threat model mitigations linked to traceability matrix entries — see [`docs/src/traceability.md`](../security/cls-traceability.md) (Rigour in Defence updated ✅)
 - Japanese translation available at `docs/ja/src/threat_model.md`
 - Closed: [#93](https://github.com/edgesentry/edgesentry-rs/issues/93) via PR [#143](https://github.com/edgesentry/edgesentry-rs/pull/143)
 
