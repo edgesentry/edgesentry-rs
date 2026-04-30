@@ -463,7 +463,7 @@ mod tests {
     fn parse_vdm_bad_checksum_returns_none() {
         let good = encode_type1(123456789, 1.2640, 103.8200, 3.0, 180.0);
         // Corrupt the checksum digit
-        let bad = format!("{}", &good[..good.len() - 1]) + "X";
+        let bad = good[..good.len() - 1].to_string() + "X";
         assert!(parse_vdm(&bad).is_none());
     }
 
