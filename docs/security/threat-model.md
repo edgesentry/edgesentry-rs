@@ -62,7 +62,7 @@ This document is a formal threat-modelling artifact produced for Singapore CLS L
 | M-S-2 | Monotonic sequence numbers and `prev_record_hash` chain continuity are enforced; replayed records are detected as duplicate sequences | `ingest/verify.rs` `check_sequence()` |
 | M-S-3 | Ed25519 signatures bind the payload hash to the private key; a forged `device_id` with the wrong key fails signature verification | `identity.rs` `verify_payload_signature()` |
 
-**Residual risk:** If a device's private key is physically extracted, records can be forged with valid signatures.  Hardware-backed key storage (TPM/SE) is a device-layer control outside the scope of this library; it is noted in the [Roadmap](roadmap.md).
+**Residual risk:** If a device's private key is physically extracted, records can be forged with valid signatures.  Hardware-backed key storage (TPM/SE) is a device-layer control outside the scope of this library; it is noted in the [Roadmap](../audit/roadmap.md).
 
 ---
 
@@ -136,7 +136,7 @@ This document is a formal threat-modelling artifact produced for Singapore CLS L
 | M-I-2 | Raw payloads are stored by `object_ref` under the caller-specified key; access control is enforced by the storage layer (S3 bucket policy, Postgres GRANT); the library does not expose read APIs to unauthenticated callers | `ingest/storage.rs` `RawDataStore::put()` |
 | M-I-3 | Error messages include `device_id` and `sequence` but never the raw payload bytes; `tracing` spans log `payload_bytes` length only | `ingest/storage.rs` `#[instrument(skip(raw_payload))]` |
 
-**Residual risk:** Encryption at rest for S3 objects and Postgres rows is a deployment-layer control (S3 SSE-KMS, Postgres `pgcrypto` or TDE).  TLS 1.3 for the ingest HTTP endpoint is addressed in the [Roadmap](roadmap.md) (issue #73).
+**Residual risk:** Encryption at rest for S3 objects and Postgres rows is a deployment-layer control (S3 SSE-KMS, Postgres `pgcrypto` or TDE).  TLS 1.3 for the ingest HTTP endpoint is addressed in the [Roadmap](../audit/roadmap.md) (issue #73).
 
 ---
 
