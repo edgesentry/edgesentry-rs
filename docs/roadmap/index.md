@@ -31,7 +31,7 @@ regulatory interpretation is applied. The regulatory knowledge base (rule defini
 regulation texts) lives in the cloud and is updated there. Edge devices need only
 the threshold values required to fire operator alerts and seal raw measurements.
 This means a regulation update takes effect once in the cloud — no field deployment
-required. See [Edge / Cloud Pipeline Split](./../pipeline/edge-cloud-split.md).
+required. See [Edge / Cloud Pipeline Split](../pipeline/edge-cloud-split.md).
 
 **4. Same binary, two execution contexts**
 
