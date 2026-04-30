@@ -141,12 +141,12 @@ fn fmt_timestamp_ms(ms: u64) -> String {
     let mut y = 1970u64;
     let mut d = days;
     loop {
-        let days_in_year = if y % 4 == 0 { 366 } else { 365 };
+        let days_in_year = if y.is_multiple_of(4) { 366 } else { 365 };
         if d < days_in_year { break; }
         d -= days_in_year;
         y += 1;
     }
-    let leap = y % 4 == 0;
+    let leap = y.is_multiple_of(4);
     let month_days = [31u64, if leap { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
     let month_names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     let mut m = 0usize;
@@ -496,6 +496,7 @@ mod tests {
             site_name: Some("Test Site".to_string()),
             report_period: Some("2026-Q1".to_string()),
             chain_valid: Some(true),
+            explanations: vec![],
         };
         let report = generate_report(&events, &assessment, config);
         assert_eq!(report.event_summary.total, 3);
@@ -512,7 +513,7 @@ mod tests {
     fn render_markdown_on_minimal_report_compiles() {
         let events = vec![make_event("RULE_X", Severity::Low)];
         let assessment = assess(&events, None);
-        let config = ReportConfig { site_name: None, report_period: None, chain_valid: None };
+        let config = ReportConfig { site_name: None, report_period: None, chain_valid: None, explanations: vec![] };
         let report = generate_report(&events, &assessment, config);
         let md = render_markdown(&report);
         assert!(md.contains("# EdgeSentry Safety Report"));
@@ -527,7 +528,7 @@ mod tests {
     fn render_pdf_returns_non_empty_bytes() {
         let events = vec![make_event("RULE_X", Severity::High)];
         let assessment = assess(&events, None);
-        let config = ReportConfig { site_name: Some("Site A".to_string()), report_period: Some("2026-Q2".to_string()), chain_valid: None };
+        let config = ReportConfig { site_name: Some("Site A".to_string()), report_period: Some("2026-Q2".to_string()), chain_valid: None, explanations: vec![] };
         let report = generate_report(&events, &assessment, config);
         let bytes = render_pdf(&report);
         assert!(!bytes.is_empty(), "PDF bytes should not be empty");
@@ -539,7 +540,7 @@ mod tests {
     fn render_markdown_shows_chain_valid_when_some() {
         let events = vec![make_event("RULE_X", Severity::Low)];
         let assessment = assess(&events, None);
-        let config = ReportConfig { site_name: None, report_period: None, chain_valid: Some(false) };
+        let config = ReportConfig { site_name: None, report_period: None, chain_valid: Some(false), explanations: vec![] };
         let report = generate_report(&events, &assessment, config);
         let md = render_markdown(&report);
         assert!(md.contains("## Audit Chain"));
