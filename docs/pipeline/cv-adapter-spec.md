@@ -2,28 +2,34 @@
 
 edgesentry-rs starts at entity positions. The component that converts camera frames
 into entity positions is called a **CV adapter**. This document defines the contract
-a CV adapter must satisfy, and describes the interim OSS-based adapter (specula)
-maintained as a contingency for on-site PoC work.
+a CV adapter must satisfy, describes the in-house OSS adapter (specula) that is
+ready for PoC use, and explains how to plug in a specialist CV solution.
 
 ---
 
-## Preferred path: CV vendor partnership
+## Design principle: clean adapter boundary
 
-The CV adapter is not a core competency of edgesentry.
-Engineering effort is concentrated on the physics engine, rule evaluation,
-audit chain, and evidence infrastructure — not object detection.
+edgesentry-rs is agnostic about where entity positions come from.
+The CV layer connects at a single interface: `eds.entity-frame` JSONL.
 
-The preferred production architecture is to integrate with a specialist CV vendor
-whose detection model is already certified for industrial environments
-(port terminals, warehouses, construction sites).
+This means:
+- The in-house OSS adapter (specula) and a specialist vendor adapter are interchangeable
+- Swapping CV solutions requires no changes to the physics engine or audit chain
+- Engineering effort stays focused on what is differentiated: physics evaluation,
+  regulatory mapping, and tamper-proof evidence infrastructure
 
-A vendor integration means:
-- Detection accuracy is the vendor's certified responsibility, not ours
-- Industrial safety standards are addressed by the vendor
-- We focus on what is differentiated: physics evaluation, regulatory mapping, audit infrastructure
-
-The vendor adapter only needs to implement the output contract below.
-The edgesentry-rs physics engine and audit chain are vendor-agnostic.
+```
+Camera frames
+  │
+  ▼
+CV adapter  ←── specula (OSS, ready now)  or  specialist vendor adapter
+  │
+  │  eds.entity-frame JSONL
+  ▼
+edgesentry-ingest  ◄── edgesentry-rs boundary
+  │
+edgesentry-evaluate → edgesentry-audit → R2
+```
 
 ---
 
@@ -72,14 +78,18 @@ Any CV adapter must produce `eds.entity-frame` JSONL, one record per timestamp:
 
 ---
 
-## Interim solution: specula
+## In-house OSS adapter: specula
 
 **Repository:** `edgesentry/specula`
-**Status:** fallback — used only if no CV vendor partnership is in place when an on-site PoC is required
+**Status:** ready for PoC use
 
-specula is a minimal in-house OSS-based CV adapter. It is not a production system and not a focus area.
-It exists to unblock on-site PoC work when a vendor integration has not yet been arranged.
-Engineering effort is directed at the physics engine and audit chain, not at specula.
+specula is an in-house OSS CV adapter built on proven open-source components.
+It runs the full pipeline from a live camera to `eds.entity-frame` JSONL output,
+enabling real on-site PoC work without dependency on any third-party vendor.
+
+A specialist CV solution can replace specula at the adapter boundary
+with no changes to edgesentry-rs. specula is retained as the reference implementation
+and a working fallback.
 
 ### Stack
 
