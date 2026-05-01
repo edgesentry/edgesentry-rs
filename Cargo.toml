@@ -38,3 +38,4 @@ rand = "0.8"
 tracing = "0.1"
 tempfile = "3"
 ureq = { version = "2", features = ["json"] }
+proptest = "1"
