@@ -21,8 +21,8 @@ use edgesentry_ingest::udp::UnityUdpAdapter;
 /// is terminated (Ctrl-C / SIGTERM).
 pub fn run_stream(
     source: &str,
-    profile_dir: &PathBuf,
-    out: &PathBuf,
+    profile_dir: &Path,
+    out: &Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if source.starts_with("ais://") {
         return run_ais_stream(source, profile_dir, out);
