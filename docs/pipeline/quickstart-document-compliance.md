@@ -15,9 +15,10 @@ No LLM server required. All steps work offline.
 
 ```
 crates/edgesentry-document/fixtures/
-  voyage_V001_compliant.csv      -- TC1: clean vessel
-  voyage_V002_bwm_expired.csv    -- TC2: BWM D-2 certificate expired
-  voyage_V003_low_confidence.csv -- TC3: missing crew_count and cargo HS code
+  voyage_V001_compliant.csv      -- TC1: clean vessel         (CSV — human-authored fixture)
+  voyage_V002_bwm_expired.csv    -- TC2: BWM D-2 expired      (CSV — human-authored fixture)
+  voyage_V003_low_confidence.csv -- TC3: missing fields        (CSV — human-authored fixture)
+  # Production: maridb writes .parquet — same column schema, auto-detected by eds parse maritime
 
 crates/edgesentry-profile/fixtures/sg-port-compliance/
   rules.json                     -- BWM_D2_EXPIRED, QUARANTINE_PRENOTIFICATION,
@@ -32,7 +33,7 @@ crates/edgesentry-profile/fixtures/sg-port-compliance/
 ## TC1 - Compliant voyage
 
 ```bash
-# Step 1 - Ingest (parse maritime CSV)
+# Step 1 - Ingest (parse maritime — CSV fixture)
 eds parse maritime \
   --source crates/edgesentry-document/fixtures/voyage_V001_compliant.csv \
   --out /tmp/entity.jsonl

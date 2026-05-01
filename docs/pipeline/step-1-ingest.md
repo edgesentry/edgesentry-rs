@@ -53,8 +53,11 @@ the process is interrupted. Designed for piping into `eds evaluate run` in a liv
 
 ## eds parse maritime
 
-Parse structured maritime voyage data from CSV into `DocumentEntity` JSONL.
-Used as the ingest step for the document compliance pipeline.
+Parse structured maritime voyage data into `DocumentEntity` JSONL.
+File format is auto-detected from the extension:
+
+- `.parquet` — Parquet file produced by maridb (production / bulk data)
+- anything else — CSV (fixtures / hand-authored data)
 
 ```
 eds parse maritime --source <FILE> --out <FILE>
@@ -62,7 +65,7 @@ eds parse maritime --source <FILE> --out <FILE>
 
 | Flag | Description |
 |------|-------------|
-| `--source` | Input maritime voyage CSV file |
+| `--source` | Input file: `.parquet` (maridb output) or `.csv` (fixtures) |
 | `--out` | Output DocumentEntity JSONL file |
 
 **CSV format** (header required):
@@ -71,6 +74,16 @@ eds parse maritime --source <FILE> --out <FILE>
 voyage_id,vessel_name,vessel_imo,flag_state,port_of_arrival,arrival_date,
 cargo_description,cargo_hs_code,crew_count,gross_tonnage,
 bwm_certificate_expiry,dangerous_goods,quarantine_status
+```
+
+**Parquet schema** — column names identical to the CSV header. Produced by maridb:
+
+```python
+# maridb (polars)
+df.write_parquet("voyage_records.parquet")
+
+# edgesentry-rs
+# eds parse maritime --source voyage_records.parquet --out entity.jsonl
 ```
 
 Empty cells become `null` in the output. Boolean fields accept `true`/`false`/`1`/`0`.
