@@ -1,0 +1,10 @@
+[package]
+name = "edgesentry-types"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Core entity types — Vec2, Entity, EntityClass — shared across all edgesentry crates"
+
+[dependencies]
+serde = { workspace = true }

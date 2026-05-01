@@ -26,6 +26,7 @@ postgres = ["edgesentry-audit/postgres"]
 edgesentry-audit    = { path = "../edgesentry-audit" }
 edgesentry-inspect  = { path = "../edgesentry-inspect" }
 edgesentry-ingest   = { path = "../edgesentry-ingest" }
+edgesentry-types    = { path = "../edgesentry-types" }
 edgesentry-compute  = { path = "../edgesentry-compute" }
 edgesentry-evaluate = { path = "../edgesentry-evaluate" }
 edgesentry-profile  = { path = "../edgesentry-profile" }

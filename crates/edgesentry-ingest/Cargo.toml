@@ -7,6 +7,8 @@ repository.workspace = true
 description = "Structured data ingestion — CSV replay, entity stream, PLY/IFC loaders"
 
 [dependencies]
+edgesentry-types  = { path = "../edgesentry-types" }
+edgesentry-compute = { path = "../edgesentry-compute" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 

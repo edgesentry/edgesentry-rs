@@ -44,8 +44,8 @@ MARITIME_PROFILE="$ROOT/crates/edgesentry-profile/fixtures/sg-port-compliance"
 DOC_FIXTURES="$ROOT/crates/edgesentry-document/fixtures"
 
 # Fall back to clarus repo if edgesentry-rs fixtures not yet present
+CLARUS="$(cd "$ROOT/../clarus" 2>/dev/null && pwd)" || true
 if [[ ! -f "$FIXTURE_CSV" ]]; then
-  CLARUS="$(cd "$ROOT/../clarus" 2>/dev/null && pwd)" || true
   if [[ -n "${CLARUS:-}" && -f "$CLARUS/fixtures/forklift_approach.csv" ]]; then
     FIXTURE_CSV="$CLARUS/fixtures/forklift_approach.csv"
     PROFILE_DIR="$CLARUS/profiles/demo"
@@ -55,6 +55,11 @@ if [[ ! -f "$FIXTURE_CSV" ]]; then
     echo "Or clone the clarus repo alongside edgesentry-rs."
     exit 1
   fi
+fi
+
+# Fall back to clarus repo for maritime profile if not in edgesentry-rs yet
+if [[ ! -d "$MARITIME_PROFILE" ]] && [[ -n "${CLARUS:-}" && -d "$CLARUS/profiles/sg-port-compliance" ]]; then
+  MARITIME_PROFILE="$CLARUS/profiles/sg-port-compliance"
 fi
 
 # ── Temp output dir ──────────────────────────────────────────────────────────

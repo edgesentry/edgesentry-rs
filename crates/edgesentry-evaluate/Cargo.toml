@@ -9,6 +9,7 @@ description = "Rule DSL and evaluation engine — loads rules.json and evaluates
 [dependencies]
 edgesentry-ingest = { path = "../edgesentry-ingest" }
 edgesentry-compute = { path = "../edgesentry-compute" }
+edgesentry-types = { path = "../edgesentry-types" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 

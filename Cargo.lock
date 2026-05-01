@@ -1312,7 +1312,7 @@ dependencies = [
 name = "edgesentry-compute"
 version = "0.2.0"
 dependencies = [
- "edgesentry-ingest",
+ "edgesentry-types",
  "serde",
  "serde_json",
 ]
@@ -1334,6 +1334,7 @@ version = "0.2.0"
 dependencies = [
  "edgesentry-compute",
  "edgesentry-ingest",
+ "edgesentry-types",
  "proptest",
  "serde",
  "serde_json",
@@ -1361,6 +1362,8 @@ dependencies = [
 name = "edgesentry-ingest"
 version = "0.2.0"
 dependencies = [
+ "edgesentry-compute",
+ "edgesentry-types",
  "serde",
  "serde_json",
  "tempfile",
@@ -1391,6 +1394,7 @@ name = "edgesentry-parse"
 version = "0.2.0"
 dependencies = [
  "edgesentry-ingest",
+ "edgesentry-types",
  "parquet",
  "serde",
  "serde_json",
@@ -1435,6 +1439,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "edgesentry-types"
+version = "0.2.0"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "eds"
 version = "0.2.0"
 dependencies = [
@@ -1454,6 +1465,7 @@ dependencies = [
  "edgesentry-report",
  "edgesentry-scenario",
  "edgesentry-store",
+ "edgesentry-types",
  "hex",
  "rcgen",
  "reqwest",

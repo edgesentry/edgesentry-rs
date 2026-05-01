@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use edgesentry_ingest::entity::{Entity, EntityClass, Vec2};
+use edgesentry_types::{Entity, EntityClass, Vec2};
 use edgesentry_compute::{euclidean_distance, relative_velocity, time_to_collision, zone_membership};
 
 // ── Public types ──────────────────────────────────────────────────────────────
@@ -201,7 +201,7 @@ pub fn evaluate(rules: &[Rule], entities: &[Entity], timestamp_ms: u64) -> Vec<R
 #[cfg(test)]
 mod tests {
     use super::*;
-    use edgesentry_ingest::entity::{Entity, EntityClass, Vec2};
+    use edgesentry_types::{Entity, EntityClass, Vec2};
 
     fn entity(id: &str, x: f32, y: f32, vx: f32, vy: f32) -> Entity {
         Entity {
