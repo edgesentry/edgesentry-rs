@@ -17,6 +17,7 @@ pub struct ReportConfig {
     pub site_name: Option<String>,
     pub report_period: Option<String>,
     pub chain_valid: Option<bool>,
+    pub executive_summary: Option<String>,
     #[serde(default)]
     pub explanations: Vec<ExplanationEntry>,
 }
@@ -54,6 +55,7 @@ pub struct Report {
     pub entity_correlations: Vec<EntityCorrelationRow>,
     pub trend: RiskTrend,
     pub chain_valid: Option<bool>,
+    pub executive_summary: Option<String>,
     #[serde(default)]
     pub explanations: Vec<ExplanationEntry>,
 }
@@ -123,6 +125,7 @@ pub fn generate_report(events: &[RiskEvent], assessment: &Assessment, config: Re
         entity_correlations,
         trend: assessment.trend.clone(),
         chain_valid: config.chain_valid,
+        executive_summary: config.executive_summary,
         explanations: config.explanations,
     }
 }
@@ -177,6 +180,12 @@ pub fn render_markdown(report: &Report) -> String {
         out.push_str(&format!("**Period:** {}\n\n", period));
     }
     out.push_str(&format!("**Generated:** {}\n\n", fmt_timestamp_ms(report.generated_at_ms)));
+
+    if let Some(ref summary) = report.executive_summary {
+        out.push_str("## Executive Summary\n\n");
+        out.push_str(summary);
+        out.push_str("\n\n");
+    }
 
     out.push_str("## Summary\n\n");
     out.push_str(
@@ -311,8 +320,32 @@ pub fn render_pdf(report: &Report) -> Vec<u8> {
     line!(font, 10.0_f32, left, y, format!("Generated: {}", fmt_timestamp_ms(report.generated_at_ms)));
     y -= 6.0;
     line!(font, 9.0_f32, left, y,
-        "Each event is a deterministic rule violation sealed with BLAKE3 + Ed25519.");
+        "All events are tamper-evident and cannot be altered after recording.");
     y -= 10.0;
+
+    // Executive Summary
+    if let Some(ref summary) = report.executive_summary {
+        line!(font_bold, 13.0_f32, left, y, "Executive Summary");
+        y -= 7.0;
+        let words: Vec<&str> = summary.split_whitespace().collect();
+        let mut line_buf = String::new();
+        for word in &words {
+            if line_buf.len() + word.len() + 1 > 95 {
+                line!(font, 9.5_f32, left, y, line_buf.as_str());
+                y -= 5.5;
+                line_buf = word.to_string();
+                if y < 25.0 { break; }
+            } else {
+                if !line_buf.is_empty() { line_buf.push(' '); }
+                line_buf.push_str(word);
+            }
+        }
+        if !line_buf.is_empty() && y >= 25.0 {
+            line!(font, 9.5_f32, left, y, line_buf.as_str());
+            y -= 5.5;
+        }
+        y -= 6.0;
+    }
 
     // Summary
     line!(font_bold, 14.0_f32, left, y, "Summary of Rule Violations");
@@ -496,6 +529,7 @@ mod tests {
             site_name: Some("Test Site".to_string()),
             report_period: Some("2026-Q1".to_string()),
             chain_valid: Some(true),
+            executive_summary: None,
             explanations: vec![],
         };
         let report = generate_report(&events, &assessment, config);
@@ -513,7 +547,7 @@ mod tests {
     fn render_markdown_on_minimal_report_compiles() {
         let events = vec![make_event("RULE_X", Severity::Low)];
         let assessment = assess(&events, None);
-        let config = ReportConfig { site_name: None, report_period: None, chain_valid: None, explanations: vec![] };
+        let config = ReportConfig { site_name: None, report_period: None, chain_valid: None, executive_summary: None, explanations: vec![] };
         let report = generate_report(&events, &assessment, config);
         let md = render_markdown(&report);
         assert!(md.contains("# EdgeSentry Safety Report"));
@@ -528,7 +562,7 @@ mod tests {
     fn render_pdf_returns_non_empty_bytes() {
         let events = vec![make_event("RULE_X", Severity::High)];
         let assessment = assess(&events, None);
-        let config = ReportConfig { site_name: Some("Site A".to_string()), report_period: Some("2026-Q2".to_string()), chain_valid: None, explanations: vec![] };
+        let config = ReportConfig { site_name: Some("Site A".to_string()), report_period: Some("2026-Q2".to_string()), chain_valid: None, executive_summary: None, explanations: vec![] };
         let report = generate_report(&events, &assessment, config);
         let bytes = render_pdf(&report);
         assert!(!bytes.is_empty(), "PDF bytes should not be empty");
@@ -540,7 +574,7 @@ mod tests {
     fn render_markdown_shows_chain_valid_when_some() {
         let events = vec![make_event("RULE_X", Severity::Low)];
         let assessment = assess(&events, None);
-        let config = ReportConfig { site_name: None, report_period: None, chain_valid: Some(false), explanations: vec![] };
+        let config = ReportConfig { site_name: None, report_period: None, chain_valid: Some(false), executive_summary: None, explanations: vec![] };
         let report = generate_report(&events, &assessment, config);
         let md = render_markdown(&report);
         assert!(md.contains("## Audit Chain"));
