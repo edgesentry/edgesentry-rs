@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use edgesentry_ingest::csv_replay::EntityFrame;
-use edgesentry_ingest::entity::{Entity, EntityClass, Vec2};
+use edgesentry_types::{Entity, EntityClass, Vec2};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

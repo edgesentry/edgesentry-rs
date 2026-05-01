@@ -91,7 +91,7 @@ fn run_ais_stream(
         if !entities.is_empty() {
             let timestamp_ms = entities
                 .iter()
-                .find(|e| e.class != edgesentry_ingest::entity::EntityClass::AisGap)
+                .find(|e| e.class != edgesentry_types::EntityClass::AisGap)
                 .map(|e| e.timestamp_ms)
                 .unwrap_or_else(|| {
                     std::time::SystemTime::now()
