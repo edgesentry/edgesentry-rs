@@ -10,7 +10,7 @@ profiles/my-profile/
   rules.json        -- rule definitions (required)
   manifest.toml     -- profile metadata (recommended)
   kb/
-    RULE_ID.txt     -- one KB snippet per rule (required for eds explain run --profile)
+    RULE_ID.md      -- one KB snippet per rule (required for eds explain run --profile)
 ```
 
 ## rules.json format
@@ -81,11 +81,11 @@ of what the profile is and how its parameters were derived.
 
 ## KB snippets
 
-For each rule, create a plain-text file at `kb/<RULE_ID>.txt` containing the verbatim
+For each rule, create a Markdown file at `kb/<RULE_ID>.md` containing the verbatim
 regulatory text. The LLM uses this as the authoritative reference when generating explanations.
 Grounding checks that the LLM cites a section reference (e.g. `§3.1`) present in the snippet.
 
-Example (`kb/TTC_ALERT.txt`):
+Example (`kb/TTC_ALERT.md`):
 
 ```
 Site Safety Procedure §3.2 -- Time-to-Collision Emergency Stop
