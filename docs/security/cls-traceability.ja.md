@@ -11,12 +11,12 @@
 
 ## SS 711:2025 設計原則カバレッジ
 
-シンガポールの国内 IoT 標準 SS 711:2025 は 4 つの原則を定義しています。完全なモジュールマッピングについては[ロードマップ](roadmap.md)を参照してください。
+シンガポールの国内 IoT 標準 SS 711:2025 は 4 つの原則を定義しています。完全なモジュールマッピングについては[ロードマップ](../audit/roadmap.md)を参照してください。
 
 | 原則 | SS 711:2025 要件 | ステータス |
 |-----------|------------------------|--------|
 | セキュア・バイ・デフォルト | 一意のデバイス同一性、署名付き OTA アップデート | ✅ `identity.rs`、`update.rs` |
-| 防御の厳格性 | STRIDE の脅威モデル、改ざん検知 | ✅ ハッシュチェーン（`integrity.rs`）＋ [STRIDE 脅威モデル](threat_model.md) |
+| 防御の厳格性 | STRIDE の脅威モデル、改ざん検知 | ✅ ハッシュチェーン（`integrity.rs`）＋ [STRIDE 脅威モデル](threat-model.md) |
 | アカウンタビリティ | 監査証跡、操作ログ、 RBAC 設計 | ✅ `ingest/`（ AuditLedger 、 OperationLog ） |
 | 回復力 | デフォルト拒否のネットワーキング、 DoS 対策 | ✅ `ingest/network_policy.rs` |
 
@@ -70,7 +70,7 @@
 | 実装 | 公開鍵レジストリ：`IntegrityPolicyGate::register_device`（[`src/ingest/policy.rs:20`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/ingest/policy.rs#L20)） |
 | 実装 | 鍵生成 CLI ：`eds keygen`（[`src/lib.rs — generate_keypair`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/lib.rs)） |
 | 実装 | 鍵検査 CLI ：`eds inspect-key`（[`src/lib.rs — inspect_key`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/lib.rs)） |
-| 実装 | プロビジョニングとローテーションのガイダンス：[鍵管理](key_management.md) |
+| 実装 | プロビジョニングとローテーションのガイダンス：[鍵管理](../audit/key_management.md) |
 | 注意 | HSM バックの鍵保存（ CLS レベル 4 ）は[#54](https://github.com/edgesentry/edgesentry-rs/issues/54)で計画中 |
 
 ---
