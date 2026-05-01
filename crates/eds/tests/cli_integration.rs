@@ -376,8 +376,8 @@ fn vessel_fixture_csv() -> PathBuf {
     workspace_path("crates/edgesentry-ingest/fixtures/vessel_zone_approach.csv")
 }
 
-fn sg_maritime_security_profile_dir() -> PathBuf {
-    workspace_path("crates/edgesentry-profile/fixtures/sg-maritime-security")
+fn zone_test_profile_dir() -> PathBuf {
+    workspace_path("crates/edgesentry-profile/fixtures/zone-test")
 }
 
 #[test]
@@ -902,14 +902,14 @@ fn sign_document_chains_sequence_and_prev_hash() {
     assert!(stdout(&v).contains("V002"), "must show V002 voyage_id");
 }
 
-// ── sg-maritime-security profile ─────────────────────────────────────────────
+// ── zone_member rule evaluation (generic test profile) ───────────────────────
 
 #[test]
-fn sg_maritime_security_profile_loads_and_exits_zero() {
+fn zone_test_profile_loads_and_exits_zero() {
     let frames = TmpFile::new("maritime_frames.jsonl");
     let r = eds()
         .args(["ingest", "replay", "--source"]).arg(vessel_fixture_csv())
-        .args(["--profile"]).arg(sg_maritime_security_profile_dir())
+        .args(["--profile"]).arg(zone_test_profile_dir())
         .args(["--out"]).arg(frames.path())
         .output().expect("eds ingest replay vessel");
     assert!(r.status.success(), "ingest failed: {}", stderr(&r));
@@ -923,14 +923,14 @@ fn restricted_zone_approach_fires_when_vessel_enters_zone() {
 
     let r = eds()
         .args(["ingest", "replay", "--source"]).arg(vessel_fixture_csv())
-        .args(["--profile"]).arg(sg_maritime_security_profile_dir())
+        .args(["--profile"]).arg(zone_test_profile_dir())
         .args(["--out"]).arg(frames.path())
         .output().unwrap();
     assert!(r.status.success(), "ingest: {}", stderr(&r));
 
     let r = eds()
         .args(["evaluate", "run", "--input"]).arg(frames.path())
-        .args(["--profile"]).arg(sg_maritime_security_profile_dir())
+        .args(["--profile"]).arg(zone_test_profile_dir())
         .args(["--out"]).arg(events.path())
         .output().expect("eds evaluate run vessel");
     assert!(r.status.success(), "evaluate: {}", stderr(&r));
@@ -943,11 +943,11 @@ fn restricted_zone_approach_fires_when_vessel_enters_zone() {
     assert!(!events_text.is_empty(), "expected at least one RESTRICTED_ZONE_APPROACH event");
 
     let combined = events_text.join("\n");
-    assert!(combined.contains("RESTRICTED_ZONE_APPROACH"),
-        "RESTRICTED_ZONE_APPROACH must fire when vessel enters zone");
+    assert!(combined.contains("ZONE_ENTRY"),
+        "ZONE_ENTRY must fire when entity enters zone");
     assert!(combined.contains("HIGH"),
         "severity must be HIGH");
-    assert!(combined.contains("Infrastructure Protection Act"),
+    assert!(combined.contains("Site Safety Procedure"),
         "regulation citation must be present");
 }
 
@@ -958,14 +958,14 @@ fn restricted_zone_approach_does_not_fire_before_zone_entry() {
 
     let r = eds()
         .args(["ingest", "replay", "--source"]).arg(vessel_fixture_csv())
-        .args(["--profile"]).arg(sg_maritime_security_profile_dir())
+        .args(["--profile"]).arg(zone_test_profile_dir())
         .args(["--out"]).arg(frames.path())
         .output().unwrap();
     assert!(r.status.success(), "ingest: {}", stderr(&r));
 
     let r = eds()
         .args(["evaluate", "run", "--input"]).arg(frames.path())
-        .args(["--profile"]).arg(sg_maritime_security_profile_dir())
+        .args(["--profile"]).arg(zone_test_profile_dir())
         .args(["--out"]).arg(events.path())
         .output().unwrap();
     assert!(r.status.success(), "evaluate: {}", stderr(&r));

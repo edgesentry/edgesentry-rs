@@ -112,6 +112,10 @@ eds profile list     --profile profiles/my-profile
 
 | Profile path | Domain | Rules |
 |---|---|---|
-| `crates/edgesentry-profile/fixtures/demo` | Warehouse safety | PROXIMITY_ALERT, TTC_ALERT, EXCLUSION_ZONE_BREACH |
-| `crates/edgesentry-profile/fixtures/sg-port-compliance` | Singapore port compliance | BWM_D2_EXPIRED, QUARANTINE_PRENOTIFICATION, DG_RESTRICTION, CREW_DOC_VALIDITY |
-| `crates/edgesentry-profile/fixtures/sg-maritime-security` | Maritime security | RESTRICTED_ZONE_APPROACH, AIS_TRACK_GAP |
+| `crates/edgesentry-profile/fixtures/demo` | Generic site safety (OSS demo) | PROXIMITY_ALERT, TTC_ALERT, EXCLUSION_ZONE_BREACH |
+| `crates/edgesentry-profile/fixtures/zone-test` | Generic zone entry (engine test) | ZONE_ENTRY |
+| `clarus-commercial/profiles/sg-port-compliance` ¹ | Singapore port compliance | BWM_D2_EXPIRED, QUARANTINE_PRENOTIFICATION, DG_RESTRICTION, CREW_DOC_VALIDITY |
+| `clarus-commercial/profiles/sg-maritime-security` ¹ | Singapore maritime security | RESTRICTED_ZONE_APPROACH, AIS_TRACK_GAP |
+
+¹ Jurisdiction-specific profiles with Singapore regulatory citations are commercial IP
+and live in the private `edgesentry/clarus-commercial` repository.

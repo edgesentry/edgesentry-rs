@@ -20,7 +20,7 @@ crates/edgesentry-document/fixtures/
   voyage_V003_low_confidence.csv -- TC3: missing fields        (CSV — human-authored fixture)
   # Production: maridb writes .parquet — same column schema, auto-detected by eds parse maritime
 
-crates/edgesentry-profile/fixtures/sg-port-compliance/
+clarus-commercial/profiles/sg-port-compliance/
   rules.json                     -- BWM_D2_EXPIRED, QUARANTINE_PRENOTIFICATION,
                                  --   DG_RESTRICTION, CREW_DOC_VALIDITY
   kb/
@@ -48,7 +48,7 @@ eds document fill \
 # Step 3 cont. - Check compliance rules
 eds document check \
   --input /tmp/filled.jsonl \
-  --profile crates/edgesentry-profile/fixtures/sg-port-compliance \
+  --profile clarus-commercial/profiles/sg-port-compliance \
   --out /tmp/alerts.jsonl
 # 0 compliance alerts
 
@@ -76,7 +76,7 @@ eds document fill \
 
 eds document check \
   --input /tmp/filled_v002.jsonl \
-  --profile crates/edgesentry-profile/fixtures/sg-port-compliance \
+  --profile clarus-commercial/profiles/sg-port-compliance \
   --out /tmp/alerts_v002.jsonl
 ```
 
