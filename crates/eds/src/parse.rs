@@ -4,11 +4,12 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use edgesentry_ingest::jsonl::JsonlWriter;
-use edgesentry_parse::{document_to_entity_frames, parse_document_json, parse_maritime_csv};
+use edgesentry_parse::{document_to_entity_frames, parse_document_json, parse_maritime_csv, parse_maritime_parquet};
 
 #[derive(Debug, Subcommand)]
 pub enum ParseCommand {
-    /// Parse maritime CSV into DocumentEntity JSONL.
+    /// Parse maritime data (CSV or Parquet) into DocumentEntity JSONL.
+    /// File format is auto-detected from the extension (.csv or .parquet).
     Maritime {
         #[arg(long)]
         source: PathBuf,
@@ -48,8 +49,15 @@ pub fn run(cmd: ParseCommand) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn run_maritime(source: &Path, out: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    let file = fs::File::open(source)?;
-    let entities = parse_maritime_csv(file).map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
+    let ext = source.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+    let entities = match ext.as_str() {
+        "parquet" => parse_maritime_parquet(source)
+            .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?,
+        _ => {
+            let file = fs::File::open(source)?;
+            parse_maritime_csv(file).map_err(|e| -> Box<dyn std::error::Error> { e.into() })?
+        }
+    };
 
     let out_file = fs::File::create(out)?;
     let mut writer = JsonlWriter::new(out_file, "eds.document-entity", "0.1")

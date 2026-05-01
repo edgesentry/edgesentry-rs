@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::path::Path;
 
 use edgesentry_ingest::csv_replay::EntityFrame;
 use edgesentry_ingest::entity::{Entity, EntityClass, Vec2};
@@ -94,6 +95,90 @@ pub fn parse_maritime_csv(reader: impl std::io::Read) -> Result<Vec<DocumentEnti
             dangerous_goods: opt_bool(fields[11]),
             quarantine_status: opt_str(fields[12]),
             crew_nationalities: None,
+        });
+    }
+
+    Ok(entities)
+}
+
+/// Read a Parquet file produced by maridb and return `DocumentEntity` records.
+///
+/// Expected schema (column names match the CSV header exactly):
+/// voyage_id, vessel_name, vessel_imo, flag_state, port_of_arrival,
+/// arrival_date, cargo_description, cargo_hs_code, crew_count,
+/// gross_tonnage, bwm_certificate_expiry, dangerous_goods, quarantine_status
+pub fn parse_maritime_parquet(path: &Path) -> Result<Vec<DocumentEntity>, String> {
+    use parquet::file::reader::{FileReader, SerializedFileReader};
+    use parquet::record::Field;
+    use std::fs::File;
+
+    let file = File::open(path).map_err(|e| format!("cannot open '{}': {e}", path.display()))?;
+    let reader = SerializedFileReader::new(file)
+        .map_err(|e| format!("parquet open error: {e}"))?;
+
+    let mut entities = Vec::new();
+
+    for (i, row_result) in reader
+        .get_row_iter(None)
+        .map_err(|e| format!("row iter error: {e}"))?
+        .enumerate()
+    {
+        let row = row_result.map_err(|e| format!("row {i}: {e}"))?;
+
+        let mut fields: HashMap<String, &Field> = HashMap::new();
+        for (name, field) in row.get_column_iter() {
+            fields.insert(name.to_string(), field);
+        }
+
+        let get_str = |key: &str| -> Option<String> {
+            match *fields.get(key)? {
+                Field::Str(ref s) => if s.is_empty() { None } else { Some(s.clone()) },
+                _ => None,
+            }
+        };
+        let get_u32 = |key: &str| -> Option<u32> {
+            match *fields.get(key)? {
+                Field::Long(ref n) => Some(*n as u32),
+                Field::Int(ref n)  => Some(*n as u32),
+                _ => None,
+            }
+        };
+        let get_f64 = |key: &str| -> Option<f64> {
+            match *fields.get(key)? {
+                Field::Double(ref f) => Some(*f),
+                Field::Float(ref f)  => Some(*f as f64),
+                Field::Long(ref n)   => Some(*n as f64),
+                Field::Int(ref n)    => Some(*n as f64),
+                _ => None,
+            }
+        };
+        let get_bool = |key: &str| -> Option<bool> {
+            match *fields.get(key)? {
+                Field::Bool(ref b) => Some(*b),
+                _ => None,
+            }
+        };
+
+        let voyage_id   = get_str("voyage_id")
+            .ok_or_else(|| format!("row {i}: voyage_id is null or empty"))?;
+        let vessel_name = get_str("vessel_name")
+            .ok_or_else(|| format!("row {i}: vessel_name is null or empty"))?;
+
+        entities.push(DocumentEntity {
+            voyage_id,
+            vessel_name,
+            vessel_imo:             get_str("vessel_imo"),
+            flag_state:             get_str("flag_state"),
+            port_of_arrival:        get_str("port_of_arrival"),
+            arrival_date:           get_str("arrival_date"),
+            cargo_description:      get_str("cargo_description"),
+            cargo_hs_code:          get_str("cargo_hs_code"),
+            crew_count:             get_u32("crew_count"),
+            gross_tonnage:          get_f64("gross_tonnage"),
+            bwm_certificate_expiry: get_str("bwm_certificate_expiry"),
+            dangerous_goods:        get_bool("dangerous_goods"),
+            quarantine_status:      get_str("quarantine_status"),
+            crew_nationalities:     None,
         });
     }
 
@@ -265,5 +350,109 @@ V002,MV Star,,MYS,SGSIN,2026-06-18,Steel coils,7208,,32000,2026-04-30,true,QUARA
         let doc = parse_document_json(json.as_bytes()).unwrap();
         let frames = document_to_entity_frames(&doc);
         assert!(frames.is_empty());
+    }
+
+    // ── Parquet round-trip ────────────────────────────────────────────────────
+
+    /// Write SAMPLE_CSV rows as a Parquet file, then read them back via
+    /// `parse_maritime_parquet` and assert the result matches the CSV parse.
+    #[test]
+    fn parquet_round_trip_matches_csv() {
+        use parquet::column::writer::ColumnWriter;
+        use parquet::file::properties::WriterProperties;
+        use parquet::file::writer::SerializedFileWriter;
+        use parquet::schema::parser::parse_message_type;
+        use std::sync::Arc;
+
+        let tmp = std::env::temp_dir().join("voyage_test.parquet");
+
+        let schema_str = "
+            message schema {
+                REQUIRED BYTE_ARRAY voyage_id (UTF8);
+                REQUIRED BYTE_ARRAY vessel_name (UTF8);
+                OPTIONAL BYTE_ARRAY vessel_imo (UTF8);
+                OPTIONAL BYTE_ARRAY flag_state (UTF8);
+                OPTIONAL BYTE_ARRAY port_of_arrival (UTF8);
+                OPTIONAL BYTE_ARRAY arrival_date (UTF8);
+                OPTIONAL BYTE_ARRAY cargo_description (UTF8);
+                OPTIONAL BYTE_ARRAY cargo_hs_code (UTF8);
+                OPTIONAL INT64 crew_count;
+                OPTIONAL DOUBLE gross_tonnage;
+                OPTIONAL BYTE_ARRAY bwm_certificate_expiry (UTF8);
+                OPTIONAL BOOLEAN dangerous_goods;
+                OPTIONAL BYTE_ARRAY quarantine_status (UTF8);
+            }
+        ";
+        let schema = Arc::new(parse_message_type(schema_str).unwrap());
+        let props = Arc::new(WriterProperties::builder().build());
+        let file = std::fs::File::create(&tmp).unwrap();
+        let mut writer = SerializedFileWriter::new(file, schema, props).unwrap();
+
+        let s = |v: &str| -> parquet::data_type::ByteArray { v.into() };
+        let def2 = [1i16, 1];
+
+        let mut rg = writer.next_row_group().unwrap();
+
+        // Helper: write a BYTE_ARRAY (UTF8) column
+        fn write_str(rg: &mut parquet::file::writer::SerializedRowGroupWriter<std::fs::File>,
+                     vals: &[parquet::data_type::ByteArray], def: &[i16]) {
+            let mut cw = rg.next_column().unwrap().unwrap();
+            if let ColumnWriter::ByteArrayColumnWriter(ref mut w) = cw.untyped() {
+                w.write_batch(vals, Some(def), None).unwrap();
+            }
+            cw.close().unwrap();
+        }
+
+        let v2 = |a: &str, b: &str| vec![s(a), s(b)];
+        let v1 = |a: &str| vec![s(a)];
+
+        write_str(&mut rg, &v2("V001","V002"),                    &def2);
+        write_str(&mut rg, &v2("MV Horizon","MV Star"),           &def2);
+        write_str(&mut rg, &v1("IMO9876543"),                     &[1i16,0]);
+        write_str(&mut rg, &v2("SGP","MYS"),                      &def2);
+        write_str(&mut rg, &v2("SGSIN","SGSIN"),                  &def2);
+        write_str(&mut rg, &v2("2026-06-15","2026-06-18"),        &def2);
+        write_str(&mut rg, &v2("General machinery","Steel coils"),&def2);
+        write_str(&mut rg, &v2("8428","7208"),                    &def2);
+        {
+            let mut cw = rg.next_column().unwrap().unwrap();
+            if let ColumnWriter::Int64ColumnWriter(ref mut w) = cw.untyped() {
+                w.write_batch(&[23i64], Some(&[1i16,0]), None).unwrap();
+            }
+            cw.close().unwrap();
+        }
+        {
+            let mut cw = rg.next_column().unwrap().unwrap();
+            if let ColumnWriter::DoubleColumnWriter(ref mut w) = cw.untyped() {
+                w.write_batch(&[45000.0f64, 32000.0], Some(&def2), None).unwrap();
+            }
+            cw.close().unwrap();
+        }
+        write_str(&mut rg, &v2("2027-03-01","2026-04-30"),        &def2);
+        {
+            let mut cw = rg.next_column().unwrap().unwrap();
+            if let ColumnWriter::BoolColumnWriter(ref mut w) = cw.untyped() {
+                w.write_batch(&[false, true], Some(&def2), None).unwrap();
+            }
+            cw.close().unwrap();
+        }
+        write_str(&mut rg, &v2("CLEAR","QUARANTINE"),             &def2);
+
+        rg.close().unwrap();
+        writer.close().unwrap();
+
+        let parquet_result = parse_maritime_parquet(&tmp).unwrap();
+        let csv_result = parse_maritime_csv(SAMPLE_CSV.as_bytes()).unwrap();
+
+        assert_eq!(parquet_result.len(), csv_result.len());
+        assert_eq!(parquet_result[0].voyage_id,   csv_result[0].voyage_id);
+        assert_eq!(parquet_result[0].vessel_name, csv_result[0].vessel_name);
+        assert_eq!(parquet_result[0].vessel_imo,  csv_result[0].vessel_imo);
+        assert_eq!(parquet_result[0].crew_count,  csv_result[0].crew_count);
+        assert_eq!(parquet_result[1].voyage_id,   csv_result[1].voyage_id);
+        assert_eq!(parquet_result[1].vessel_imo,  None);
+        assert_eq!(parquet_result[1].crew_count,  None);
+
+        let _ = std::fs::remove_file(&tmp);
     }
 }

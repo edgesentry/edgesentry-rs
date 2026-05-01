@@ -15,33 +15,12 @@ ignore = [
   # No direct call-site exposure in our code.
   { id = "RUSTSEC-2025-0134", reason = "rustls-pemfile pulled in transitively by rustls 0.23 chain; no patch available. Functionality superseded by rustls-pki-types but not yet adopted by rustls." },
 
-  # RUSTSEC-2026-0104: reachable panic in rustls-webpki bit_string_flags()
-  # when parsing a BIT STRING with content [0x00].
-  # Affected: rustls-webpki 0.101.7 (via rustls 0.21 → AWS SDK chain)
-  #           rustls-webpki 0.102.8 (via rumqttc 0.25 → rustls ^0.102)
-  # Fixed:    rustls-webpki >= 0.103.13 (already used by tokio-rustls 0.26
-  #           and our direct TLS stack).
-  # No patch available in the 0.101 or 0.102 series.  The fix requires
-  # aws-config / aws-sdk-s3 and rumqttc to upgrade their rustls dependency,
-  # which is an upstream change outside our control.
-  # Exposure: CRL revocation checking is opt-in via RevocationOptions.
-  # edgesentry-rs does not pass RevocationOptions anywhere; neither the
-  # S3 (aws-config) nor MQTT (rumqttc) paths enable CRL checking.
-  # Risk: negligible — attacker would need to influence CRL bytes served
-  # to a code path that does not exist in this codebase.
-  { id = "RUSTSEC-2026-0104", reason = "Transitive via AWS SDK (rustls 0.21) and rumqttc (rustls 0.102). No patch in those series. CRL checking is opt-in and not enabled anywhere in edgesentry-rs. Fixed in rustls-webpki >= 0.103.13 which is already used by our direct TLS stack." },
-
-  # RUSTSEC-2026-0098 / 0099: URI name constraint and wildcard name constraint
-  # bypass in rustls-webpki < 0.103.12.
-  # Same root cause: 0.101.7 is pinned by AWS SDK chain, 0.102.8 by rumqttc.
-  # No patch available in those series; rustls-webpki 0.103.13 (our direct
-  # TLS stack) is already fixed.  No direct name-constraint verification
-  # in edgesentry-rs code paths.
-  { id = "RUSTSEC-2026-0098", reason = "Transitive via AWS SDK and rumqttc; no patch in 0.101/0.102 series. rustls-webpki 0.103.13 (direct TLS stack) is already patched. No name-constraint verification in our code." },
-  { id = "RUSTSEC-2026-0099", reason = "Transitive via AWS SDK and rumqttc; no patch in 0.101/0.102 series. rustls-webpki 0.103.13 (direct TLS stack) is already patched. No name-constraint verification in our code." },
-
-  # RUSTSEC-2026-0049: see CI audit ignore list for details.
-  { id = "RUSTSEC-2026-0049", reason = "See cargo audit --ignore annotation in CI for details." },
+  # RUSTSEC-2024-0436: `paste` macro crate is unmaintained (archived by dtolnay).
+  # Pulled in transitively by parquet v55 → paste v1.0.15.
+  # No safe upgrade available; parquet upstream must migrate to an alternative.
+  # paste is a proc-macro used only at compile time and ships no runtime code,
+  # so the unmaintained status carries no security risk at runtime.
+  { id = "RUSTSEC-2024-0436", reason = "paste is a compile-time proc-macro pulled in by parquet v55; no runtime exposure. parquet upstream must adopt an alternative before this can be resolved." },
 ]
 
 [bans]

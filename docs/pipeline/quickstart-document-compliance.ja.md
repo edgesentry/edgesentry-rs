@@ -32,7 +32,7 @@ crates/edgesentry-profile/fixtures/sg-port-compliance/
 ## TC1 - コンプライアント航海
 
 ```bash
-# ステップ 1 - 取込（海事 CSV の解析）
+# ステップ 1 - 取込（海事データの解析 — CSV フィクスチャ）
 eds parse maritime \
   --source crates/edgesentry-document/fixtures/voyage_V001_compliant.csv \
   --out /tmp/entity.jsonl

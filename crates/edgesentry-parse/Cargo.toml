@@ -10,3 +10,4 @@ description = "Maritime structured data parsing — CSV/Parquet → DocumentEnti
 edgesentry-ingest = { path = "../edgesentry-ingest" }
 serde = { workspace = true }
 serde_json = { workspace = true }
+parquet = { version = "55", default-features = false, features = ["snap"] }

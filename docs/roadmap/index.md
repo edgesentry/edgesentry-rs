@@ -50,7 +50,7 @@ is inspectable; the profiles are valuable because they require domain expertise.
 | Step | Crate | CLI | Status |
 |---|---|---|---|
 | 1a — Structured ingest | `edgesentry-ingest` | `eds ingest replay` / `eds ingest stream` | ✅ Done |
-| 1b — Unstructured parse | `edgesentry-parse` | `eds parse maritime` / `eds parse image` | ✅ CSV done · 📋 ONNX vision stub |
+| 1b — Unstructured parse | `edgesentry-parse` | `eds parse maritime` / `eds parse image` | ✅ CSV + Parquet done · 📋 ONNX vision stub |
 | 2 — Compute | `edgesentry-compute` | `eds compute run` | ✅ Done |
 | 3 — Evaluate | `edgesentry-evaluate` | `eds evaluate run` | ✅ Done |
 | 4 — Assess | `edgesentry-assess` | `eds assess run` | ✅ Done |
@@ -100,7 +100,7 @@ These items are required to demonstrate the full end-to-end pipeline.
 | [#302](https://github.com/edgesentry/edgesentry-rs/issues/302) | Synthetic AIS `EntityStream` CSV fixture for `sg-maritime-security` demo | AIS adapter workaround before #299 ships |
 | [#303](https://github.com/edgesentry/edgesentry-rs/issues/303) | ARM64 cross-compile CI — `aarch64-unknown-linux-gnu` build job | Validates edge deployment claim |
 | [#18](https://github.com/edgesentry/edgesentry-rs/issues/18) | LLM runtime decision doc — Ollama vs llama.cpp vs MLX | Submission technical section |
-| [#301](https://github.com/edgesentry/edgesentry-rs/issues/301) | Confirm `eds parse maritime` uses CSV for MVP; defer Parquet | Scope clarity |
+| ~~[#301](https://github.com/edgesentry/edgesentry-rs/issues/301)~~ | ~~Confirm `eds parse maritime` uses CSV for MVP; defer Parquet~~ | ✅ Parquet implemented (#326) — `.parquet` auto-detected, same schema as CSV |
 
 ---
 
