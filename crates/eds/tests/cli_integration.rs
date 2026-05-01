@@ -372,6 +372,14 @@ fn demo_profile_dir() -> PathBuf {
     workspace_path("crates/edgesentry-profile/fixtures/demo")
 }
 
+fn vessel_fixture_csv() -> PathBuf {
+    workspace_path("crates/edgesentry-ingest/fixtures/vessel_zone_approach.csv")
+}
+
+fn sg_maritime_security_profile_dir() -> PathBuf {
+    workspace_path("crates/edgesentry-profile/fixtures/sg-maritime-security")
+}
+
 #[test]
 fn ingest_replay_with_demo_fixture_exits_zero() {
     let out_file = TmpFile::new("frames.jsonl");
@@ -892,4 +900,83 @@ fn sign_document_chains_sequence_and_prev_hash() {
         .output().expect("verify V002");
     assert!(v.status.success(), "V002 must verify: {}", stderr(&v));
     assert!(stdout(&v).contains("V002"), "must show V002 voyage_id");
+}
+
+// ── sg-maritime-security profile ─────────────────────────────────────────────
+
+#[test]
+fn sg_maritime_security_profile_loads_and_exits_zero() {
+    let frames = TmpFile::new("maritime_frames.jsonl");
+    let r = eds()
+        .args(["ingest", "replay", "--source"]).arg(vessel_fixture_csv())
+        .args(["--profile"]).arg(sg_maritime_security_profile_dir())
+        .args(["--out"]).arg(frames.path())
+        .output().expect("eds ingest replay vessel");
+    assert!(r.status.success(), "ingest failed: {}", stderr(&r));
+    assert!(frames.path().exists(), "frames file not created");
+}
+
+#[test]
+fn restricted_zone_approach_fires_when_vessel_enters_zone() {
+    let frames = TmpFile::new("maritime_frames2.jsonl");
+    let events = TmpFile::new("maritime_events.jsonl");
+
+    let r = eds()
+        .args(["ingest", "replay", "--source"]).arg(vessel_fixture_csv())
+        .args(["--profile"]).arg(sg_maritime_security_profile_dir())
+        .args(["--out"]).arg(frames.path())
+        .output().unwrap();
+    assert!(r.status.success(), "ingest: {}", stderr(&r));
+
+    let r = eds()
+        .args(["evaluate", "run", "--input"]).arg(frames.path())
+        .args(["--profile"]).arg(sg_maritime_security_profile_dir())
+        .args(["--out"]).arg(events.path())
+        .output().expect("eds evaluate run vessel");
+    assert!(r.status.success(), "evaluate: {}", stderr(&r));
+
+    let content = fs::read_to_string(events.path()).unwrap();
+    let events_text: Vec<&str> = content.lines()
+        .filter(|l| !l.contains("eds_schema"))
+        .collect();
+
+    assert!(!events_text.is_empty(), "expected at least one RESTRICTED_ZONE_APPROACH event");
+
+    let combined = events_text.join("\n");
+    assert!(combined.contains("RESTRICTED_ZONE_APPROACH"),
+        "RESTRICTED_ZONE_APPROACH must fire when vessel enters zone");
+    assert!(combined.contains("HIGH"),
+        "severity must be HIGH");
+    assert!(combined.contains("Infrastructure Protection Act"),
+        "regulation citation must be present");
+}
+
+#[test]
+fn restricted_zone_approach_does_not_fire_before_zone_entry() {
+    let frames = TmpFile::new("maritime_frames3.jsonl");
+    let events = TmpFile::new("maritime_events2.jsonl");
+
+    let r = eds()
+        .args(["ingest", "replay", "--source"]).arg(vessel_fixture_csv())
+        .args(["--profile"]).arg(sg_maritime_security_profile_dir())
+        .args(["--out"]).arg(frames.path())
+        .output().unwrap();
+    assert!(r.status.success(), "ingest: {}", stderr(&r));
+
+    let r = eds()
+        .args(["evaluate", "run", "--input"]).arg(frames.path())
+        .args(["--profile"]).arg(sg_maritime_security_profile_dir())
+        .args(["--out"]).arg(events.path())
+        .output().unwrap();
+    assert!(r.status.success(), "evaluate: {}", stderr(&r));
+
+    // First 5 frames (t=0..120000ms) vessel is outside the zone (x < 300).
+    // Alerts must only appear at t >= 152500 ms.
+    let content = fs::read_to_string(events.path()).unwrap();
+    for line in content.lines().filter(|l| !l.contains("eds_schema")) {
+        let v: serde_json::Value = serde_json::from_str(line).unwrap();
+        let ts = v["timestamp_ms"].as_u64().unwrap_or(0);
+        assert!(ts >= 152500,
+            "no alert should fire before vessel enters zone (t=152500ms), got t={ts}");
+    }
 }
