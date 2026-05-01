@@ -62,7 +62,7 @@
 | M-S-2 | 単調増加するシーケンス番号と `prev_record_hash` チェーン継続性を強制；リプレイされたレコードは重複シーケンスとして検出される | `ingest/verify.rs` `check_sequence()` |
 | M-S-3 | Ed25519 署名はペイロードハッシュを秘密鍵に結びつける；偽造 `device_id` は署名検証で失敗する | `identity.rs` `verify_payload_signature()` |
 
-**残留リスク:** デバイスの秘密鍵が物理的に抽出された場合、有効な署名でレコードを偽造できる。ハードウェアバックアップ鍵ストレージ（TPM/SE）はデバイス層の管理策であり、本ライブラリのスコープ外。[ロードマップ](roadmap.md)に記載。
+**残留リスク:** デバイスの秘密鍵が物理的に抽出された場合、有効な署名でレコードを偽造できる。ハードウェアバックアップ鍵ストレージ（TPM/SE）はデバイス層の管理策であり、本ライブラリのスコープ外。[ロードマップ](../audit/roadmap.md)に記載。
 
 ---
 
@@ -85,7 +85,7 @@
 |----|--------|-----------|
 | M-T-1 | インジェスト毎にクラウドが `BLAKE3(raw_payload)` を再計算し `record.payload_hash` と比較；不一致は `PayloadHashMismatch` として拒否される | `ingest/storage.rs` `IngestService::ingest()` |
 | M-T-2 | `payload_hash` は Ed25519 署名で保護される；ハッシュが変更されると署名検証が失敗する | `identity.rs` `verify_payload_signature()` |
-| M-T-3 | 保存後の改ざんは、台帳のハッシュとオブジェクト内容を再検証することで検出可能；[運用ランブック](operations.md)に記載の運用的管理策 | — |
+| M-T-3 | 保存後の改ざんは、台帳のハッシュとオブジェクト内容を再検証することで検出可能；[運用ランブック](../audit/operations.md)に記載の運用的管理策 | — |
 | M-T-4 | `prev_record_hash` は直前の受理済みレコードの `hash()` と照合される；継続性が断たれると以後のすべてのレコードが拒否される | `ingest/verify.rs` `check_chain_link()` |
 
 **残留リスク:** 受理後の保存オブジェクト改ざんはストレージ層の問題。S3 Object Lock（WORM）やDB行レベルチェックサムをデプロイ層で有効化することで排除できる。
@@ -132,11 +132,11 @@
 
 | ID | 緩和策 | コード位置 |
 |----|--------|-----------|
-| M-I-1 | HTTP トランスポートは TLS ターミネーション（ロードバランサー / Nginx / Cloudflare）の後ろで動作するよう設計されている；生ペイロードは JSON ボディ内で hex エンコードされ HTTPS で転送される必要がある | `transport/http.rs` — TLS はデプロイ層の管理策；[運用ランブック](operations.md)に記載 |
+| M-I-1 | HTTP トランスポートは TLS ターミネーション（ロードバランサー / Nginx / Cloudflare）の後ろで動作するよう設計されている；生ペイロードは JSON ボディ内で hex エンコードされ HTTPS で転送される必要がある | `transport/http.rs` — TLS はデプロイ層の管理策；[運用ランブック](../audit/operations.md)に記載 |
 | M-I-2 | 生ペイロードは呼び出し元が指定したキーで `object_ref` により保存される；アクセス制御はストレージ層（S3 バケットポリシー、Postgres GRANT）で強制；ライブラリは非認証の呼び出し元に読み取り API を公開しない | `ingest/storage.rs` `RawDataStore::put()` |
 | M-I-3 | エラーメッセージには `device_id` と `sequence` が含まれるが生ペイロードバイトは含まれない；`tracing` スパンはペイロードバイト長のみを記録する | `ingest/storage.rs` `#[instrument(skip(raw_payload))]` |
 
-**残留リスク:** S3 オブジェクトと Postgres 行の保存時暗号化はデプロイ層の管理策（S3 SSE-KMS、Postgres `pgcrypto` または TDE）。インジェスト HTTP エンドポイントの TLS 1.3 は[ロードマップ](roadmap.md)（issue #73）で対応予定。
+**残留リスク:** S3 オブジェクトと Postgres 行の保存時暗号化はデプロイ層の管理策（S3 SSE-KMS、Postgres `pgcrypto` または TDE）。インジェスト HTTP エンドポイントの TLS 1.3 は[ロードマップ](../audit/roadmap.md)（issue #73）で対応予定。
 
 ---
 
