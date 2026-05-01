@@ -571,6 +571,54 @@ mod tests {
     }
 
     #[test]
+    fn render_markdown_shows_executive_summary_before_summary_table() {
+        let events = vec![make_event("RULE_X", Severity::High)];
+        let assessment = assess(&events, None);
+        let config = ReportConfig {
+            site_name: None,
+            report_period: None,
+            chain_valid: None,
+            executive_summary: Some("Three proximity breaches recorded. Recommend refresher training.".to_string()),
+            explanations: vec![],
+        };
+        let report = generate_report(&events, &assessment, config);
+        let md = render_markdown(&report);
+        assert!(md.contains("## Executive Summary"), "markdown should contain Executive Summary heading");
+        assert!(md.contains("Three proximity breaches"), "markdown should contain summary text");
+        // Executive Summary must appear before the event table
+        let exec_pos = md.find("## Executive Summary").unwrap();
+        let summary_pos = md.find("## Summary").unwrap();
+        assert!(exec_pos < summary_pos, "Executive Summary should precede the Summary table");
+    }
+
+    #[test]
+    fn render_pdf_includes_executive_summary() {
+        let events = vec![make_event("RULE_X", Severity::High)];
+        let assessment = assess(&events, None);
+        let config = ReportConfig {
+            site_name: None,
+            report_period: None,
+            chain_valid: None,
+            executive_summary: Some("Summary for PDF test.".to_string()),
+            explanations: vec![],
+        };
+        let report = generate_report(&events, &assessment, config);
+        let bytes = render_pdf(&report);
+        assert!(!bytes.is_empty());
+        assert!(bytes.starts_with(b"%PDF"));
+    }
+
+    #[test]
+    fn render_markdown_no_executive_summary_section_when_none() {
+        let events = vec![make_event("RULE_X", Severity::Low)];
+        let assessment = assess(&events, None);
+        let config = ReportConfig { site_name: None, report_period: None, chain_valid: None, executive_summary: None, explanations: vec![] };
+        let report = generate_report(&events, &assessment, config);
+        let md = render_markdown(&report);
+        assert!(!md.contains("## Executive Summary"), "should not render section when None");
+    }
+
+    #[test]
     fn render_markdown_shows_chain_valid_when_some() {
         let events = vec![make_event("RULE_X", Severity::Low)];
         let assessment = assess(&events, None);
