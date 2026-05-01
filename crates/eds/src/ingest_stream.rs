@@ -1,7 +1,7 @@
 //! `eds ingest stream` — receive EntityFrames via UDP and write JSONL.
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::Path;
 
 use edgesentry_ingest::csv_replay::EntityFrame;
 use edgesentry_ingest::jsonl::JsonlWriter;
@@ -21,8 +21,8 @@ use edgesentry_ingest::udp::UnityUdpAdapter;
 /// is terminated (Ctrl-C / SIGTERM).
 pub fn run_stream(
     source: &str,
-    profile_dir: &PathBuf,
-    out: &PathBuf,
+    profile_dir: &Path,
+    out: &Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if source.starts_with("ais://") {
         return run_ais_stream(source, profile_dir, out);
@@ -57,8 +57,8 @@ pub fn run_stream(
 
 fn run_ais_stream(
     source: &str,
-    profile_dir: &PathBuf,
-    out: &PathBuf,
+    profile_dir: &Path,
+    out: &Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use edgesentry_ingest::ais_nmea::{load_port_ref, AisAdapter};
 

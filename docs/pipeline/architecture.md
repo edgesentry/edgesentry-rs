@@ -1,5 +1,9 @@
 # Architecture
 
+> **CV integration and system boundary:** edgesentry-rs starts at entity positions,
+> not video frames. For camera-to-position calibration, environmental constraints,
+> and the completeness gap in the audit chain, see [cv-integration.md](cv-integration.md).
+
 ## Pipeline flow
 
 ```mermaid

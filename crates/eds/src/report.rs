@@ -90,7 +90,7 @@ fn run_generate(
     let assessment = read_assessment(assessment_path)?;
 
     let chain_valid = if chain_valid_flag { Some(true) } else { None };
-    let config = ReportConfig { site_name, report_period: period, chain_valid };
+    let config = ReportConfig { site_name, report_period: period, chain_valid, explanations: vec![] };
 
     let report = generate_report(&events, &assessment, config);
 
