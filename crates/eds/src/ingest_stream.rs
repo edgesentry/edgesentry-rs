@@ -1,7 +1,7 @@
 //! `eds ingest stream` — receive EntityFrames via UDP and write JSONL.
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use edgesentry_ingest::csv_replay::EntityFrame;
 use edgesentry_ingest::jsonl::JsonlWriter;
