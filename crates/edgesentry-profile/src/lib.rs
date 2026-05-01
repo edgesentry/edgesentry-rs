@@ -292,7 +292,7 @@ fn validate_kb(profile_dir: &Path, rule_ids: &[String], report: &mut ValidationR
     let kb_files: HashSet<String> = match fs::read_dir(&kb_dir) {
         Ok(entries) => entries
             .filter_map(|e| e.ok())
-            .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("txt"))
+            .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("md"))
             .filter_map(|e| e.path().file_stem()?.to_str().map(str::to_string))
             .collect(),
         Err(e) => {
@@ -304,14 +304,14 @@ fn validate_kb(profile_dir: &Path, rule_ids: &[String], report: &mut ValidationR
     // Each rule should have a KB file
     for rule_id in rule_ids {
         if kb_files.contains(rule_id) {
-            let path = kb_dir.join(format!("{rule_id}.txt"));
+            let path = kb_dir.join(format!("{rule_id}.md"));
             let content = fs::read_to_string(&path).unwrap_or_default();
             if content.trim().is_empty() {
-                report.warnings.push(format!("kb/{rule_id}.txt exists but is empty"));
+                report.warnings.push(format!("kb/{rule_id}.md exists but is empty"));
             }
         } else {
             report.warnings.push(format!(
-                "kb/{rule_id}.txt not found — LLM explanation for {rule_id} will be ungrounded"
+                "kb/{rule_id}.md not found — LLM explanation for {rule_id} will be ungrounded"
             ));
         }
     }
@@ -321,7 +321,7 @@ fn validate_kb(profile_dir: &Path, rule_ids: &[String], report: &mut ValidationR
     for kb_id in &kb_files {
         if !rule_set.contains(kb_id.as_str()) {
             report.warnings.push(format!(
-                "kb/{kb_id}.txt has no matching rule in rules.json (orphaned)"
+                "kb/{kb_id}.md has no matching rule in rules.json (orphaned)"
             ));
         }
     }
@@ -340,7 +340,7 @@ mod tests {
         let kb_dir = dir.join("kb");
         fs::create_dir_all(&kb_dir).unwrap();
         for (name, content) in kb {
-            fs::write(kb_dir.join(format!("{name}.txt")), content).unwrap();
+            fs::write(kb_dir.join(format!("{name}.md")), content).unwrap();
         }
     }
 

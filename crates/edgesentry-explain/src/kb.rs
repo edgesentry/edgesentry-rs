@@ -20,7 +20,7 @@ impl KnowledgeBase {
         for entry in entries {
             let entry = entry.map_err(|e| e.to_string())?;
             let path = entry.path();
-            if path.extension().and_then(|s| s.to_str()) != Some("txt") {
+            if path.extension().and_then(|s| s.to_str()) != Some("md") {
                 continue;
             }
             let rule_id = path
