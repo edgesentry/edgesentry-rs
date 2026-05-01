@@ -124,10 +124,11 @@ jobs:
         run: cargo audit --version 2>/dev/null || cargo install cargo-audit --locked
 
       - name: Run security audit
-        # rustls-webpki advisories affecting 0.101.7 and 0.102.8 — pinned by
-        # upstream (AWS SDK → rustls 0.21; rumqttc → rustls ^0.102). No patch
-        # available without upstream changes. No CRL / URI / wildcard SAN code
-        # paths in our usage.
+        # All advisory ignores are documented in deny.toml [advisories].ignore
+        # with full rationale. RUSTSEC-2026-0098/0099/0104: rustls-webpki
+        # 0.101.7/0.102.8 pinned by upstream (AWS SDK → rustls 0.21;
+        # rumqttc → rustls ^0.102); no patch in those series; CRL/URI/wildcard
+        # SAN code paths not used in edgesentry-rs.
         run: >
           cargo audit
           --ignore RUSTSEC-2026-0049
