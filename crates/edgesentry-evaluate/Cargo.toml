@@ -11,3 +11,6 @@ edgesentry-ingest = { path = "../edgesentry-ingest" }
 edgesentry-compute = { path = "../edgesentry-compute" }
 serde = { workspace = true }
 serde_json = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
