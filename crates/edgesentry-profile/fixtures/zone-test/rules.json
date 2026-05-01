@@ -1,0 +1,14 @@
+[
+  {
+    "rule_id": "ZONE_ENTRY",
+    "condition": "zone_member",
+    "severity": "HIGH",
+    "regulation": "Site Safety Procedure §4.1 — Unauthorised entry to restricted zone",
+    "zone": [
+      [300, 200],
+      [600, 200],
+      [600, 500],
+      [300, 500]
+    ]
+  }
+]

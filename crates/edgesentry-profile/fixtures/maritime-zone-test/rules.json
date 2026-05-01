@@ -1,0 +1,15 @@
+[
+  {
+    "rule_id": "RESTRICTED_ZONE_APPROACH",
+    "condition": "zone_member",
+    "zone": [[-300, 200], [300, 200], [300, 700], [-300, 700]],
+    "severity": "HIGH",
+    "regulation": "Site Safety Procedure §4.1 — Unauthorised vessel entry to restricted zone"
+  },
+  {
+    "rule_id": "AIS_TRACK_GAP",
+    "condition": "ais_gap > 480",
+    "severity": "CRITICAL",
+    "regulation": "Site Safety Procedure §5.1 — AIS silence exceeding 8 minutes requires immediate reporting"
+  }
+]

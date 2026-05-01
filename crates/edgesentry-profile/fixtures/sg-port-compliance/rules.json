@@ -1,6 +1,0 @@
-[
-  {"rule_id": "BWM_D2_EXPIRED", "field": "bwm_certificate_expiry", "check": "not_expired", "severity": "HIGH", "regulation": "Ballast Water Management Convention (BWM) D-2 Standard — MPA Port Marine Circular No. 19 of 2023"},
-  {"rule_id": "QUARANTINE_PRENOTIFICATION", "field": "quarantine_status", "check": "not_null", "severity": "MEDIUM", "regulation": "Singapore Environmental Public Health Act — Quarantine pre-notification required 24h before arrival"},
-  {"rule_id": "DG_RESTRICTION", "field": "dangerous_goods", "check": "not_true", "severity": "HIGH", "regulation": "IMDG Code — Dangerous Goods require prior MPA approval and berth allocation"},
-  {"rule_id": "CREW_DOC_VALIDITY", "field": "crew_count", "check": "not_null", "severity": "MEDIUM", "regulation": "MLC 2006 — Crew documentation must be complete for all crew members listed"}
-]

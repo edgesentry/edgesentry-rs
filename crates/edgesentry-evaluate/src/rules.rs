@@ -492,12 +492,11 @@ mod tests {
     }
 
     #[test]
-    fn evaluate_sg_maritime_rules_load_correctly() {
-        // The sg-maritime-security rules.json must load without errors
+    fn evaluate_maritime_rules_load_correctly() {
         let rules_json = include_str!(
-            "../../edgesentry-profile/fixtures/sg-maritime-security/rules.json"
+            "../../edgesentry-profile/fixtures/maritime-zone-test/rules.json"
         );
-        let rules = load_rules(rules_json).expect("sg-maritime-security rules.json must parse");
+        let rules = load_rules(rules_json).expect("maritime-zone-test rules.json must parse");
         assert_eq!(rules.len(), 2);
         assert_eq!(rules[0].rule_id, "RESTRICTED_ZONE_APPROACH");
         assert_eq!(rules[1].rule_id, "AIS_TRACK_GAP");
@@ -512,9 +511,9 @@ mod tests {
     }
 
     #[test]
-    fn evaluate_sg_zone_fires_for_vessel_inside() {
+    fn evaluate_maritime_zone_fires_for_vessel_inside() {
         let rules_json = include_str!(
-            "../../edgesentry-profile/fixtures/sg-maritime-security/rules.json"
+            "../../edgesentry-profile/fixtures/maritime-zone-test/rules.json"
         );
         let rules = load_rules(rules_json).unwrap();
         // Position at (0, 400) — inside polygon [[-300,200],[300,200],[300,700],[-300,700]]
@@ -531,9 +530,9 @@ mod tests {
     }
 
     #[test]
-    fn evaluate_sg_zone_no_fire_for_vessel_outside() {
+    fn evaluate_maritime_zone_no_fire_for_vessel_outside() {
         let rules_json = include_str!(
-            "../../edgesentry-profile/fixtures/sg-maritime-security/rules.json"
+            "../../edgesentry-profile/fixtures/maritime-zone-test/rules.json"
         );
         let rules = load_rules(rules_json).unwrap();
         // Position at (0, -278) — outside zone (south of y=+200m boundary)

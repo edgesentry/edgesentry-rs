@@ -76,8 +76,8 @@ is inspectable; the profiles are valuable because they require domain expertise.
 | Profile | Location | Rules | KB entries |
 |---|---|---|---|
 | `demo` | `crates/edgesentry-profile/fixtures/demo/` | PROXIMITY_ALERT, EXCLUSION_ZONE_BREACH, TTC_ALERT | 3 |
-| `sg-maritime-security` | `crates/edgesentry-profile/fixtures/sg-maritime-security/` | RESTRICTED_ZONE_APPROACH, AIS_TRACK_GAP | 2 |
-| `sg-port-compliance` | `crates/edgesentry-profile/fixtures/sg-port-compliance/` | BWM_D2_EXPIRED, QUARANTINE_PRENOTIFICATION, DG_RESTRICTION, CREW_DOC_VALIDITY | 4 |
+| `sg-maritime-security` | `clarus-commercial/profiles/sg-maritime-security/` | RESTRICTED_ZONE_APPROACH, AIS_TRACK_GAP | 2 |
+| `sg-port-compliance` | `clarus-commercial/profiles/sg-port-compliance/` | BWM_D2_EXPIRED, QUARANTINE_PRENOTIFICATION, DG_RESTRICTION, CREW_DOC_VALIDITY | 4 |
 
 ---
 

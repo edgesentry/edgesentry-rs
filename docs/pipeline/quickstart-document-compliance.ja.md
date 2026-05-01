@@ -19,7 +19,7 @@ crates/edgesentry-document/fixtures/
   voyage_V002_bwm_expired.csv    -- TC2: BWM D-2 証明書の有効期限切れ
   voyage_V003_low_confidence.csv -- TC3: crew_count と cargo HS コードが欠損
 
-crates/edgesentry-profile/fixtures/sg-port-compliance/
+clarus-commercial/profiles/sg-port-compliance/
   rules.json                     -- BWM_D2_EXPIRED, QUARANTINE_PRENOTIFICATION,
                                  --   DG_RESTRICTION, CREW_DOC_VALIDITY
   kb/
@@ -47,7 +47,7 @@ eds document fill \
 # ステップ 3 続き - コンプライアンスルールの確認
 eds document check \
   --input /tmp/filled.jsonl \
-  --profile crates/edgesentry-profile/fixtures/sg-port-compliance \
+  --profile clarus-commercial/profiles/sg-port-compliance \
   --out /tmp/alerts.jsonl
 # 0件のコンプライアンスアラート
 
@@ -74,7 +74,7 @@ eds document fill \
 
 eds document check \
   --input /tmp/filled_v002.jsonl \
-  --profile crates/edgesentry-profile/fixtures/sg-port-compliance \
+  --profile clarus-commercial/profiles/sg-port-compliance \
   --out /tmp/alerts_v002.jsonl
 ```
 
