@@ -227,7 +227,7 @@ jobs:
             --summary-only 2>/dev/null || true
 
   arm64_cross_compile:
-    name: ARM64 Cross-Compile (aarch64 — RPi5 target)
+    name: ARM64 Cross-Compile (aarch64-unknown-linux-gnu)
     runs-on: ubuntu-latest
     permissions:
       contents: read
