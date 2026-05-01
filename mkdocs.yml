@@ -111,6 +111,9 @@ nav:
       - Step 7 - Seal: pipeline/step-7-seal.md
     - Scenario: pipeline/scenario.md
     - Profile Authoring: pipeline/profile-authoring.md
+    - CV Integration: pipeline/cv-integration.md
+    - Edge / Cloud Split: pipeline/edge-cloud-split.md
+    - Edge / Cloud Implementation: pipeline/edge-cloud-implementation.md
     - CLI Reference: pipeline/cli-reference.md
   - Audit:
     - Introduction: audit/introduction.md
@@ -128,6 +131,7 @@ nav:
     - SBOM: security/sbom.md
   - Legal:
     - Admissibility: legal/index.md
+  - Roadmap: roadmap/index.md
   - Inspect:
     - Introduction: inspect/introduction.md
     - Background: inspect/background.md
