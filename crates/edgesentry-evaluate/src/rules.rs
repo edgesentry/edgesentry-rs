@@ -547,4 +547,195 @@ mod tests {
         assert!(!events.iter().any(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH"),
             "RESTRICTED_ZONE_APPROACH must not fire for vessel south of zone");
     }
+
+    // ── Physics validation scenarios ──────────────────────────────────────────
+    //
+    // Each scenario is defined analytically with hand-calculated ground truth.
+    // These tests constitute the physics validation evidence for submission.
+    // See docs/pipeline/physics-validation.md.
+
+    const PORT_SAFETY_RULES: &str = r#"[
+        {"rule_id":"PROXIMITY_ALERT","condition":"distance < 5.0","severity":"HIGH","regulation":"Site Safety §3.1"},
+        {"rule_id":"TTC_ALERT",      "condition":"ttc < 3.0",      "severity":"HIGH","regulation":"Site Safety §3.2"}
+    ]"#;
+
+    const ZONE_RULES: &str = r#"[
+        {"rule_id":"ZONE_ENTRY","condition":"zone_member","severity":"HIGH","regulation":"Site Safety §4.1",
+         "zone":[[300,200],[600,200],[600,500],[300,500]]}
+    ]"#;
+
+    // Scenario 1 — Proximity approach
+    //
+    // Vehicle closes from 12.0 m to 1.0 m over 15 frames at constant velocity.
+    // step = (12.0 - 1.0) / 14 = 11/14 m/frame  (1 frame = 1 s)
+    //
+    // Hand-calculated first alert frame:
+    //   12.0 - N*(11/14) < 5.0  →  N > 7*14/11 = 8.909  →  frame 9
+    //   distance at frame 9 = 12.0 - 9*(11/14) = 69/14 ≈ 4.929 m
+    //
+    // Hand-calculated first TTC alert frame:
+    //   TTC = distance/speed = (12.0 - N*step)/step = 12*14/11 - N
+    //   TTC < 3.0  →  N > 12*14/11 - 3 = 135/11 = 12.27  →  frame 13
+    //   TTC at frame 13 = 25/14 / (11/14) = 25/11 ≈ 2.273 s
+    #[test]
+    fn scenario_1_proximity_approach_first_alert_frame() {
+        let rules = load_rules(PORT_SAFETY_RULES).unwrap();
+        let step = 11.0_f32 / 14.0;
+        let worker = entity("W-01", 0.0, 0.0, 0.0, 0.0);
+
+        let first_proximity_frame = (0..15).find(|&n| {
+            let x = 12.0 - n as f32 * step;
+            let vehicle = entity("FL-01", x, 0.0, -step, 0.0);
+            evaluate(&rules, &[vehicle, worker.clone()], n as u64 * 1000)
+                .iter().any(|e| e.rule_id == "PROXIMITY_ALERT")
+        });
+
+        assert_eq!(first_proximity_frame, Some(9),
+            "PROXIMITY_ALERT must first fire at frame 9 (distance ≈ 4.929 m)");
+
+        // Verify measured_value at frame 9 matches hand-calculated distance
+        let x9 = 12.0_f32 - 9.0 * step;
+        let vehicle9 = entity("FL-01", x9, 0.0, -step, 0.0);
+        let events = evaluate(&rules, &[vehicle9, worker.clone()], 9000);
+        let evt = events.iter().find(|e| e.rule_id == "PROXIMITY_ALERT").unwrap();
+        let expected_dist = 69.0_f32 / 14.0;
+        assert!((evt.measured_value - expected_dist).abs() < 1e-3,
+            "measured distance at frame 9 must be 69/14 ≈ {:.4} m, got {:.4}",
+            expected_dist, evt.measured_value);
+        assert_eq!(evt.threshold, 5.0);
+    }
+
+    #[test]
+    fn scenario_1_ttc_alert_frame() {
+        let rules = load_rules(PORT_SAFETY_RULES).unwrap();
+        let step = 11.0_f32 / 14.0;
+        let worker = entity("W-01", 0.0, 0.0, 0.0, 0.0);
+
+        let first_ttc_frame = (0..15).find(|&n| {
+            let x = 12.0 - n as f32 * step;
+            let vehicle = entity("FL-01", x, 0.0, -step, 0.0);
+            evaluate(&rules, &[vehicle, worker.clone()], n as u64 * 1000)
+                .iter().any(|e| e.rule_id == "TTC_ALERT")
+        });
+
+        assert_eq!(first_ttc_frame, Some(13),
+            "TTC_ALERT must first fire at frame 13 (TTC = 25/11 ≈ 2.273 s)");
+
+        // Verify TTC measured_value at frame 13: distance=25/14, speed=11/14 → TTC=25/11
+        let x13 = 12.0_f32 - 13.0 * step;
+        let vehicle13 = entity("FL-01", x13, 0.0, -step, 0.0);
+        let events = evaluate(&rules, &[vehicle13, worker.clone()], 13000);
+        let evt = events.iter().find(|e| e.rule_id == "TTC_ALERT").unwrap();
+        let expected_ttc = 25.0_f32 / 11.0;
+        assert!((evt.measured_value - expected_ttc).abs() < 1e-3,
+            "TTC at frame 13 must be 25/11 ≈ {:.4} s, got {:.4}",
+            expected_ttc, evt.measured_value);
+        assert_eq!(evt.threshold, 3.0);
+    }
+
+    // Scenario 2 — TTC trigger (clean numbers)
+    //
+    // Vehicle at (8.0, 0) closing at 4.0 m/s toward worker at origin.
+    //   TTC = distance / closing_speed = 8.0 / 4.0 = 2.0 s < threshold 3.0 s  → TTC_ALERT fires
+    //   distance = 8.0 m > threshold 5.0 m                                     → PROXIMITY_ALERT silent
+    #[test]
+    fn scenario_2_ttc_clean_numbers() {
+        let rules = load_rules(PORT_SAFETY_RULES).unwrap();
+        let vehicle = entity("FL-01", 8.0, 0.0, -4.0, 0.0);
+        let worker  = entity("W-01",  0.0, 0.0,  0.0, 0.0);
+        let events  = evaluate(&rules, &[vehicle, worker], 0);
+
+        assert!(events.iter().any(|e| e.rule_id == "TTC_ALERT"),
+            "TTC_ALERT must fire: TTC = 8.0/4.0 = 2.0 s < 3.0 s");
+        assert!(!events.iter().any(|e| e.rule_id == "PROXIMITY_ALERT"),
+            "PROXIMITY_ALERT must be silent: distance = 8.0 m > 5.0 m");
+
+        let evt = events.iter().find(|e| e.rule_id == "TTC_ALERT").unwrap();
+        assert!((evt.measured_value - 2.0).abs() < 1e-3,
+            "measured TTC must be 2.0 s, got {:.4}", evt.measured_value);
+        assert_eq!(evt.threshold, 3.0);
+    }
+
+    // Scenario 3 — Safe pass, zero false positives
+    //
+    // Vehicle passes at 6.0 m lateral clearance, moving parallel to worker (no closing velocity).
+    //   distance = 6.0 m > threshold 5.0 m  → PROXIMITY_ALERT silent
+    //   closing speed = 0                   → TTC = ∞              → TTC_ALERT silent
+    // Over 10 frames the vehicle moves further away: zero events total.
+    #[test]
+    fn scenario_3_safe_pass_no_false_positives() {
+        let rules = load_rules(PORT_SAFETY_RULES).unwrap();
+        let worker = entity("W-01", 0.0, 0.0, 0.0, 0.0);
+        let mut total_events = 0usize;
+
+        for frame in 0..10_u64 {
+            // Vehicle moves along x-axis at y=6.0 — always 6 m from worker at origin
+            let x = frame as f32 * 1.0;
+            let vehicle = entity("FL-01", x, 6.0, 1.0, 0.0);
+            total_events += evaluate(&rules, &[vehicle, worker.clone()], frame * 1000).len();
+        }
+
+        assert_eq!(total_events, 0,
+            "safe pass at 6 m lateral clearance must produce zero events across 10 frames");
+    }
+
+    // Scenario 4 — Zone boundary precision
+    //
+    // Zone: [[300,200],[600,200],[600,500],[300,500]] (300 m × 300 m rectangle)
+    // Vessel at (299, 350): x < 300 → outside → no alert
+    // Vessel at (301, 350): x > 300, 200 < y < 500 → inside → ZONE_ENTRY fires
+    #[test]
+    fn scenario_4_zone_boundary_precision() {
+        let rules = load_rules(ZONE_RULES).unwrap();
+
+        let outside = Entity {
+            id: "V-001".into(), class: EntityClass::Vessel,
+            position: Vec2::new(299.0, 350.0), velocity: Vec2::new(0.0, 0.0), timestamp_ms: 0,
+        };
+        let inside = Entity {
+            id: "V-001".into(), class: EntityClass::Vessel,
+            position: Vec2::new(301.0, 350.0), velocity: Vec2::new(0.0, 0.0), timestamp_ms: 0,
+        };
+
+        assert!(evaluate(&rules, &[outside], 0).is_empty(),
+            "vessel at x=299 (outside zone x∈[300,600]) must produce no alert");
+        assert!(evaluate(&rules, &[inside], 1000)
+            .iter().any(|e| e.rule_id == "ZONE_ENTRY"),
+            "vessel at x=301 (inside zone) must fire ZONE_ENTRY");
+    }
+
+    // Scenario 5 — Zone exit: events on inside frames only
+    //
+    // Vessel trajectory (6 frames, Δt=30 s, speed=2 m/s → 60 m/frame):
+    //   f0 t=0:      x=250 → outside  (x < 300)
+    //   f1 t=30000:  x=310 → inside
+    //   f2 t=60000:  x=400 → inside
+    //   f3 t=90000:  x=500 → inside
+    //   f4 t=120000: x=590 → inside
+    //   f5 t=150000: x=650 → outside  (x > 600)
+    //
+    // Expected: ZONE_ENTRY fires at frames 1-4 only → exactly 4 events.
+    #[test]
+    fn scenario_5_zone_exit_events_only_on_inside_frames() {
+        let rules = load_rules(ZONE_RULES).unwrap();
+        let x_positions: &[(u64, f32, bool)] = &[
+            (0,      250.0, false),
+            (30_000, 310.0, true),
+            (60_000, 400.0, true),
+            (90_000, 500.0, true),
+            (120_000,590.0, true),
+            (150_000,650.0, false),
+        ];
+
+        for &(ts, x, should_fire) in x_positions {
+            let vessel = Entity {
+                id: "V-001".into(), class: EntityClass::Vessel,
+                position: Vec2::new(x, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: ts,
+            };
+            let fired = evaluate(&rules, &[vessel], ts)
+                .iter().any(|e| e.rule_id == "ZONE_ENTRY");
+            assert_eq!(fired, should_fire,
+                "at x={x} (t={ts}ms): ZONE_ENTRY fired={fired}, expected={should_fire}");
+        }
+    }
 }
