@@ -79,4 +79,21 @@ mod tests {
         assert!(v.x.abs() < 1e-3, "vx should be ~0, got {}", v.x);
         assert!((v.y + 0.5144).abs() < 1e-3, "vy should be ~-0.5144, got {}", v.y);
     }
+
+    #[test]
+    fn cog_sog_zero_speed_gives_zero_velocity() {
+        let v = cog_sog_to_velocity(45.0, 0.0);
+        assert_eq!(v.x, 0.0);
+        assert_eq!(v.y, 0.0);
+    }
+
+    #[test]
+    fn latlon_to_local_east_correction_scales_with_cos_lat() {
+        // At equator (lat=0): 1° east ≈ 111320 m
+        // At lat=60°: 1° east ≈ 111320 * cos(60°) ≈ 55660 m
+        let (x_eq, _) = latlon_to_local(0.0, 1.0, 0.0, 0.0);
+        let (x_60, _) = latlon_to_local(60.0, 61.0, 60.0, 60.0);
+        let ratio = x_60 / x_eq;
+        assert!((ratio - 0.5_f32).abs() < 0.01, "ratio should be ~0.5 (cos 60°), got {ratio}");
+    }
 }
