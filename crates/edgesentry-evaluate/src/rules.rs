@@ -37,10 +37,11 @@ pub struct Rule {
 
 /// Evidentiary quality of a RiskEvent, derived from the CV model confidence and
 /// anchor drift score. Sealed into the audit chain alongside every event.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum EvidenceQuality {
     /// confidence_cv >= 0.8 — full actuarial weight
+    #[default]
     Certified,
     /// 0.5 <= confidence_cv < 0.8 — reduced actuarial weight
     Degraded,
@@ -57,12 +58,6 @@ impl EvidenceQuality {
         } else {
             Self::Rejected
         }
-    }
-}
-
-impl Default for EvidenceQuality {
-    fn default() -> Self {
-        Self::Certified
     }
 }
 
