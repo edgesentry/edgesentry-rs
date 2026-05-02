@@ -31,6 +31,8 @@ pub struct UnityEntityJson {
     pub vx: f32,
     pub vy: f32,
     pub timestamp_ms: u64,
+    #[serde(default)]
+    pub confidence: Option<f32>,
 }
 
 impl From<UnityEntityJson> for Entity {
@@ -41,6 +43,7 @@ impl From<UnityEntityJson> for Entity {
             position: Vec2::new(u.x, u.y),
             velocity: Vec2::new(u.vx, u.vy),
             timestamp_ms: u.timestamp_ms,
+            confidence: u.confidence,
         }
     }
 }
@@ -140,5 +143,53 @@ mod tests {
         let json = r#"{"entities":[{"id":"x","class":"Submarine","x":0.0,"y":0.0,"vx":0.0,"vy":0.0,"timestamp_ms":0}]}"#;
         let result: Result<UnityPacket, _> = serde_json::from_str(json);
         assert!(result.is_err());
+    }
+
+    // ── Unity Scene 2 (maritime demo) packet tests ────────────────────────────
+    //
+    // ClarusUdpExporter sends {"entities":[{"id":"V-001","class":"Vessel",...}]}.
+    // These tests verify the exact packet the Unity vessel scene emits parses
+    // correctly into an Entity that the rule engine can evaluate.
+
+    #[test]
+    fn parse_vessel_entity_from_unity_packet() {
+        // Packet as ClarusUdpExporter would send for V-001 at x=350, y=350
+        let json = r#"{"entities":[
+            {"id":"V-001","class":"Vessel","x":350.0,"y":350.0,"vx":2.0,"vy":0.0,"timestamp_ms":175000}
+        ]}"#;
+        let entities = parse(json);
+        assert_eq!(entities.len(), 1);
+        let e = &entities[0];
+        assert_eq!(e.id, "V-001");
+        assert_eq!(e.class, crate::entity::EntityClass::Vessel);
+        assert!((e.position.x - 350.0).abs() < 1e-4);
+        assert!((e.position.y - 350.0).abs() < 1e-4);
+        assert!((e.velocity.x - 2.0).abs() < 1e-4, "vx should be 2.0 m/s east");
+        assert!(e.velocity.y.abs() < 1e-4, "vy should be 0 (straight east)");
+        assert_eq!(e.timestamp_ms, 175_000);
+    }
+
+    #[test]
+    fn parse_vessel_before_zone_entry() {
+        // x=150 — vessel approaching but not yet inside zone
+        let json = r#"{"entities":[
+            {"id":"V-001","class":"Vessel","x":150.0,"y":350.0,"vx":2.0,"vy":0.0,"timestamp_ms":75000}
+        ]}"#;
+        let entities = parse(json);
+        assert_eq!(entities[0].position.x, 150.0);
+    }
+
+    #[test]
+    fn parse_scene1_forklift_and_worker_packet() {
+        // Packet as Scene 1 ClarusUdpExporter sends — both FL-01 and W-03
+        let json = r#"{"entities":[
+            {"id":"FL-01","class":"Forklift","x":0.5,"y":0.0,"vx":1.4,"vy":0.0,"timestamp_ms":500},
+            {"id":"W-03","class":"Person","x":12.0,"y":0.0,"vx":0.0,"vy":0.0,"timestamp_ms":500}
+        ]}"#;
+        let entities = parse(json);
+        assert_eq!(entities.len(), 2);
+        assert_eq!(entities[0].class, crate::entity::EntityClass::Forklift);
+        assert_eq!(entities[1].class, crate::entity::EntityClass::Person);
+        assert!((entities[0].velocity.x - 1.4).abs() < 1e-4);
     }
 }

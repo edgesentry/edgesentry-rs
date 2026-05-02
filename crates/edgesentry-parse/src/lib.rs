@@ -246,6 +246,7 @@ pub fn document_to_entity_frames(doc: &ParsedDocument) -> Vec<EntityFrame> {
                 position: Vec2::new(x, y),
                 velocity: Vec2::new(vx, vy),
                 timestamp_ms,
+                confidence: None,
             };
             ts_map.entry(timestamp_ms).or_default().push(entity);
         }
@@ -270,6 +271,7 @@ pub fn document_to_entity_frames(doc: &ParsedDocument) -> Vec<EntityFrame> {
             position: Vec2::new(x, y),
             velocity: Vec2::new(vx, vy),
             timestamp_ms,
+            confidence: None,
         };
         let frame = EntityFrame { timestamp_ms, entities: vec![entity] };
         return vec![frame];

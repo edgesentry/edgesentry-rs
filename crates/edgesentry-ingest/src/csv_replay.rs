@@ -54,6 +54,7 @@ impl FileReplayAdapter {
                 position: Vec2::new(x, y),
                 velocity: Vec2::new(vx, vy),
                 timestamp_ms: ts,
+                confidence: None,
             });
         }
 

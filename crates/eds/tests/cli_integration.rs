@@ -484,8 +484,8 @@ fn assess_run_window_sec_filters_events() {
     let assessment  = TmpFile::new("assessment_window.jsonl");
 
     let header = r#"{"eds_schema":"eds.risk-event","version":"0.1"}"#;
-    let old_event = r#"{"rule_id":"PROXIMITY_ALERT","severity":"HIGH","regulation":"§1","entity_ids":["A","B"],"measured_value":3.0,"threshold":5.0,"timestamp_ms":1000}"#;
-    let new_event = r#"{"rule_id":"PROXIMITY_ALERT","severity":"HIGH","regulation":"§1","entity_ids":["A","B"],"measured_value":3.0,"threshold":5.0,"timestamp_ms":60000}"#;
+    let old_event = r#"{"rule_id":"PROXIMITY_ALERT","severity":"HIGH","regulation":"§1","entity_ids":["A","B"],"measured_value":3.0,"threshold":5.0,"timestamp_ms":1000,"confidence_cv":1.0,"evidence_quality":"CERTIFIED"}"#;
+    let new_event = r#"{"rule_id":"PROXIMITY_ALERT","severity":"HIGH","regulation":"§1","entity_ids":["A","B"],"measured_value":3.0,"threshold":5.0,"timestamp_ms":60000,"confidence_cv":1.0,"evidence_quality":"CERTIFIED"}"#;
     fs::write(events_file.path(), format!("{header}\n{old_event}\n{new_event}\n")).unwrap();
 
     let out = eds()

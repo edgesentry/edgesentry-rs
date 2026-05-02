@@ -35,6 +35,31 @@ pub struct Rule {
     pub regulation: String,
 }
 
+/// Evidentiary quality of a RiskEvent, derived from the CV model confidence and
+/// anchor drift score. Sealed into the audit chain alongside every event.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum EvidenceQuality {
+    /// confidence_cv >= 0.8 — full actuarial weight
+    Certified,
+    /// 0.5 <= confidence_cv < 0.8 — reduced actuarial weight
+    Degraded,
+    /// confidence_cv < 0.5 — event recorded but not admissible as evidence
+    Rejected,
+}
+
+impl EvidenceQuality {
+    pub fn from_confidence(confidence_cv: f32) -> Self {
+        if confidence_cv >= 0.8 {
+            Self::Certified
+        } else if confidence_cv >= 0.5 {
+            Self::Degraded
+        } else {
+            Self::Rejected
+        }
+    }
+}
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct RiskEvent {
     pub rule_id: String,
@@ -48,6 +73,10 @@ pub struct RiskEvent {
     /// The threshold that was breached.
     pub threshold: f32,
     pub timestamp_ms: u64,
+    /// Minimum CV confidence across all involved entities (1.0 when confidence not provided).
+    pub confidence_cv: f32,
+    /// Evidentiary quality derived from confidence_cv.
+    pub evidence_quality: EvidenceQuality,
 }
 
 // ── JSON loading ──────────────────────────────────────────────────────────────
@@ -109,6 +138,28 @@ fn parse_condition(s: &str, zone: Option<Vec<[f32; 2]>>) -> Result<Condition, St
 
 // ── Evaluation ────────────────────────────────────────────────────────────────
 
+fn entity_confidence(e: &Entity) -> f32 {
+    e.confidence.unwrap_or(1.0)
+}
+
+fn pair_confidence(a: &Entity, b: &Entity) -> f32 {
+    entity_confidence(a).min(entity_confidence(b))
+}
+
+fn make_event(rule: &Rule, entity_ids: Vec<String>, measured_value: f32, threshold: f32, timestamp_ms: u64, confidence_cv: f32) -> RiskEvent {
+    RiskEvent {
+        rule_id: rule.rule_id.clone(),
+        severity: rule.severity.clone(),
+        regulation: rule.regulation.clone(),
+        entity_ids,
+        measured_value,
+        threshold,
+        timestamp_ms,
+        confidence_cv,
+        evidence_quality: EvidenceQuality::from_confidence(confidence_cv),
+    }
+}
+
 /// Evaluate all rules against the current entity snapshot.
 /// Returns one `RiskEvent` per (rule, entity-pair or entity) that breaches a threshold.
 pub fn evaluate(rules: &[Rule], entities: &[Entity], timestamp_ms: u64) -> Vec<RiskEvent> {
@@ -121,18 +172,10 @@ pub fn evaluate(rules: &[Rule], entities: &[Entity], timestamp_ms: u64) -> Vec<R
                     for j in (i + 1)..entities.len() {
                         let dist = euclidean_distance(&entities[i], &entities[j]);
                         if dist < *threshold {
-                            events.push(RiskEvent {
-                                rule_id: rule.rule_id.clone(),
-                                severity: rule.severity.clone(),
-                                regulation: rule.regulation.clone(),
-                                entity_ids: vec![
-                                    entities[i].id.clone(),
-                                    entities[j].id.clone(),
-                                ],
-                                measured_value: dist,
-                                threshold: *threshold,
-                                timestamp_ms,
-                            });
+                            let cv = pair_confidence(&entities[i], &entities[j]);
+                            events.push(make_event(rule,
+                                vec![entities[i].id.clone(), entities[j].id.clone()],
+                                dist, *threshold, timestamp_ms, cv));
                         }
                     }
                 }
@@ -144,18 +187,10 @@ pub fn evaluate(rules: &[Rule], entities: &[Entity], timestamp_ms: u64) -> Vec<R
                         let rv = relative_velocity(&entities[i], &entities[j]);
                         let ttc = time_to_collision(dist, rv);
                         if ttc < *threshold {
-                            events.push(RiskEvent {
-                                rule_id: rule.rule_id.clone(),
-                                severity: rule.severity.clone(),
-                                regulation: rule.regulation.clone(),
-                                entity_ids: vec![
-                                    entities[i].id.clone(),
-                                    entities[j].id.clone(),
-                                ],
-                                measured_value: ttc,
-                                threshold: *threshold,
-                                timestamp_ms,
-                            });
+                            let cv = pair_confidence(&entities[i], &entities[j]);
+                            events.push(make_event(rule,
+                                vec![entities[i].id.clone(), entities[j].id.clone()],
+                                ttc, *threshold, timestamp_ms, cv));
                         }
                     }
                 }
@@ -163,30 +198,20 @@ pub fn evaluate(rules: &[Rule], entities: &[Entity], timestamp_ms: u64) -> Vec<R
             Condition::ZoneMember(polygon) => {
                 for entity in entities {
                     if zone_membership(entity.position.clone(), polygon) {
-                        events.push(RiskEvent {
-                            rule_id: rule.rule_id.clone(),
-                            severity: rule.severity.clone(),
-                            regulation: rule.regulation.clone(),
-                            entity_ids: vec![entity.id.clone()],
-                            measured_value: 1.0,
-                            threshold: 0.0,
-                            timestamp_ms,
-                        });
+                        let cv = entity_confidence(entity);
+                        events.push(make_event(rule,
+                            vec![entity.id.clone()],
+                            1.0, 0.0, timestamp_ms, cv));
                     }
                 }
             }
             Condition::AisGapGt(threshold) => {
                 for entity in entities {
                     if entity.class == EntityClass::AisGap && entity.velocity.x > *threshold {
-                        events.push(RiskEvent {
-                            rule_id: rule.rule_id.clone(),
-                            severity: rule.severity.clone(),
-                            regulation: rule.regulation.clone(),
-                            entity_ids: vec![entity.id.clone()],
-                            measured_value: entity.velocity.x,
-                            threshold: *threshold,
-                            timestamp_ms,
-                        });
+                        let cv = entity_confidence(entity);
+                        events.push(make_event(rule,
+                            vec![entity.id.clone()],
+                            entity.velocity.x, *threshold, timestamp_ms, cv));
                     }
                 }
             }
@@ -210,7 +235,12 @@ mod tests {
             position: Vec2::new(x, y),
             velocity: Vec2::new(vx, vy),
             timestamp_ms: 0,
+            confidence: None,
         }
+    }
+
+    fn entity_with_confidence(id: &str, x: f32, y: f32, vx: f32, vy: f32, confidence: f32) -> Entity {
+        Entity { confidence: Some(confidence), ..entity(id, x, y, vx, vy) }
     }
 
     const DEMO_RULES_JSON: &str = r#"[
@@ -444,6 +474,7 @@ mod tests {
             position: Vec2::new(0.0, 0.0),
             velocity: Vec2::new(gap_s, 0.0),
             timestamp_ms: 0,
+            confidence: None,
         }
     }
 
@@ -523,6 +554,7 @@ mod tests {
             position: Vec2::new(0.0, 400.0),
             velocity: Vec2::new(0.0, 0.0),
             timestamp_ms: 0,
+            confidence: None,
         };
         let events = evaluate(&rules, &[vessel], 0);
         assert!(events.iter().any(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH"),
@@ -542,6 +574,7 @@ mod tests {
             position: Vec2::new(0.0, -278.0),
             velocity: Vec2::new(0.0, 0.0),
             timestamp_ms: 0,
+            confidence: None,
         };
         let events = evaluate(&rules, &[vessel], 0);
         assert!(!events.iter().any(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH"),
@@ -690,11 +723,11 @@ mod tests {
 
         let outside = Entity {
             id: "V-001".into(), class: EntityClass::Vessel,
-            position: Vec2::new(299.0, 350.0), velocity: Vec2::new(0.0, 0.0), timestamp_ms: 0,
+            position: Vec2::new(299.0, 350.0), velocity: Vec2::new(0.0, 0.0), timestamp_ms: 0, confidence: None,
         };
         let inside = Entity {
             id: "V-001".into(), class: EntityClass::Vessel,
-            position: Vec2::new(301.0, 350.0), velocity: Vec2::new(0.0, 0.0), timestamp_ms: 0,
+            position: Vec2::new(301.0, 350.0), velocity: Vec2::new(0.0, 0.0), timestamp_ms: 0, confidence: None,
         };
 
         assert!(evaluate(&rules, &[outside], 0).is_empty(),
@@ -715,6 +748,63 @@ mod tests {
     //   f5 t=150000: x=650 → outside  (x > 600)
     //
     // Expected: ZONE_ENTRY fires at frames 1-4 only → exactly 4 events.
+    // ── Unity demo pipeline tests ─────────────────────────────────────────────
+    //
+    // These tests validate the exact scenario the Unity scene exercises:
+    // - Entity ID "V-001", class Vessel (as ClarusUdpExporter sends)
+    // - sg-maritime-security zone: [[300,200],[600,200],[600,500],[300,500]]
+    // - Vessel path: x = 0 → 700, y = 350 at 2 m/s (VesselPath.cs defaults)
+    // - RESTRICTED_ZONE_APPROACH fires when x ∈ [300,600], y ∈ [200,500]
+
+    const SG_MARITIME_RULES: &str = r#"[{
+        "rule_id": "RESTRICTED_ZONE_APPROACH",
+        "condition": "zone_member",
+        "severity": "HIGH",
+        "regulation": "Singapore Infrastructure Protection Act (Cap. 136A) §18",
+        "zone": [[300,200],[600,200],[600,500],[300,500]]
+    }]"#;
+
+    #[test]
+    fn unity_demo_vessel_outside_zone_no_alert() {
+        // V-001 at x=150, y=350 — approaching but not yet inside zone
+        let rules = load_rules(SG_MARITIME_RULES).unwrap();
+        let vessel = Entity {
+            id: "V-001".into(), class: EntityClass::Vessel,
+            position: Vec2::new(150.0, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 75_000, confidence: None,
+        };
+        let events = evaluate(&rules, &[vessel], 75_000);
+        assert!(events.is_empty(), "no alert before zone entry at x=150");
+    }
+
+    #[test]
+    fn unity_demo_vessel_enters_zone_alert_fires() {
+        // V-001 at x=350, y=350 — inside zone (t ≈ 175 s at 2 m/s from x=0)
+        let rules = load_rules(SG_MARITIME_RULES).unwrap();
+        let vessel = Entity {
+            id: "V-001".into(), class: EntityClass::Vessel,
+            position: Vec2::new(350.0, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 175_000, confidence: None,
+        };
+        let events = evaluate(&rules, &[vessel], 175_000);
+        let ev = events.iter().find(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH");
+        assert!(ev.is_some(), "RESTRICTED_ZONE_APPROACH must fire at x=350");
+        assert_eq!(ev.unwrap().entity_ids, vec!["V-001"]);
+    }
+
+    #[test]
+    fn unity_demo_zone_entry_at_x300_boundary() {
+        // Exactly the zone boundary — x=299 silent, x=301 fires
+        let rules = load_rules(SG_MARITIME_RULES).unwrap();
+        for (x, should_fire) in [(299.0f32, false), (301.0f32, true)] {
+            let vessel = Entity {
+                id: "V-001".into(), class: EntityClass::Vessel,
+                position: Vec2::new(x, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 0, confidence: None,
+            };
+            let fired = evaluate(&rules, &[vessel], 0)
+                .iter().any(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH");
+            assert_eq!(fired, should_fire, "x={x}: fired={fired}, expected={should_fire}");
+        }
+    }
+
     #[test]
     fn scenario_5_zone_exit_events_only_on_inside_frames() {
         let rules = load_rules(ZONE_RULES).unwrap();
@@ -730,12 +820,84 @@ mod tests {
         for &(ts, x, should_fire) in x_positions {
             let vessel = Entity {
                 id: "V-001".into(), class: EntityClass::Vessel,
-                position: Vec2::new(x, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: ts,
+                position: Vec2::new(x, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: ts, confidence: None,
             };
             let fired = evaluate(&rules, &[vessel], ts)
                 .iter().any(|e| e.rule_id == "ZONE_ENTRY");
             assert_eq!(fired, should_fire,
                 "at x={x} (t={ts}ms): ZONE_ENTRY fired={fired}, expected={should_fire}");
         }
+    }
+
+    // ── Evidence quality tests ────────────────────────────────────────────────
+
+    #[test]
+    fn evidence_quality_certified_at_08() {
+        assert_eq!(EvidenceQuality::from_confidence(0.8), EvidenceQuality::Certified);
+        assert_eq!(EvidenceQuality::from_confidence(1.0), EvidenceQuality::Certified);
+        assert_eq!(EvidenceQuality::from_confidence(0.95), EvidenceQuality::Certified);
+    }
+
+    #[test]
+    fn evidence_quality_degraded_between_05_and_08() {
+        assert_eq!(EvidenceQuality::from_confidence(0.5), EvidenceQuality::Degraded);
+        assert_eq!(EvidenceQuality::from_confidence(0.7), EvidenceQuality::Degraded);
+        assert_eq!(EvidenceQuality::from_confidence(0.79), EvidenceQuality::Degraded);
+    }
+
+    #[test]
+    fn evidence_quality_rejected_below_05() {
+        assert_eq!(EvidenceQuality::from_confidence(0.0), EvidenceQuality::Rejected);
+        assert_eq!(EvidenceQuality::from_confidence(0.49), EvidenceQuality::Rejected);
+    }
+
+    #[test]
+    fn evaluate_no_confidence_defaults_to_certified() {
+        let rules = load_rules(DEMO_RULES_JSON).unwrap();
+        let entities = vec![
+            entity("FL-01", 0.0, 0.0, 1.4, 0.0),
+            entity("W-03", 3.2, 0.0, 0.0, 0.0),
+        ];
+        let events = evaluate(&rules, &entities, 0);
+        let evt = events.iter().find(|e| e.rule_id == "PROXIMITY_ALERT").unwrap();
+        assert!((evt.confidence_cv - 1.0).abs() < 1e-6);
+        assert_eq!(evt.evidence_quality, EvidenceQuality::Certified);
+    }
+
+    #[test]
+    fn evaluate_low_confidence_entity_produces_rejected_event() {
+        let rules = load_rules(DEMO_RULES_JSON).unwrap();
+        let entities = vec![
+            entity_with_confidence("FL-01", 0.0, 0.0, 1.4, 0.0, 0.3),
+            entity("W-03", 3.2, 0.0, 0.0, 0.0),
+        ];
+        let events = evaluate(&rules, &entities, 0);
+        let evt = events.iter().find(|e| e.rule_id == "PROXIMITY_ALERT").unwrap();
+        assert!((evt.confidence_cv - 0.3).abs() < 1e-6);
+        assert_eq!(evt.evidence_quality, EvidenceQuality::Rejected);
+    }
+
+    #[test]
+    fn evaluate_pair_confidence_uses_minimum() {
+        // Entity A: 0.9, Entity B: 0.6 → pair confidence = 0.6 → Degraded
+        let rules = load_rules(DEMO_RULES_JSON).unwrap();
+        let entities = vec![
+            entity_with_confidence("FL-01", 0.0, 0.0, 1.4, 0.0, 0.9),
+            entity_with_confidence("W-03", 3.2, 0.0, 0.0, 0.0, 0.6),
+        ];
+        let events = evaluate(&rules, &entities, 0);
+        let evt = events.iter().find(|e| e.rule_id == "PROXIMITY_ALERT").unwrap();
+        assert!((evt.confidence_cv - 0.6).abs() < 1e-6);
+        assert_eq!(evt.evidence_quality, EvidenceQuality::Degraded);
+    }
+
+    #[test]
+    fn evaluate_zone_confidence_propagates_to_event() {
+        let rules = load_rules(DEMO_RULES_JSON).unwrap();
+        let entities = vec![entity_with_confidence("V-01", 5.0, 5.0, 0.0, 0.0, 0.55)];
+        let events = evaluate(&rules, &entities, 0);
+        let evt = events.iter().find(|e| e.rule_id == "EXCLUSION_ZONE_BREACH").unwrap();
+        assert!((evt.confidence_cv - 0.55).abs() < 1e-6);
+        assert_eq!(evt.evidence_quality, EvidenceQuality::Degraded);
     }
 }

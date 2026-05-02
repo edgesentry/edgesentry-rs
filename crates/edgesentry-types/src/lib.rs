@@ -80,6 +80,9 @@ pub struct Entity {
     pub velocity: Vec2,
     /// Unix timestamp in milliseconds.
     pub timestamp_ms: u64,
+    /// CV model confidence for this detection (0.0–1.0). None means not provided (treated as 1.0).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub confidence: Option<f32>,
 }
 
 #[cfg(test)]

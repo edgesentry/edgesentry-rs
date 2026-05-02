@@ -149,6 +149,8 @@ mod tests {
             measured_value: 1.0,
             threshold: 5.0,
             timestamp_ms: ts,
+            confidence_cv: 1.0,
+            evidence_quality: edgesentry_evaluate::EvidenceQuality::Certified,
         }
     }
 
