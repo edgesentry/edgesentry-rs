@@ -715,6 +715,63 @@ mod tests {
     //   f5 t=150000: x=650 → outside  (x > 600)
     //
     // Expected: ZONE_ENTRY fires at frames 1-4 only → exactly 4 events.
+    // ── Unity demo pipeline tests ─────────────────────────────────────────────
+    //
+    // These tests validate the exact scenario the Unity scene exercises:
+    // - Entity ID "V-001", class Vessel (as ClarusUdpExporter sends)
+    // - sg-maritime-security zone: [[300,200],[600,200],[600,500],[300,500]]
+    // - Vessel path: x = 0 → 700, y = 350 at 2 m/s (VesselPath.cs defaults)
+    // - RESTRICTED_ZONE_APPROACH fires when x ∈ [300,600], y ∈ [200,500]
+
+    const SG_MARITIME_RULES: &str = r#"[{
+        "rule_id": "RESTRICTED_ZONE_APPROACH",
+        "condition": "zone_member",
+        "severity": "HIGH",
+        "regulation": "Singapore Infrastructure Protection Act (Cap. 136A) §18",
+        "zone": [[300,200],[600,200],[600,500],[300,500]]
+    }]"#;
+
+    #[test]
+    fn unity_demo_vessel_outside_zone_no_alert() {
+        // V-001 at x=150, y=350 — approaching but not yet inside zone
+        let rules = load_rules(SG_MARITIME_RULES).unwrap();
+        let vessel = Entity {
+            id: "V-001".into(), class: EntityClass::Vessel,
+            position: Vec2::new(150.0, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 75_000,
+        };
+        let events = evaluate(&rules, &[vessel], 75_000);
+        assert!(events.is_empty(), "no alert before zone entry at x=150");
+    }
+
+    #[test]
+    fn unity_demo_vessel_enters_zone_alert_fires() {
+        // V-001 at x=350, y=350 — inside zone (t ≈ 175 s at 2 m/s from x=0)
+        let rules = load_rules(SG_MARITIME_RULES).unwrap();
+        let vessel = Entity {
+            id: "V-001".into(), class: EntityClass::Vessel,
+            position: Vec2::new(350.0, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 175_000,
+        };
+        let events = evaluate(&rules, &[vessel], 175_000);
+        let ev = events.iter().find(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH");
+        assert!(ev.is_some(), "RESTRICTED_ZONE_APPROACH must fire at x=350");
+        assert_eq!(ev.unwrap().entity_ids, vec!["V-001"]);
+    }
+
+    #[test]
+    fn unity_demo_zone_entry_at_x300_boundary() {
+        // Exactly the zone boundary — x=299 silent, x=301 fires
+        let rules = load_rules(SG_MARITIME_RULES).unwrap();
+        for (x, should_fire) in [(299.0f32, false), (301.0f32, true)] {
+            let vessel = Entity {
+                id: "V-001".into(), class: EntityClass::Vessel,
+                position: Vec2::new(x, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 0,
+            };
+            let fired = evaluate(&rules, &[vessel], 0)
+                .iter().any(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH");
+            assert_eq!(fired, should_fire, "x={x}: fired={fired}, expected={should_fire}");
+        }
+    }
+
     #[test]
     fn scenario_5_zone_exit_events_only_on_inside_frames() {
         let rules = load_rules(ZONE_RULES).unwrap();
