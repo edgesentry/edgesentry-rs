@@ -31,6 +31,8 @@ pub struct UnityEntityJson {
     pub vx: f32,
     pub vy: f32,
     pub timestamp_ms: u64,
+    #[serde(default)]
+    pub confidence: Option<f32>,
 }
 
 impl From<UnityEntityJson> for Entity {
@@ -41,6 +43,7 @@ impl From<UnityEntityJson> for Entity {
             position: Vec2::new(u.x, u.y),
             velocity: Vec2::new(u.vx, u.vy),
             timestamp_ms: u.timestamp_ms,
+            confidence: u.confidence,
         }
     }
 }

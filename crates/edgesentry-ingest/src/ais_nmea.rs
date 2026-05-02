@@ -287,6 +287,7 @@ impl AisAdapter {
                 position: Vec2::new(x, y),
                 velocity: vel,
                 timestamp_ms: now_ms,
+                confidence: None,
             });
         }
 
@@ -308,6 +309,7 @@ impl AisAdapter {
                 position: Vec2::new(0.0, 0.0),
                 velocity: Vec2::new(gap_s, 0.0),
                 timestamp_ms: now_ms,
+                confidence: None,
             });
         }
 

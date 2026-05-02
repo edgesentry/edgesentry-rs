@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::io::BufWriter;
 
 use edgesentry_assess::{Assessment, EntityCorrelation, RiskTrend};
-use edgesentry_evaluate::{RiskEvent, Severity};
+use edgesentry_evaluate::{EvidenceQuality, RiskEvent, Severity};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -22,6 +22,13 @@ pub struct ReportConfig {
     pub explanations: Vec<ExplanationEntry>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct EvidenceQualitySummary {
+    pub certified: usize,
+    pub degraded: usize,
+    pub rejected: usize,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventSummary {
     pub total: usize,
@@ -29,6 +36,7 @@ pub struct EventSummary {
     pub high: usize,
     pub medium: usize,
     pub low: usize,
+    pub evidence_quality: EvidenceQualitySummary,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -74,6 +82,7 @@ pub fn generate_report(events: &[RiskEvent], assessment: &Assessment, config: Re
     let mut high = 0usize;
     let mut medium = 0usize;
     let mut low = 0usize;
+    let mut eq = EvidenceQualitySummary::default();
 
     for e in events {
         match e.severity {
@@ -81,6 +90,11 @@ pub fn generate_report(events: &[RiskEvent], assessment: &Assessment, config: Re
             Severity::High => high += 1,
             Severity::Medium => medium += 1,
             Severity::Low => low += 1,
+        }
+        match e.evidence_quality {
+            EvidenceQuality::Certified => eq.certified += 1,
+            EvidenceQuality::Degraded  => eq.degraded  += 1,
+            EvidenceQuality::Rejected  => eq.rejected  += 1,
         }
     }
 
@@ -120,7 +134,7 @@ pub fn generate_report(events: &[RiskEvent], assessment: &Assessment, config: Re
         site_name: config.site_name,
         report_period: config.report_period,
         generated_at_ms,
-        event_summary: EventSummary { total, critical, high, medium, low },
+        event_summary: EventSummary { total, critical, high, medium, low, evidence_quality: eq },
         rule_frequencies,
         entity_correlations,
         trend: assessment.trend.clone(),
@@ -199,6 +213,21 @@ pub fn render_markdown(report: &Report) -> String {
     out.push_str(&format!("| Medium   | {} | Moderate breach — monitor and review |\n", report.event_summary.medium));
     out.push_str(&format!("| Low      | {} | Minor breach — logged for trend analysis |\n", report.event_summary.low));
     out.push_str(&format!("| **Total**| **{}** | |\n\n", report.event_summary.total));
+
+    let eq = &report.event_summary.evidence_quality;
+    if report.event_summary.total > 0 {
+        out.push_str("## Evidence Quality\n\n");
+        out.push_str(
+            "Each event carries a machine-verifiable quality score derived from the CV model \
+            confidence. Certified events carry full actuarial weight; Degraded events carry \
+            reduced weight; Rejected events are recorded but not admissible as evidence.\n\n"
+        );
+        out.push_str("| Quality | Count | Actuarial weight |\n");
+        out.push_str("|---------|-------|------------------|\n");
+        out.push_str(&format!("| Certified  | {} | Full |\n", eq.certified));
+        out.push_str(&format!("| Degraded   | {} | Reduced |\n", eq.degraded));
+        out.push_str(&format!("| Rejected   | {} | None (recorded only) |\n\n", eq.rejected));
+    }
 
     out.push_str("## Risk Events by Rule\n\n");
     out.push_str(
@@ -369,6 +398,22 @@ pub fn render_pdf(report: &Report) -> Vec<u8> {
         format!("Total:                                     {}", report.event_summary.total));
     y -= 10.0;
 
+    // Evidence Quality
+    if report.event_summary.total > 0 {
+        let eq = &report.event_summary.evidence_quality;
+        line!(font_bold, 14.0_f32, left, y, "Evidence Quality");
+        y -= 7.0;
+        line!(font, 9.0_f32, left, y,
+            "CV model confidence per event: Certified (>=0.8) / Degraded (0.5-0.8) / Rejected (<0.5).");
+        y -= 7.0;
+        line!(font, 10.0_f32, left, y, format!("Certified  (full actuarial weight):  {}", eq.certified));
+        y -= 6.0;
+        line!(font, 10.0_f32, left, y, format!("Degraded   (reduced weight):          {}", eq.degraded));
+        y -= 6.0;
+        line!(font, 10.0_f32, left, y, format!("Rejected   (recorded, not admissible):{}", eq.rejected));
+        y -= 10.0;
+    }
+
     // Risk Events by Rule
     line!(font_bold, 14.0_f32, left, y, "Violations by Safety Rule");
     y -= 7.0;
@@ -507,6 +552,8 @@ mod tests {
             measured_value: 1.0,
             threshold: 5.0,
             timestamp_ms: 1000,
+            confidence_cv: 1.0,
+            evidence_quality: EvidenceQuality::Certified,
         }
     }
 
