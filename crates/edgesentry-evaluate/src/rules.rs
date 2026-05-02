@@ -912,4 +912,48 @@ mod tests {
         assert!((evt.confidence_cv - 0.55).abs() < 1e-6);
         assert_eq!(evt.evidence_quality, EvidenceQuality::Degraded);
     }
+
+    // ── serde backward-compatibility tests ───────────────────────────────────
+
+    #[test]
+    fn risk_event_deserializes_without_confidence_fields() {
+        // JSON produced before confidence_cv / evidence_quality were added
+        // (e.g. Tauri demo app). Must deserialize with defaults: cv=1.0, Certified.
+        let json = r#"{
+            "rule_id": "PROXIMITY_ALERT",
+            "severity": "HIGH",
+            "regulation": "§3.1",
+            "entity_ids": ["FL-01", "W-03"],
+            "measured_value": 3.2,
+            "threshold": 5.0,
+            "timestamp_ms": 1000
+        }"#;
+        let ev: RiskEvent = serde_json::from_str(json).expect("should deserialize without new fields");
+        assert!((ev.confidence_cv - 1.0).abs() < 1e-6, "default confidence_cv should be 1.0");
+        assert_eq!(ev.evidence_quality, EvidenceQuality::Certified, "default evidence_quality should be Certified");
+    }
+
+    #[test]
+    fn risk_event_deserializes_with_confidence_fields() {
+        // JSON produced by current code — fields present, must round-trip correctly.
+        let json = r#"{
+            "rule_id": "TTC_ALERT",
+            "severity": "HIGH",
+            "regulation": "§3.2",
+            "entity_ids": ["FL-01", "W-03"],
+            "measured_value": 2.1,
+            "threshold": 3.0,
+            "timestamp_ms": 2000,
+            "confidence_cv": 0.62,
+            "evidence_quality": "DEGRADED"
+        }"#;
+        let ev: RiskEvent = serde_json::from_str(json).expect("should deserialize with new fields");
+        assert!((ev.confidence_cv - 0.62).abs() < 1e-4);
+        assert_eq!(ev.evidence_quality, EvidenceQuality::Degraded);
+    }
+
+    #[test]
+    fn evidence_quality_default_is_certified() {
+        assert_eq!(EvidenceQuality::default(), EvidenceQuality::Certified);
+    }
 }
