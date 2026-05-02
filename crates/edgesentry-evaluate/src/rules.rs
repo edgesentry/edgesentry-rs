@@ -60,6 +60,16 @@ impl EvidenceQuality {
     }
 }
 
+impl Default for EvidenceQuality {
+    fn default() -> Self {
+        Self::Certified
+    }
+}
+
+fn default_confidence() -> f32 {
+    1.0
+}
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct RiskEvent {
     pub rule_id: String,
@@ -74,8 +84,10 @@ pub struct RiskEvent {
     pub threshold: f32,
     pub timestamp_ms: u64,
     /// Minimum CV confidence across all involved entities (1.0 when confidence not provided).
+    #[serde(default = "default_confidence")]
     pub confidence_cv: f32,
     /// Evidentiary quality derived from confidence_cv.
+    #[serde(default)]
     pub evidence_quality: EvidenceQuality,
 }
 
