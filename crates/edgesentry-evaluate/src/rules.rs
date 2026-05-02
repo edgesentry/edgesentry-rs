@@ -37,10 +37,11 @@ pub struct Rule {
 
 /// Evidentiary quality of a RiskEvent, derived from the CV model confidence and
 /// anchor drift score. Sealed into the audit chain alongside every event.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum EvidenceQuality {
     /// confidence_cv >= 0.8 — full actuarial weight
+    #[default]
     Certified,
     /// 0.5 <= confidence_cv < 0.8 — reduced actuarial weight
     Degraded,
@@ -60,6 +61,10 @@ impl EvidenceQuality {
     }
 }
 
+fn default_confidence() -> f32 {
+    1.0
+}
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct RiskEvent {
     pub rule_id: String,
@@ -74,8 +79,10 @@ pub struct RiskEvent {
     pub threshold: f32,
     pub timestamp_ms: u64,
     /// Minimum CV confidence across all involved entities (1.0 when confidence not provided).
+    #[serde(default = "default_confidence")]
     pub confidence_cv: f32,
     /// Evidentiary quality derived from confidence_cv.
+    #[serde(default)]
     pub evidence_quality: EvidenceQuality,
 }
 
@@ -899,5 +906,49 @@ mod tests {
         let evt = events.iter().find(|e| e.rule_id == "EXCLUSION_ZONE_BREACH").unwrap();
         assert!((evt.confidence_cv - 0.55).abs() < 1e-6);
         assert_eq!(evt.evidence_quality, EvidenceQuality::Degraded);
+    }
+
+    // ── serde backward-compatibility tests ───────────────────────────────────
+
+    #[test]
+    fn risk_event_deserializes_without_confidence_fields() {
+        // JSON produced before confidence_cv / evidence_quality were added
+        // (e.g. Tauri demo app). Must deserialize with defaults: cv=1.0, Certified.
+        let json = r#"{
+            "rule_id": "PROXIMITY_ALERT",
+            "severity": "HIGH",
+            "regulation": "§3.1",
+            "entity_ids": ["FL-01", "W-03"],
+            "measured_value": 3.2,
+            "threshold": 5.0,
+            "timestamp_ms": 1000
+        }"#;
+        let ev: RiskEvent = serde_json::from_str(json).expect("should deserialize without new fields");
+        assert!((ev.confidence_cv - 1.0).abs() < 1e-6, "default confidence_cv should be 1.0");
+        assert_eq!(ev.evidence_quality, EvidenceQuality::Certified, "default evidence_quality should be Certified");
+    }
+
+    #[test]
+    fn risk_event_deserializes_with_confidence_fields() {
+        // JSON produced by current code — fields present, must round-trip correctly.
+        let json = r#"{
+            "rule_id": "TTC_ALERT",
+            "severity": "HIGH",
+            "regulation": "§3.2",
+            "entity_ids": ["FL-01", "W-03"],
+            "measured_value": 2.1,
+            "threshold": 3.0,
+            "timestamp_ms": 2000,
+            "confidence_cv": 0.62,
+            "evidence_quality": "DEGRADED"
+        }"#;
+        let ev: RiskEvent = serde_json::from_str(json).expect("should deserialize with new fields");
+        assert!((ev.confidence_cv - 0.62).abs() < 1e-4);
+        assert_eq!(ev.evidence_quality, EvidenceQuality::Degraded);
+    }
+
+    #[test]
+    fn evidence_quality_default_is_certified() {
+        assert_eq!(EvidenceQuality::default(), EvidenceQuality::Certified);
     }
 }
