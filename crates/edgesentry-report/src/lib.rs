@@ -92,9 +92,10 @@ pub fn generate_report(events: &[RiskEvent], assessment: &Assessment, config: Re
             Severity::Low => low += 1,
         }
         match e.evidence_quality {
-            EvidenceQuality::Certified => eq.certified += 1,
-            EvidenceQuality::Degraded  => eq.degraded  += 1,
-            EvidenceQuality::Rejected  => eq.rejected  += 1,
+            EvidenceQuality::Certified      => eq.certified += 1,
+            EvidenceQuality::Degraded       => eq.degraded  += 1,
+            EvidenceQuality::Rejected       => eq.rejected  += 1,
+            EvidenceQuality::NotApplicable  => {}
         }
     }
 

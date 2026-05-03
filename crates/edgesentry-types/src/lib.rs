@@ -69,6 +69,53 @@ impl EntityClass {
     }
 }
 
+/// The type of sensor or data source that produced an entity reading.
+/// Determines how `EvidenceQuality` is computed — some sources have meaningful
+/// detection confidence (CV, Radar), others are inherently authoritative (AIS,
+/// LiDAR), and simulation data is not applicable to evidence quality at all.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub enum SourceType {
+    /// Computer vision model (YOLO et al.) — detection_confidence is meaningful.
+    ComputerVision,
+    /// AIS NMEA — vessel self-reports its own GPS position; no CV involved.
+    Ais,
+    /// LiDAR — direct range measurement; sub-centimetre accuracy; no detection model.
+    Lidar,
+    /// Radar — has a detection probability; treat like CV if provided.
+    Radar,
+    /// UWB tag — RF positioning; high accuracy; no detection confidence needed.
+    Uwb,
+    /// Point sensor (light curtain, PIR, area sensor) — binary zone signal; no confidence.
+    PointSensor,
+    /// Simulation / synthetic data — evidence quality concept does not apply.
+    Simulation,
+}
+
+/// Sensor reading metadata attached to an entity detection.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SensorReading {
+    pub source_type: SourceType,
+    /// Detection confidence (0.0–1.0). Meaningful for `ComputerVision` and `Radar` only;
+    /// `None` for sources where detection confidence is not a relevant concept.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub detection_confidence: Option<f32>,
+    /// Estimated 1-sigma position accuracy in metres, if known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position_stddev_m: Option<f32>,
+}
+
+impl SensorReading {
+    pub fn cv(confidence: f32) -> Self {
+        Self { source_type: SourceType::ComputerVision, detection_confidence: Some(confidence), position_stddev_m: None }
+    }
+    pub fn ais() -> Self {
+        Self { source_type: SourceType::Ais, detection_confidence: None, position_stddev_m: None }
+    }
+    pub fn simulation() -> Self {
+        Self { source_type: SourceType::Simulation, detection_confidence: None, position_stddev_m: None }
+    }
+}
+
 /// A tracked entity in the physical space.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Entity {
@@ -80,9 +127,9 @@ pub struct Entity {
     pub velocity: Vec2,
     /// Unix timestamp in milliseconds.
     pub timestamp_ms: u64,
-    /// CV model confidence for this detection (0.0–1.0). None means not provided (treated as 1.0).
+    /// Sensor reading metadata. `None` means the source is unknown → treated as `Degraded`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub confidence: Option<f32>,
+    pub sensor: Option<SensorReading>,
 }
 
 #[cfg(test)]

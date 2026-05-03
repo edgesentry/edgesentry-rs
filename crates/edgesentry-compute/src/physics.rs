@@ -83,7 +83,7 @@ mod tests {
             position: Vec2::new(x, y),
             velocity: Vec2::new(vx, vy),
             timestamp_ms: 0,
-            confidence: None,
+            sensor: None,
         }
     }
 

@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::net::UdpSocket;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::entity::{Entity, EntityClass, Vec2};
+use crate::entity::{Entity, EntityClass, SensorReading, Vec2};
 use edgesentry_compute::{latlon_to_local, cog_sog_to_velocity};
 
 // ── AIS sentinel values ───────────────────────────────────────────────────────
@@ -287,7 +287,7 @@ impl AisAdapter {
                 position: Vec2::new(x, y),
                 velocity: vel,
                 timestamp_ms: now_ms,
-                confidence: None,
+                sensor: Some(SensorReading::ais()),
             });
         }
 
@@ -309,7 +309,7 @@ impl AisAdapter {
                 position: Vec2::new(0.0, 0.0),
                 velocity: Vec2::new(gap_s, 0.0),
                 timestamp_ms: now_ms,
-                confidence: None,
+                sensor: None,
             });
         }
 

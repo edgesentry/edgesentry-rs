@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use edgesentry_types::{Entity, EntityClass, Vec2};
+use edgesentry_types::{Entity, EntityClass, SensorReading, SourceType, Vec2};
 use edgesentry_compute::{euclidean_distance, relative_velocity, time_to_collision, zone_membership};
 
 // ── Public types ──────────────────────────────────────────────────────────────
@@ -35,21 +35,24 @@ pub struct Rule {
     pub regulation: String,
 }
 
-/// Evidentiary quality of a RiskEvent, derived from the CV model confidence and
-/// anchor drift score. Sealed into the audit chain alongside every event.
+/// Evidentiary quality of a RiskEvent. Sealed into the audit chain alongside every event.
+/// Determined by the sensor source type and its detection confidence.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum EvidenceQuality {
-    /// confidence_cv >= 0.8 — full actuarial weight
+    /// Full actuarial weight — admissible as standalone evidence.
     #[default]
     Certified,
-    /// 0.5 <= confidence_cv < 0.8 — reduced actuarial weight
+    /// Reduced actuarial weight — requires corroboration before use in a claim.
     Degraded,
-    /// confidence_cv < 0.5 — event recorded but not admissible as evidence
+    /// Not admissible as standalone evidence.
     Rejected,
+    /// Evidence quality concept does not apply (simulation / test data).
+    NotApplicable,
 }
 
 impl EvidenceQuality {
+    /// Derive quality from a raw confidence score (0.0–1.0).
     pub fn from_confidence(confidence_cv: f32) -> Self {
         if confidence_cv >= 0.8 {
             Self::Certified
@@ -57,6 +60,30 @@ impl EvidenceQuality {
             Self::Degraded
         } else {
             Self::Rejected
+        }
+    }
+
+    /// Derive quality from the sensor reading attached to an entity.
+    /// Rules:
+    /// - Unknown source (`None`) → `Degraded` (cannot certify without provenance)
+    /// - CV / Radar with confidence → score-based
+    /// - CV without confidence → `Degraded`
+    /// - AIS, LiDAR, UWB, PointSensor → `Certified` (authoritative primary data)
+    /// - Simulation → `NotApplicable`
+    pub fn from_reading(reading: Option<&SensorReading>) -> Self {
+        match reading {
+            None => Self::Degraded,
+            Some(r) => match (&r.source_type, r.detection_confidence) {
+                (SourceType::ComputerVision, Some(c)) => Self::from_confidence(c),
+                (SourceType::ComputerVision, None)    => Self::Degraded,
+                (SourceType::Radar, Some(c))          => Self::from_confidence(c),
+                (SourceType::Radar, None)             => Self::Degraded,
+                (SourceType::Ais, _)                  => Self::Certified,
+                (SourceType::Lidar, _)                => Self::Certified,
+                (SourceType::Uwb, _)                  => Self::Certified,
+                (SourceType::PointSensor, _)          => Self::Certified,
+                (SourceType::Simulation, _)           => Self::NotApplicable,
+            },
         }
     }
 }
@@ -78,10 +105,12 @@ pub struct RiskEvent {
     /// The threshold that was breached.
     pub threshold: f32,
     pub timestamp_ms: u64,
-    /// Minimum CV confidence across all involved entities (1.0 when confidence not provided).
+    /// Minimum detection confidence across all involved entities.
+    /// Derived from `SensorReading.detection_confidence`; defaults to 1.0 for
+    /// sources where detection confidence is not applicable (AIS, LiDAR, etc.).
     #[serde(default = "default_confidence")]
     pub confidence_cv: f32,
-    /// Evidentiary quality derived from confidence_cv.
+    /// Evidentiary quality derived from the sensor reading of involved entities.
     #[serde(default)]
     pub evidence_quality: EvidenceQuality,
 }
@@ -145,15 +174,45 @@ fn parse_condition(s: &str, zone: Option<Vec<[f32; 2]>>) -> Result<Condition, St
 
 // ── Evaluation ────────────────────────────────────────────────────────────────
 
+/// Extract a scalar confidence_cv from an entity's sensor reading.
+/// For sources without a detection confidence (AIS, LiDAR, etc.) returns 1.0
+/// so that the numeric field in RiskEvent is well-defined.
 fn entity_confidence(e: &Entity) -> f32 {
-    e.confidence.unwrap_or(1.0)
+    e.sensor.as_ref()
+        .and_then(|s| s.detection_confidence)
+        .unwrap_or(1.0)
 }
 
 fn pair_confidence(a: &Entity, b: &Entity) -> f32 {
     entity_confidence(a).min(entity_confidence(b))
 }
 
-fn make_event(rule: &Rule, entity_ids: Vec<String>, measured_value: f32, threshold: f32, timestamp_ms: u64, confidence_cv: f32) -> RiskEvent {
+fn entity_quality(e: &Entity) -> EvidenceQuality {
+    EvidenceQuality::from_reading(e.sensor.as_ref())
+}
+
+fn pair_quality(a: &Entity, b: &Entity) -> EvidenceQuality {
+    let qa = entity_quality(a);
+    let qb = entity_quality(b);
+    // Take the worse of the two
+    use EvidenceQuality::*;
+    match (&qa, &qb) {
+        (NotApplicable, _) | (_, NotApplicable) => NotApplicable,
+        (Rejected, _) | (_, Rejected) => Rejected,
+        (Degraded, _) | (_, Degraded) => Degraded,
+        _ => Certified,
+    }
+}
+
+fn make_event(
+    rule: &Rule,
+    entity_ids: Vec<String>,
+    measured_value: f32,
+    threshold: f32,
+    timestamp_ms: u64,
+    confidence_cv: f32,
+    evidence_quality: EvidenceQuality,
+) -> RiskEvent {
     RiskEvent {
         rule_id: rule.rule_id.clone(),
         severity: rule.severity.clone(),
@@ -163,7 +222,7 @@ fn make_event(rule: &Rule, entity_ids: Vec<String>, measured_value: f32, thresho
         threshold,
         timestamp_ms,
         confidence_cv,
-        evidence_quality: EvidenceQuality::from_confidence(confidence_cv),
+        evidence_quality,
     }
 }
 
@@ -180,9 +239,10 @@ pub fn evaluate(rules: &[Rule], entities: &[Entity], timestamp_ms: u64) -> Vec<R
                         let dist = euclidean_distance(&entities[i], &entities[j]);
                         if dist < *threshold {
                             let cv = pair_confidence(&entities[i], &entities[j]);
+                            let eq = pair_quality(&entities[i], &entities[j]);
                             events.push(make_event(rule,
                                 vec![entities[i].id.clone(), entities[j].id.clone()],
-                                dist, *threshold, timestamp_ms, cv));
+                                dist, *threshold, timestamp_ms, cv, eq));
                         }
                     }
                 }
@@ -195,9 +255,10 @@ pub fn evaluate(rules: &[Rule], entities: &[Entity], timestamp_ms: u64) -> Vec<R
                         let ttc = time_to_collision(dist, rv);
                         if ttc < *threshold {
                             let cv = pair_confidence(&entities[i], &entities[j]);
+                            let eq = pair_quality(&entities[i], &entities[j]);
                             events.push(make_event(rule,
                                 vec![entities[i].id.clone(), entities[j].id.clone()],
-                                ttc, *threshold, timestamp_ms, cv));
+                                ttc, *threshold, timestamp_ms, cv, eq));
                         }
                     }
                 }
@@ -206,9 +267,10 @@ pub fn evaluate(rules: &[Rule], entities: &[Entity], timestamp_ms: u64) -> Vec<R
                 for entity in entities {
                     if zone_membership(entity.position.clone(), polygon) {
                         let cv = entity_confidence(entity);
+                        let eq = entity_quality(entity);
                         events.push(make_event(rule,
                             vec![entity.id.clone()],
-                            1.0, 0.0, timestamp_ms, cv));
+                            1.0, 0.0, timestamp_ms, cv, eq));
                     }
                 }
             }
@@ -216,9 +278,10 @@ pub fn evaluate(rules: &[Rule], entities: &[Entity], timestamp_ms: u64) -> Vec<R
                 for entity in entities {
                     if entity.class == EntityClass::AisGap && entity.velocity.x > *threshold {
                         let cv = entity_confidence(entity);
+                        let eq = entity_quality(entity);
                         events.push(make_event(rule,
                             vec![entity.id.clone()],
-                            entity.velocity.x, *threshold, timestamp_ms, cv));
+                            entity.velocity.x, *threshold, timestamp_ms, cv, eq));
                     }
                 }
             }
@@ -233,7 +296,7 @@ pub fn evaluate(rules: &[Rule], entities: &[Entity], timestamp_ms: u64) -> Vec<R
 #[cfg(test)]
 mod tests {
     use super::*;
-    use edgesentry_types::{Entity, EntityClass, Vec2};
+    use edgesentry_types::{Entity, EntityClass, SensorReading, Vec2};
 
     fn entity(id: &str, x: f32, y: f32, vx: f32, vy: f32) -> Entity {
         Entity {
@@ -242,12 +305,12 @@ mod tests {
             position: Vec2::new(x, y),
             velocity: Vec2::new(vx, vy),
             timestamp_ms: 0,
-            confidence: None,
+            sensor: None,
         }
     }
 
     fn entity_with_confidence(id: &str, x: f32, y: f32, vx: f32, vy: f32, confidence: f32) -> Entity {
-        Entity { confidence: Some(confidence), ..entity(id, x, y, vx, vy) }
+        Entity { sensor: Some(SensorReading::cv(confidence)), ..entity(id, x, y, vx, vy) }
     }
 
     const DEMO_RULES_JSON: &str = r#"[
@@ -481,7 +544,7 @@ mod tests {
             position: Vec2::new(0.0, 0.0),
             velocity: Vec2::new(gap_s, 0.0),
             timestamp_ms: 0,
-            confidence: None,
+            sensor: None,
         }
     }
 
@@ -561,7 +624,7 @@ mod tests {
             position: Vec2::new(0.0, 400.0),
             velocity: Vec2::new(0.0, 0.0),
             timestamp_ms: 0,
-            confidence: None,
+            sensor: None,
         };
         let events = evaluate(&rules, &[vessel], 0);
         assert!(events.iter().any(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH"),
@@ -581,7 +644,7 @@ mod tests {
             position: Vec2::new(0.0, -278.0),
             velocity: Vec2::new(0.0, 0.0),
             timestamp_ms: 0,
-            confidence: None,
+            sensor: None,
         };
         let events = evaluate(&rules, &[vessel], 0);
         assert!(!events.iter().any(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH"),
@@ -730,11 +793,11 @@ mod tests {
 
         let outside = Entity {
             id: "V-001".into(), class: EntityClass::Vessel,
-            position: Vec2::new(299.0, 350.0), velocity: Vec2::new(0.0, 0.0), timestamp_ms: 0, confidence: None,
+            position: Vec2::new(299.0, 350.0), velocity: Vec2::new(0.0, 0.0), timestamp_ms: 0, sensor: None,
         };
         let inside = Entity {
             id: "V-001".into(), class: EntityClass::Vessel,
-            position: Vec2::new(301.0, 350.0), velocity: Vec2::new(0.0, 0.0), timestamp_ms: 0, confidence: None,
+            position: Vec2::new(301.0, 350.0), velocity: Vec2::new(0.0, 0.0), timestamp_ms: 0, sensor: None,
         };
 
         assert!(evaluate(&rules, &[outside], 0).is_empty(),
@@ -777,7 +840,7 @@ mod tests {
         let rules = load_rules(SG_MARITIME_RULES).unwrap();
         let vessel = Entity {
             id: "V-001".into(), class: EntityClass::Vessel,
-            position: Vec2::new(150.0, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 75_000, confidence: None,
+            position: Vec2::new(150.0, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 75_000, sensor: None,
         };
         let events = evaluate(&rules, &[vessel], 75_000);
         assert!(events.is_empty(), "no alert before zone entry at x=150");
@@ -789,7 +852,7 @@ mod tests {
         let rules = load_rules(SG_MARITIME_RULES).unwrap();
         let vessel = Entity {
             id: "V-001".into(), class: EntityClass::Vessel,
-            position: Vec2::new(350.0, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 175_000, confidence: None,
+            position: Vec2::new(350.0, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 175_000, sensor: None,
         };
         let events = evaluate(&rules, &[vessel], 175_000);
         let ev = events.iter().find(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH");
@@ -804,7 +867,7 @@ mod tests {
         for (x, should_fire) in [(299.0f32, false), (301.0f32, true)] {
             let vessel = Entity {
                 id: "V-001".into(), class: EntityClass::Vessel,
-                position: Vec2::new(x, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 0, confidence: None,
+                position: Vec2::new(x, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 0, sensor: None,
             };
             let fired = evaluate(&rules, &[vessel], 0)
                 .iter().any(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH");
@@ -827,7 +890,7 @@ mod tests {
         for &(ts, x, should_fire) in x_positions {
             let vessel = Entity {
                 id: "V-001".into(), class: EntityClass::Vessel,
-                position: Vec2::new(x, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: ts, confidence: None,
+                position: Vec2::new(x, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: ts, sensor: None,
             };
             let fired = evaluate(&rules, &[vessel], ts)
                 .iter().any(|e| e.rule_id == "ZONE_ENTRY");
@@ -859,7 +922,9 @@ mod tests {
     }
 
     #[test]
-    fn evaluate_no_confidence_defaults_to_certified() {
+    fn evaluate_unknown_sensor_confidence_cv_is_one_quality_is_degraded() {
+        // Entity with no SensorReading: confidence_cv defaults to 1.0 (numeric field
+        // is well-defined) but evidence_quality is Degraded (unknown provenance).
         let rules = load_rules(DEMO_RULES_JSON).unwrap();
         let entities = vec![
             entity("FL-01", 0.0, 0.0, 1.4, 0.0),
@@ -868,7 +933,7 @@ mod tests {
         let events = evaluate(&rules, &entities, 0);
         let evt = events.iter().find(|e| e.rule_id == "PROXIMITY_ALERT").unwrap();
         assert!((evt.confidence_cv - 1.0).abs() < 1e-6);
-        assert_eq!(evt.evidence_quality, EvidenceQuality::Certified);
+        assert_eq!(evt.evidence_quality, EvidenceQuality::Degraded);
     }
 
     #[test]
