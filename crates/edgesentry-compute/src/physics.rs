@@ -81,9 +81,12 @@ mod tests {
             id: "t".into(),
             class: EntityClass::Forklift,
             position: Vec2::new(x, y),
+            position_z: None,
             velocity: Vec2::new(vx, vy),
+            velocity_z: None,
             timestamp_ms: 0,
             sensor: None,
+            computed_confidence: None,
         }
     }
 

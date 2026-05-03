@@ -303,9 +303,12 @@ mod tests {
             id: id.into(),
             class: EntityClass::Forklift,
             position: Vec2::new(x, y),
+            position_z: None,
             velocity: Vec2::new(vx, vy),
+            velocity_z: None,
             timestamp_ms: 0,
             sensor: None,
+            computed_confidence: None,
         }
     }
 
@@ -542,9 +545,12 @@ mod tests {
             id: id.into(),
             class: EntityClass::AisGap,
             position: Vec2::new(0.0, 0.0),
+            position_z: None,
             velocity: Vec2::new(gap_s, 0.0),
+            velocity_z: None,
             timestamp_ms: 0,
             sensor: Some(SensorReading::ais()),
+            computed_confidence: None,
         }
     }
 
@@ -625,6 +631,7 @@ mod tests {
             velocity: Vec2::new(0.0, 0.0),
             timestamp_ms: 0,
             sensor: None,
+            position_z: None, velocity_z: None, computed_confidence: None,
         };
         let events = evaluate(&rules, &[vessel], 0);
         assert!(events.iter().any(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH"),
@@ -645,6 +652,7 @@ mod tests {
             velocity: Vec2::new(0.0, 0.0),
             timestamp_ms: 0,
             sensor: None,
+            position_z: None, velocity_z: None, computed_confidence: None,
         };
         let events = evaluate(&rules, &[vessel], 0);
         assert!(!events.iter().any(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH"),
@@ -793,11 +801,11 @@ mod tests {
 
         let outside = Entity {
             id: "V-001".into(), class: EntityClass::Vessel,
-            position: Vec2::new(299.0, 350.0), velocity: Vec2::new(0.0, 0.0), timestamp_ms: 0, sensor: None,
+            position: Vec2::new(299.0, 350.0), velocity: Vec2::new(0.0, 0.0), timestamp_ms: 0, sensor: None, position_z: None, velocity_z: None, computed_confidence: None,
         };
         let inside = Entity {
             id: "V-001".into(), class: EntityClass::Vessel,
-            position: Vec2::new(301.0, 350.0), velocity: Vec2::new(0.0, 0.0), timestamp_ms: 0, sensor: None,
+            position: Vec2::new(301.0, 350.0), velocity: Vec2::new(0.0, 0.0), timestamp_ms: 0, sensor: None, position_z: None, velocity_z: None, computed_confidence: None,
         };
 
         assert!(evaluate(&rules, &[outside], 0).is_empty(),
@@ -840,7 +848,7 @@ mod tests {
         let rules = load_rules(SG_MARITIME_RULES).unwrap();
         let vessel = Entity {
             id: "V-001".into(), class: EntityClass::Vessel,
-            position: Vec2::new(150.0, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 75_000, sensor: None,
+            position: Vec2::new(150.0, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 75_000, sensor: None, position_z: None, velocity_z: None, computed_confidence: None,
         };
         let events = evaluate(&rules, &[vessel], 75_000);
         assert!(events.is_empty(), "no alert before zone entry at x=150");
@@ -852,7 +860,7 @@ mod tests {
         let rules = load_rules(SG_MARITIME_RULES).unwrap();
         let vessel = Entity {
             id: "V-001".into(), class: EntityClass::Vessel,
-            position: Vec2::new(350.0, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 175_000, sensor: None,
+            position: Vec2::new(350.0, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 175_000, sensor: None, position_z: None, velocity_z: None, computed_confidence: None,
         };
         let events = evaluate(&rules, &[vessel], 175_000);
         let ev = events.iter().find(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH");
@@ -867,7 +875,7 @@ mod tests {
         for (x, should_fire) in [(299.0f32, false), (301.0f32, true)] {
             let vessel = Entity {
                 id: "V-001".into(), class: EntityClass::Vessel,
-                position: Vec2::new(x, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 0, sensor: None,
+                position: Vec2::new(x, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 0, sensor: None, position_z: None, velocity_z: None, computed_confidence: None,
             };
             let fired = evaluate(&rules, &[vessel], 0)
                 .iter().any(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH");
@@ -890,7 +898,7 @@ mod tests {
         for &(ts, x, should_fire) in x_positions {
             let vessel = Entity {
                 id: "V-001".into(), class: EntityClass::Vessel,
-                position: Vec2::new(x, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: ts, sensor: None,
+                position: Vec2::new(x, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: ts, sensor: None, position_z: None, velocity_z: None, computed_confidence: None,
             };
             let fired = evaluate(&rules, &[vessel], ts)
                 .iter().any(|e| e.rule_id == "ZONE_ENTRY");
@@ -1044,7 +1052,7 @@ mod tests {
 
     #[test]
     fn from_reading_cv_without_confidence_is_degraded() {
-        let r = SensorReading { source_type: SourceType::ComputerVision, detection_confidence: None, position_stddev_m: None };
+        let r = SensorReading { source_type: SourceType::ComputerVision, dimensions: 2, detection_confidence: None, position_stddev_m: None, position_stddev_z_m: None };
         assert_eq!(EvidenceQuality::from_reading(Some(&r)), EvidenceQuality::Degraded);
     }
 
@@ -1055,33 +1063,33 @@ mod tests {
 
     #[test]
     fn from_reading_lidar_is_certified() {
-        let r = SensorReading { source_type: SourceType::Lidar, detection_confidence: None, position_stddev_m: None };
+        let r = SensorReading { source_type: SourceType::Lidar, dimensions: 2, detection_confidence: None, position_stddev_m: None, position_stddev_z_m: None };
         assert_eq!(EvidenceQuality::from_reading(Some(&r)), EvidenceQuality::Certified);
     }
 
     #[test]
     fn from_reading_uwb_is_certified() {
-        let r = SensorReading { source_type: SourceType::Uwb, detection_confidence: None, position_stddev_m: None };
+        let r = SensorReading { source_type: SourceType::Uwb, dimensions: 2, detection_confidence: None, position_stddev_m: None, position_stddev_z_m: None };
         assert_eq!(EvidenceQuality::from_reading(Some(&r)), EvidenceQuality::Certified);
     }
 
     #[test]
     fn from_reading_point_sensor_is_certified() {
-        let r = SensorReading { source_type: SourceType::PointSensor, detection_confidence: None, position_stddev_m: None };
+        let r = SensorReading { source_type: SourceType::PointSensor, dimensions: 1, detection_confidence: None, position_stddev_m: None, position_stddev_z_m: None };
         assert_eq!(EvidenceQuality::from_reading(Some(&r)), EvidenceQuality::Certified);
     }
 
     #[test]
     fn from_reading_radar_with_score_follows_threshold() {
-        let high = SensorReading { source_type: SourceType::Radar, detection_confidence: Some(0.85), position_stddev_m: None };
-        let low  = SensorReading { source_type: SourceType::Radar, detection_confidence: Some(0.3),  position_stddev_m: None };
+        let high = SensorReading { source_type: SourceType::Radar, dimensions: 2, detection_confidence: Some(0.85), position_stddev_m: None, position_stddev_z_m: None };
+        let low  = SensorReading { source_type: SourceType::Radar, dimensions: 2, detection_confidence: Some(0.3),  position_stddev_m: None, position_stddev_z_m: None };
         assert_eq!(EvidenceQuality::from_reading(Some(&high)), EvidenceQuality::Certified);
         assert_eq!(EvidenceQuality::from_reading(Some(&low)),  EvidenceQuality::Rejected);
     }
 
     #[test]
     fn from_reading_radar_without_confidence_is_degraded() {
-        let r = SensorReading { source_type: SourceType::Radar, detection_confidence: None, position_stddev_m: None };
+        let r = SensorReading { source_type: SourceType::Radar, dimensions: 2, detection_confidence: None, position_stddev_m: None, position_stddev_z_m: None };
         assert_eq!(EvidenceQuality::from_reading(Some(&r)), EvidenceQuality::Degraded);
     }
 
@@ -1136,7 +1144,7 @@ mod tests {
             ..Entity {
                 id: "V-001".into(), class: EntityClass::Vessel,
                 position: Vec2::new(350.0, 350.0), velocity: Vec2::new(2.0, 0.0),
-                timestamp_ms: 0, sensor: None,
+                timestamp_ms: 0, sensor: None, position_z: None, velocity_z: None, computed_confidence: None,
             }
         };
         let events = evaluate(&rules, &[vessel], 0);

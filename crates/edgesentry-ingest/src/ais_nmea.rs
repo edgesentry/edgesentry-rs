@@ -285,9 +285,12 @@ impl AisAdapter {
                 id: mmsi_str,
                 class: EntityClass::Vessel,
                 position: Vec2::new(x, y),
+                position_z: None,
                 velocity: vel,
+                velocity_z: None,
                 timestamp_ms: now_ms,
                 sensor: Some(SensorReading::ais()),
+                computed_confidence: None,
             });
         }
 
@@ -307,9 +310,12 @@ impl AisAdapter {
                 id: mmsi_str,
                 class: EntityClass::AisGap,
                 position: Vec2::new(0.0, 0.0),
+                position_z: None,
                 velocity: Vec2::new(gap_s, 0.0),
+                velocity_z: None,
                 timestamp_ms: now_ms,
                 sensor: Some(SensorReading::ais()),
+                computed_confidence: None,
             });
         }
 

@@ -52,9 +52,12 @@ impl FileReplayAdapter {
                 id,
                 class,
                 position: Vec2::new(x, y),
+                position_z: None,
                 velocity: Vec2::new(vx, vy),
+                velocity_z: None,
                 timestamp_ms: ts,
                 sensor: Some(SensorReading::simulation()),
+                computed_confidence: None,
             });
         }
 
