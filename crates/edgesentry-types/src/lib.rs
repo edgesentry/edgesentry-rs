@@ -69,20 +69,88 @@ impl EntityClass {
     }
 }
 
+/// The type of sensor or data source that produced an entity reading.
+/// Determines how `EvidenceQuality` is computed — some sources have meaningful
+/// detection confidence (CV, Radar), others are inherently authoritative (AIS,
+/// LiDAR), and simulation data is not applicable to evidence quality at all.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub enum SourceType {
+    /// Computer vision model (YOLO et al.) — detection_confidence is meaningful.
+    ComputerVision,
+    /// AIS NMEA — vessel self-reports its own GPS position; no CV involved.
+    Ais,
+    /// LiDAR — direct range measurement; sub-centimetre accuracy; no detection model.
+    Lidar,
+    /// Radar — has a detection probability; treat like CV if provided.
+    Radar,
+    /// UWB tag — RF positioning; high accuracy; no detection confidence needed.
+    Uwb,
+    /// Point sensor (light curtain, PIR, area sensor) — binary zone signal; no confidence.
+    PointSensor,
+    /// Simulation / synthetic data — evidence quality concept does not apply.
+    Simulation,
+}
+
+fn default_dimensions() -> u8 { 2 }
+
+/// Sensor reading metadata attached to an entity detection.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SensorReading {
+    pub source_type: SourceType,
+    /// Number of spatial dimensions this sensor operates in: 1, 2, or 3.
+    /// Defaults to 2 for backward compatibility.
+    #[serde(default = "default_dimensions")]
+    pub dimensions: u8,
+    /// Detection confidence (0.0–1.0). Meaningful for `ComputerVision` and `Radar` only;
+    /// `None` for sources where detection confidence is not a relevant concept.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub detection_confidence: Option<f32>,
+    /// Estimated 1-sigma horizontal position accuracy in metres, if known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position_stddev_m: Option<f32>,
+    /// Estimated 1-sigma vertical (z-axis) position accuracy in metres.
+    /// Only relevant when `dimensions == 3`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position_stddev_z_m: Option<f32>,
+}
+
+impl SensorReading {
+    pub fn cv(confidence: f32) -> Self {
+        Self { source_type: SourceType::ComputerVision, dimensions: 2, detection_confidence: Some(confidence), position_stddev_m: None, position_stddev_z_m: None }
+    }
+    pub fn ais() -> Self {
+        Self { source_type: SourceType::Ais, dimensions: 2, detection_confidence: None, position_stddev_m: None, position_stddev_z_m: None }
+    }
+    pub fn simulation() -> Self {
+        Self { source_type: SourceType::Simulation, dimensions: 2, detection_confidence: None, position_stddev_m: None, position_stddev_z_m: None }
+    }
+}
+
 /// A tracked entity in the physical space.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Entity {
     pub id: String,
     pub class: EntityClass,
-    /// Position in metres relative to site origin.
+    /// Position in metres relative to site origin (horizontal plane).
     pub position: Vec2,
-    /// Velocity in m/s.
+    /// Vertical position in metres above site datum. Only set for 3-D sensors (LiDAR, UWB 3D).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position_z: Option<f32>,
+    /// Velocity in m/s (horizontal plane).
     pub velocity: Vec2,
+    /// Vertical velocity in m/s. Only set for 3-D sensors.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub velocity_z: Option<f32>,
     /// Unix timestamp in milliseconds.
     pub timestamp_ms: u64,
-    /// CV model confidence for this detection (0.0–1.0). None means not provided (treated as 1.0).
+    /// Sensor reading metadata. `None` means the source is unknown → treated as `Degraded`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub confidence: Option<f32>,
+    pub sensor: Option<SensorReading>,
+    /// Confidence score computed by EdgeSentry from all available signals
+    /// (sensor type, detection_confidence, position accuracy, calibration state, etc.).
+    /// `None` until the compute stage populates it. Placeholder — calculation logic is TBD.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub computed_confidence: Option<f32>,
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-use crate::entity::{Entity, EntityClass, Vec2};
+use crate::entity::{Entity, EntityClass, SensorReading, Vec2};
 
 /// A single time-slice of entity positions.
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -52,9 +52,12 @@ impl FileReplayAdapter {
                 id,
                 class,
                 position: Vec2::new(x, y),
+                position_z: None,
                 velocity: Vec2::new(vx, vy),
+                velocity_z: None,
                 timestamp_ms: ts,
-                confidence: None,
+                sensor: Some(SensorReading::simulation()),
+                computed_confidence: None,
             });
         }
 

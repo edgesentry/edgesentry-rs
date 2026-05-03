@@ -41,10 +41,14 @@ fn parse_min_quality(s: &str) -> Result<EvidenceQuality, Box<dyn std::error::Err
 }
 
 fn quality_passes(event: &RiskEvent, min: &EvidenceQuality) -> bool {
+    if event.evidence_quality == EvidenceQuality::NotApplicable {
+        return true;
+    }
     match min {
-        EvidenceQuality::Rejected  => true,
-        EvidenceQuality::Degraded  => event.evidence_quality != EvidenceQuality::Rejected,
-        EvidenceQuality::Certified => event.evidence_quality == EvidenceQuality::Certified,
+        EvidenceQuality::Rejected      => true,
+        EvidenceQuality::Degraded      => event.evidence_quality != EvidenceQuality::Rejected,
+        EvidenceQuality::Certified     => event.evidence_quality == EvidenceQuality::Certified,
+        EvidenceQuality::NotApplicable => true,
     }
 }
 

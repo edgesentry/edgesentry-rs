@@ -1,6 +1,6 @@
 use std::net::UdpSocket;
 
-use crate::entity::{Entity, EntityClass, Vec2};
+use crate::entity::{Entity, EntityClass, SensorReading, SourceType, Vec2};
 use serde::Deserialize;
 
 /// A single entity frame as exported by Unity at 10 Hz via UDP.
@@ -41,9 +41,18 @@ impl From<UnityEntityJson> for Entity {
             id: u.id,
             class: u.class,
             position: Vec2::new(u.x, u.y),
+            position_z: None,
             velocity: Vec2::new(u.vx, u.vy),
+            velocity_z: None,
             timestamp_ms: u.timestamp_ms,
-            confidence: u.confidence,
+            sensor: Some(SensorReading {
+                source_type: SourceType::ComputerVision,
+                dimensions: 2,
+                detection_confidence: u.confidence,
+                position_stddev_m: None,
+                position_stddev_z_m: None,
+            }),
+            computed_confidence: None,
         }
     }
 }
