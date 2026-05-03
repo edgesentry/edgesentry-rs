@@ -309,7 +309,7 @@ impl AisAdapter {
                 position: Vec2::new(0.0, 0.0),
                 velocity: Vec2::new(gap_s, 0.0),
                 timestamp_ms: now_ms,
-                sensor: None,
+                sensor: Some(SensorReading::ais()),
             });
         }
 

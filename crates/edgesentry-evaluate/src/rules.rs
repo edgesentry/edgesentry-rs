@@ -544,7 +544,7 @@ mod tests {
             position: Vec2::new(0.0, 0.0),
             velocity: Vec2::new(gap_s, 0.0),
             timestamp_ms: 0,
-            sensor: None,
+            sensor: Some(SensorReading::ais()),
         }
     }
 
@@ -1015,5 +1015,133 @@ mod tests {
     #[test]
     fn evidence_quality_default_is_certified() {
         assert_eq!(EvidenceQuality::default(), EvidenceQuality::Certified);
+    }
+
+    // ── EvidenceQuality::from_reading — all source types ─────────────────────
+
+    #[test]
+    fn from_reading_none_is_degraded() {
+        assert_eq!(EvidenceQuality::from_reading(None), EvidenceQuality::Degraded);
+    }
+
+    #[test]
+    fn from_reading_cv_with_high_confidence_is_certified() {
+        let r = SensorReading::cv(0.9);
+        assert_eq!(EvidenceQuality::from_reading(Some(&r)), EvidenceQuality::Certified);
+    }
+
+    #[test]
+    fn from_reading_cv_with_mid_confidence_is_degraded() {
+        let r = SensorReading::cv(0.65);
+        assert_eq!(EvidenceQuality::from_reading(Some(&r)), EvidenceQuality::Degraded);
+    }
+
+    #[test]
+    fn from_reading_cv_with_low_confidence_is_rejected() {
+        let r = SensorReading::cv(0.3);
+        assert_eq!(EvidenceQuality::from_reading(Some(&r)), EvidenceQuality::Rejected);
+    }
+
+    #[test]
+    fn from_reading_cv_without_confidence_is_degraded() {
+        let r = SensorReading { source_type: SourceType::ComputerVision, detection_confidence: None, position_stddev_m: None };
+        assert_eq!(EvidenceQuality::from_reading(Some(&r)), EvidenceQuality::Degraded);
+    }
+
+    #[test]
+    fn from_reading_ais_is_certified() {
+        assert_eq!(EvidenceQuality::from_reading(Some(&SensorReading::ais())), EvidenceQuality::Certified);
+    }
+
+    #[test]
+    fn from_reading_lidar_is_certified() {
+        let r = SensorReading { source_type: SourceType::Lidar, detection_confidence: None, position_stddev_m: None };
+        assert_eq!(EvidenceQuality::from_reading(Some(&r)), EvidenceQuality::Certified);
+    }
+
+    #[test]
+    fn from_reading_uwb_is_certified() {
+        let r = SensorReading { source_type: SourceType::Uwb, detection_confidence: None, position_stddev_m: None };
+        assert_eq!(EvidenceQuality::from_reading(Some(&r)), EvidenceQuality::Certified);
+    }
+
+    #[test]
+    fn from_reading_point_sensor_is_certified() {
+        let r = SensorReading { source_type: SourceType::PointSensor, detection_confidence: None, position_stddev_m: None };
+        assert_eq!(EvidenceQuality::from_reading(Some(&r)), EvidenceQuality::Certified);
+    }
+
+    #[test]
+    fn from_reading_radar_with_score_follows_threshold() {
+        let high = SensorReading { source_type: SourceType::Radar, detection_confidence: Some(0.85), position_stddev_m: None };
+        let low  = SensorReading { source_type: SourceType::Radar, detection_confidence: Some(0.3),  position_stddev_m: None };
+        assert_eq!(EvidenceQuality::from_reading(Some(&high)), EvidenceQuality::Certified);
+        assert_eq!(EvidenceQuality::from_reading(Some(&low)),  EvidenceQuality::Rejected);
+    }
+
+    #[test]
+    fn from_reading_radar_without_confidence_is_degraded() {
+        let r = SensorReading { source_type: SourceType::Radar, detection_confidence: None, position_stddev_m: None };
+        assert_eq!(EvidenceQuality::from_reading(Some(&r)), EvidenceQuality::Degraded);
+    }
+
+    #[test]
+    fn from_reading_simulation_is_not_applicable() {
+        assert_eq!(EvidenceQuality::from_reading(Some(&SensorReading::simulation())), EvidenceQuality::NotApplicable);
+    }
+
+    // ── pair_quality worst-of-two logic ───────────────────────────────────────
+
+    #[test]
+    fn pair_quality_both_certified_is_certified() {
+        let a = Entity { sensor: Some(SensorReading::ais()), ..entity("A", 0.0, 0.0, 0.0, 0.0) };
+        let b = Entity { sensor: Some(SensorReading::ais()), ..entity("B", 1.0, 0.0, 0.0, 0.0) };
+        assert_eq!(pair_quality(&a, &b), EvidenceQuality::Certified);
+    }
+
+    #[test]
+    fn pair_quality_one_rejected_is_rejected() {
+        let a = Entity { sensor: Some(SensorReading::cv(0.9)), ..entity("A", 0.0, 0.0, 0.0, 0.0) };
+        let b = Entity { sensor: Some(SensorReading::cv(0.2)), ..entity("B", 1.0, 0.0, 0.0, 0.0) };
+        assert_eq!(pair_quality(&a, &b), EvidenceQuality::Rejected);
+    }
+
+    #[test]
+    fn pair_quality_simulation_is_not_applicable() {
+        let a = Entity { sensor: Some(SensorReading::simulation()), ..entity("A", 0.0, 0.0, 0.0, 0.0) };
+        let b = Entity { sensor: Some(SensorReading::simulation()), ..entity("B", 1.0, 0.0, 0.0, 0.0) };
+        assert_eq!(pair_quality(&a, &b), EvidenceQuality::NotApplicable);
+    }
+
+    // ── AIS gap event carries Certified quality ───────────────────────────────
+    // The gap observation is derived from the AIS system (authoritative) so it
+    // carries Certified evidence quality despite being a synthetic entity.
+
+    #[test]
+    fn evaluate_ais_gap_event_quality_is_certified() {
+        let rules = load_rules(AIS_RULES_JSON).unwrap();
+        let entities = vec![ais_gap_entity("563012345", 600.0)];
+        let events = evaluate(&rules, &entities, 0);
+        let evt = events.iter().find(|e| e.rule_id == "AIS_TRACK_GAP").unwrap();
+        assert_eq!(evt.evidence_quality, EvidenceQuality::Certified);
+    }
+
+    // ── AIS vessel event carries Certified quality ────────────────────────────
+
+    #[test]
+    fn evaluate_ais_vessel_in_zone_is_certified() {
+        let rules = load_rules(SG_MARITIME_RULES).unwrap();
+        let vessel = Entity {
+            sensor: Some(SensorReading::ais()),
+            ..Entity {
+                id: "V-001".into(), class: EntityClass::Vessel,
+                position: Vec2::new(350.0, 350.0), velocity: Vec2::new(2.0, 0.0),
+                timestamp_ms: 0, sensor: None,
+            }
+        };
+        let events = evaluate(&rules, &[vessel], 0);
+        let evt = events.iter().find(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH").unwrap();
+        assert_eq!(evt.evidence_quality, EvidenceQuality::Certified);
+        assert!((evt.confidence_cv - 1.0).abs() < 1e-6);
     }
 }
