@@ -174,9 +174,9 @@ green "  ✓ $EVENT_COUNT risk events detected"
 if [[ "$EVENT_COUNT" -gt 0 ]]; then
   echo ""
   dim "  Events:"
-  # Print each event's rule_id and severity (skip header line)
+  # Print each event's rule_id, severity, and evidence_quality (skip header line)
   tail -n +2 "$EVENTS_JSONL" | while IFS= read -r line; do
-    rule=$(echo "$line" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f\"  [{d['severity']}] {d['rule_id']} — entities: {', '.join(d['entity_ids'])} — value: {d['measured_value']:.2f}\")" 2>/dev/null \
+    rule=$(echo "$line" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f\"  [{d['severity']}] {d['rule_id']} — entities: {', '.join(d['entity_ids'])} — value: {d['measured_value']:.2f} — quality: {d.get('evidence_quality','?')}\")" 2>/dev/null \
       || echo "  $line")
     dim "$rule"
   done
