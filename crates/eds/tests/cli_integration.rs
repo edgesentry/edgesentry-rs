@@ -1079,7 +1079,7 @@ fn ais_track_gap_fires_on_ais_maritime_fixture() {
         "measured gap ({measured}) must exceed threshold ({threshold})");
     assert_eq!(ev["timestamp_ms"].as_u64(), Some(60000),
         "AIS_TRACK_GAP must fire at t=60000 ms");
-    assert!(ev["entity_ids"].as_array().map_or(false, |a| {
+    assert!(ev["entity_ids"].as_array().is_some_and(|a| {
         a.iter().any(|id| id.as_str() == Some("563023456"))
     }), "AIS_TRACK_GAP must name vessel 563023456");
 }
