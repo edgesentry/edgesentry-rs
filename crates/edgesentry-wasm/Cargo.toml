@@ -1,0 +1,27 @@
+[package]
+name = "edgesentry-wasm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "WebAssembly bindings — exposes the edgesentry document pipeline to JavaScript/TypeScript"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+
+[dependencies]
+edgesentry-parse    = { path = "../edgesentry-parse", default-features = false }
+edgesentry-document = { path = "../edgesentry-document", default-features = false }
+edgesentry-audit    = { path = "../edgesentry-audit" }
+serde_json          = { workspace = true }
+wasm-bindgen        = "0.2"
+js-sys              = "0.3"
+hex                 = { workspace = true }
+# getrandom with js feature is required for rand/ed25519-dalek under wasm32
+getrandom           = { version = "0.2", features = ["js"] }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"

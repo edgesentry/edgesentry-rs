@@ -101,6 +101,7 @@ pub fn parse_maritime_csv(reader: impl std::io::Read) -> Result<Vec<DocumentEnti
     Ok(entities)
 }
 
+#[cfg(feature = "parquet-support")]
 /// Read a Parquet file produced by maridb and return `DocumentEntity` records.
 ///
 /// Expected schema (column names match the CSV header exactly):
@@ -364,6 +365,7 @@ V002,MV Star,,MYS,SGSIN,2026-06-18,Steel coils,7208,,32000,2026-04-30,true,QUARA
 
     /// Write SAMPLE_CSV rows as a Parquet file, then read them back via
     /// `parse_maritime_parquet` and assert the result matches the CSV parse.
+    #[cfg(feature = "parquet-support")]
     #[test]
     fn parquet_round_trip_matches_csv() {
         use parquet::column::writer::ColumnWriter;
