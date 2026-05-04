@@ -1,0 +1,15 @@
+[
+  {
+    "rule_id": "RESTRICTED_ZONE_APPROACH",
+    "condition": "zone_member",
+    "zone": [[-300, 200], [300, 200], [300, 700], [-300, 700]],
+    "severity": "HIGH",
+    "regulation": "Singapore Infrastructure Protection Act (Cap. 136A) §18 — Prohibition on entry to protected areas without authorisation; MPA Port Marine Notice No. 63 of 2024 — Restricted zones in Singapore port waters"
+  },
+  {
+    "rule_id": "AIS_TRACK_GAP",
+    "condition": "ais_gap > 480",
+    "severity": "CRITICAL",
+    "regulation": "SOLAS V/19 — Carriage requirements for shipborne navigational systems; MPA Port Marine Circular No. 28 of 2024 — AIS silence reporting requirements"
+  }
+]

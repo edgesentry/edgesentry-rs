@@ -376,6 +376,14 @@ fn vessel_fixture_csv() -> PathBuf {
     workspace_path("crates/edgesentry-ingest/fixtures/vessel_zone_approach.csv")
 }
 
+fn ais_maritime_fixture_csv() -> PathBuf {
+    workspace_path("crates/edgesentry-ingest/fixtures/ais_maritime_approach.csv")
+}
+
+fn sg_maritime_profile_dir() -> PathBuf {
+    workspace_path("crates/edgesentry-profile/fixtures/sg-maritime-security")
+}
+
 fn zone_test_profile_dir() -> PathBuf {
     workspace_path("crates/edgesentry-profile/fixtures/zone-test")
 }
@@ -979,4 +987,99 @@ fn restricted_zone_approach_does_not_fire_before_zone_entry() {
         assert!(ts >= 152500,
             "no alert should fire before vessel enters zone (t=152500ms), got t={ts}");
     }
+}
+
+// ── sg-maritime-security fixture (ais_maritime_approach.csv) ─────────────────
+
+#[test]
+fn ais_maritime_fixture_ingest_replay_produces_70_frames() {
+    let frames = TmpFile::new("ais_frames.jsonl");
+    let r = eds()
+        .args(["ingest", "replay", "--source"]).arg(ais_maritime_fixture_csv())
+        .args(["--out"]).arg(frames.path())
+        .output().expect("eds ingest replay ais_maritime");
+    assert!(r.status.success(), "ingest failed: {}", stderr(&r));
+    let stderr_text = stderr(&r);
+    assert!(stderr_text.contains("70 frame"), "expected 70 frames, got: {stderr_text}");
+}
+
+#[test]
+fn restricted_zone_approach_fires_at_56s_on_ais_maritime_fixture() {
+    let frames = TmpFile::new("ais_frames2.jsonl");
+    let events = TmpFile::new("ais_events.jsonl");
+
+    let r = eds()
+        .args(["ingest", "replay", "--source"]).arg(ais_maritime_fixture_csv())
+        .args(["--out"]).arg(frames.path())
+        .output().unwrap();
+    assert!(r.status.success(), "ingest: {}", stderr(&r));
+
+    let r = eds()
+        .args(["evaluate", "run", "--input"]).arg(frames.path())
+        .args(["--profile"]).arg(sg_maritime_profile_dir())
+        .args(["--out"]).arg(events.path())
+        .output().expect("eds evaluate run ais_maritime");
+    assert!(r.status.success(), "evaluate: {}", stderr(&r));
+
+    let content = fs::read_to_string(events.path()).unwrap();
+    let event_lines: Vec<serde_json::Value> = content.lines()
+        .filter(|l| !l.contains("eds_schema"))
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+
+    // RESTRICTED_ZONE_APPROACH must fire — vessel 563012345 crosses zone at t=56000 ms.
+    let zone_events: Vec<&serde_json::Value> = event_lines.iter()
+        .filter(|v| v["rule_id"].as_str() == Some("RESTRICTED_ZONE_APPROACH"))
+        .collect();
+    assert!(!zone_events.is_empty(), "RESTRICTED_ZONE_APPROACH must fire");
+
+    let first_ts = zone_events[0]["timestamp_ms"].as_u64().unwrap_or(0);
+    assert!(first_ts >= 56000,
+        "must not fire before vessel reaches zone boundary (t=56000 ms), got t={first_ts}");
+    assert!(first_ts <= 57000,
+        "must fire within one frame of zone entry, got t={first_ts}");
+
+    // Must not fire before zone entry.
+    for ev in &zone_events {
+        let ts = ev["timestamp_ms"].as_u64().unwrap_or(0);
+        assert!(ts >= 56000, "early fire at t={ts}");
+    }
+}
+
+#[test]
+fn ais_track_gap_fires_on_ais_maritime_fixture() {
+    let frames = TmpFile::new("ais_frames3.jsonl");
+    let events = TmpFile::new("ais_events2.jsonl");
+
+    let r = eds()
+        .args(["ingest", "replay", "--source"]).arg(ais_maritime_fixture_csv())
+        .args(["--out"]).arg(frames.path())
+        .output().unwrap();
+    assert!(r.status.success(), "ingest: {}", stderr(&r));
+
+    let r = eds()
+        .args(["evaluate", "run", "--input"]).arg(frames.path())
+        .args(["--profile"]).arg(sg_maritime_profile_dir())
+        .args(["--out"]).arg(events.path())
+        .output().expect("eds evaluate run ais_gap");
+    assert!(r.status.success(), "evaluate: {}", stderr(&r));
+
+    let content = fs::read_to_string(events.path()).unwrap();
+    let gap_events: Vec<serde_json::Value> = content.lines()
+        .filter(|l| !l.contains("eds_schema"))
+        .map(|l| serde_json::from_str::<serde_json::Value>(l).unwrap())
+        .filter(|v| v["rule_id"].as_str() == Some("AIS_TRACK_GAP"))
+        .collect();
+
+    assert!(!gap_events.is_empty(), "AIS_TRACK_GAP must fire");
+    let ev = &gap_events[0];
+    let measured = ev["measured_value"].as_f64().unwrap_or(0.0);
+    let threshold = ev["threshold"].as_f64().unwrap_or(0.0);
+    assert!(measured > threshold,
+        "measured gap ({measured}) must exceed threshold ({threshold})");
+    assert_eq!(ev["timestamp_ms"].as_u64(), Some(60000),
+        "AIS_TRACK_GAP must fire at t=60000 ms");
+    assert!(ev["entity_ids"].as_array().is_some_and(|a| {
+        a.iter().any(|id| id.as_str() == Some("563023456"))
+    }), "AIS_TRACK_GAP must name vessel 563023456");
 }
