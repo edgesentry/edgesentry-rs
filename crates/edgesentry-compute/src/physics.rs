@@ -1,5 +1,20 @@
 use edgesentry_types::{Entity, EntityClass, Vec2};
 
+/// 3D straight-line distance between two entities in metres.
+///
+/// Falls back to 2D (`euclidean_distance`) when either entity lacks a z-position.
+pub fn euclidean_distance_3d(a: &Entity, b: &Entity) -> f32 {
+    match (a.position_z, b.position_z) {
+        (Some(az), Some(bz)) => {
+            let dx = b.position.x - a.position.x;
+            let dy = b.position.y - a.position.y;
+            let dz = bz - az;
+            (dx * dx + dy * dy + dz * dz).sqrt()
+        }
+        _ => euclidean_distance(a, b),
+    }
+}
+
 /// Straight-line distance between two entities in metres.
 pub fn euclidean_distance(a: &Entity, b: &Entity) -> f32 {
     (&b.position - &a.position).length()
@@ -88,6 +103,39 @@ mod tests {
             sensor: None,
             computed_confidence: None,
         }
+    }
+
+    // ── euclidean_distance_3d ─────────────────────────────────────────────
+
+    fn entity_3d(x: f32, y: f32, z: f32, vx: f32, vy: f32) -> Entity {
+        let mut e = entity(x, y, vx, vy);
+        e.position_z = Some(z);
+        e
+    }
+
+    #[test]
+    fn distance_3d_unit_cube_diagonal() {
+        let a = entity_3d(0.0, 0.0, 0.0, 0.0, 0.0);
+        let b = entity_3d(1.0, 1.0, 1.0, 0.0, 0.0);
+        let d = euclidean_distance_3d(&a, &b);
+        assert!((d - 3f32.sqrt()).abs() < 1e-5, "got {d}");
+    }
+
+    #[test]
+    fn distance_3d_falls_back_to_2d_when_z_missing() {
+        let a = entity(0.0, 0.0, 0.0, 0.0); // no position_z
+        let b = entity_3d(3.0, 4.0, 5.0, 0.0, 0.0);
+        // fallback: 2D distance = 5.0
+        let d = euclidean_distance_3d(&a, &b);
+        assert!((d - 5.0).abs() < 1e-5, "got {d}");
+    }
+
+    #[test]
+    fn distance_3d_same_xy_different_z() {
+        let a = entity_3d(0.0, 0.0, 0.0, 0.0, 0.0);
+        let b = entity_3d(0.0, 0.0, 3.0, 0.0, 0.0);
+        let d = euclidean_distance_3d(&a, &b);
+        assert!((d - 3.0).abs() < 1e-5, "got {d}");
     }
 
     // ── euclidean_distance ────────────────────────────────────────────────

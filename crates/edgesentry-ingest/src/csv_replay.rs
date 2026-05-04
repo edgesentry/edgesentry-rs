@@ -48,6 +48,12 @@ impl FileReplayAdapter {
             let vy: f32 = cols[5].parse().map_err(|_| format!("line {}: bad vy", i + 2))?;
             let ts: u64 = cols[6].parse().map_err(|_| format!("line {}: bad timestamp", i + 2))?;
 
+            // Infer sensor type from entity class so replay fixtures
+            // produce the correct EvidenceQuality (AIS → Certified, etc.).
+            let sensor = match class {
+                EntityClass::Vessel | EntityClass::AisGap => SensorReading::ais(),
+                _ => SensorReading::simulation(),
+            };
             frames_map.entry(ts).or_default().push(Entity {
                 id,
                 class,
@@ -56,7 +62,7 @@ impl FileReplayAdapter {
                 velocity: Vec2::new(vx, vy),
                 velocity_z: None,
                 timestamp_ms: ts,
-                sensor: Some(SensorReading::simulation()),
+                sensor: Some(sensor),
                 computed_confidence: None,
             });
         }
