@@ -38,7 +38,14 @@ tmp/
 sbom/
 
 # Generated demo data (eds inspect generate-fixtures)
-/demo/
+/demo/output/
+/demo/config*.toml
+/demo/output*/
+/demo/*.ply
+/demo/*.ifc
+/demo/*.onnx
+/demo/scan-output/
+/demo/prototype_detector.onnx
 
 # Local output artifacts (examples / manual runs)
 record*.json

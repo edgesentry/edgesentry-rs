@@ -1,0 +1,30 @@
+[
+  {
+    "rule_id": "BWM_D2_EXPIRED",
+    "field": "bwm_certificate_expiry",
+    "check": "not_expired",
+    "severity": "HIGH",
+    "regulation": "BWM Convention Regulation D-2 — Ballast Water Performance Standard; MPA Port Circular No. 19 of 2023 — Ballast water management certificate requirements for vessels calling at Singapore"
+  },
+  {
+    "rule_id": "CREW_COUNT_PRESENT",
+    "field": "crew_count",
+    "check": "not_null",
+    "severity": "HIGH",
+    "regulation": "IMO FAL Convention Annex — FAL Form 1 Field 15 (Number of crew members); MLC 2006 Regulation 1.4 — Manning requirements"
+  },
+  {
+    "rule_id": "CARGO_DESCRIPTION_PRESENT",
+    "field": "cargo_description",
+    "check": "not_null",
+    "severity": "HIGH",
+    "regulation": "IMO FAL Convention Annex — FAL Form 1 Field 7 (Brief description of cargo); Singapore Customs Act (Cap. 70) §22 — Cargo declaration requirements"
+  },
+  {
+    "rule_id": "DANGEROUS_GOODS_FLAG",
+    "field": "dangerous_goods",
+    "check": "not_true",
+    "severity": "MEDIUM",
+    "regulation": "SOLAS Chapter VII — Carriage of dangerous goods; MPA Port Marine Circular No. 11 of 2024 — Pre-arrival notification for vessels carrying dangerous goods (minimum 24 hours)"
+  }
+]
