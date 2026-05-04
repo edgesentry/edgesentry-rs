@@ -4,6 +4,7 @@ use clap::Subcommand;
 use std::fs;
 use std::path::PathBuf;
 
+use edgesentry_compute::{compute_entity_confidence, ConfidenceContext};
 use edgesentry_evaluate::{evaluate, EvidenceQuality, RiskEvent};
 use edgesentry_ingest::csv_replay::EntityFrame;
 use edgesentry_ingest::jsonl::{JsonlReader, JsonlWriter};
@@ -81,8 +82,16 @@ fn run_evaluate(input: PathBuf, profile: PathBuf, out: PathBuf, min_quality: Evi
     let mut total_events = 0usize;
     let mut filtered_events = 0usize;
     for frame in &frames {
+        // Populate computed_confidence on each entity before evaluation.
+        // Use zero drift (no calibration data in replay mode).
+        let ctx = ConfidenceContext { now_ms: frame.timestamp_ms, drift_score: 0.0 };
+        let enriched: Vec<_> = frame.entities.iter().map(|e| {
+            let mut e = e.clone();
+            e.computed_confidence = compute_entity_confidence(&e, &ctx);
+            e
+        }).collect();
         let events: Vec<RiskEvent> =
-            evaluate(&rules, &frame.entities, frame.timestamp_ms);
+            evaluate(&rules, &enriched, frame.timestamp_ms);
         for event in &events {
             if quality_passes(event, &min_quality) {
                 writer.write_record(event)

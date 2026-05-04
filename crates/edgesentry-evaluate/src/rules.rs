@@ -188,7 +188,11 @@ fn pair_confidence(a: &Entity, b: &Entity) -> f32 {
 }
 
 fn entity_quality(e: &Entity) -> EvidenceQuality {
-    EvidenceQuality::from_reading(e.sensor.as_ref())
+    if let Some(score) = e.computed_confidence {
+        EvidenceQuality::from_confidence(score)
+    } else {
+        EvidenceQuality::from_reading(e.sensor.as_ref())
+    }
 }
 
 fn pair_quality(a: &Entity, b: &Entity) -> EvidenceQuality {
