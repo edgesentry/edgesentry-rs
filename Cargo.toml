@@ -17,6 +17,7 @@ members = [
   "crates/edgesentry-document",
   "crates/edgesentry-image-utils",
   "crates/edgesentry-scenario",
+  "crates/edgesentry-wasm",
 ]
 resolver = "2"
 
