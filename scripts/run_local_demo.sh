@@ -25,6 +25,8 @@
 #   Stage 12 V001 compliant voyage  parse → fill → check (0 alerts) → gen → sign-document → verify
 #   Stage 13 V002 BWM expired       parse → fill → check (HIGH alert) → sign-document (chain) → verify
 #   Stage 14 V003 low confidence    parse → fill (threshold 0.80, flagged fields) → sign-document → verify
+#   --- AIS maritime confidence demo ---
+#   Stage 15 AIS maritime approach   ingest AIS fixture → evaluate sg-maritime-security → CERTIFIED events
 #
 # Prerequisites:
 #   cargo build (done automatically)
@@ -459,6 +461,46 @@ green "  ✓ VERIFIED (flagged fields visible):"
 
 pause "Stage 14 complete"
 
+# ── Stage 15: AIS maritime confidence demo ────────────────────────────────────
+bold "━━ Stage 15 — AIS maritime: multi-sensor confidence (evidence_quality: CERTIFIED)"
+dim  "  Fixture: ais_maritime_approach.csv — vessel_01 zone approach + vessel_02 AIS gap"
+dim  "  Profile: sg-maritime-security"
+echo ""
+
+AIS_FIXTURE="$ROOT/crates/edgesentry-ingest/fixtures/ais_maritime_approach.csv"
+AIS_PROFILE="$ROOT/crates/edgesentry-profile/fixtures/sg-maritime-security"
+AIS_FRAMES="$OUT/ais_frames.jsonl"
+AIS_EVENTS="$OUT/ais_events.jsonl"
+
+"$BIN" ingest replay \
+  --source "$AIS_FIXTURE" \
+  --out "$AIS_FRAMES"
+
+"$BIN" evaluate run \
+  --input "$AIS_FRAMES" \
+  --profile "$AIS_PROFILE" \
+  --out "$AIS_EVENTS"
+
+AIS_EVENT_COUNT=$(count_lines "$AIS_EVENTS")
+green "  ✓ $AIS_EVENT_COUNT events — evidence_quality from multi-sensor confidence model:"
+echo ""
+tail -n +2 "$AIS_EVENTS" | python3 -c "
+import sys, json
+seen = set()
+for line in sys.stdin:
+    d = json.loads(line)
+    key = (d['rule_id'], d['evidence_quality'])
+    if key not in seen:
+        seen.add(key)
+        print(f\"    [{d['severity']}] {d['rule_id']}\")
+        print(f\"      entity:  {', '.join(d['entity_ids'])}\")
+        print(f\"      quality: {d['evidence_quality']}  (computed_confidence: AIS=1.0)\")
+        print(f\"      first t: {d['timestamp_ms']//1000}s\")
+        print()
+" 2>/dev/null
+
+pause "Stage 15 complete"
+
 # ── Summary ──────────────────────────────────────────────────────────────────
 echo ""
 bold "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -480,6 +522,7 @@ dim "  Stage 11  parse document  → $PARSED_FRAMES EntityFrame(s)"
 dim "  Stage 12  doc audit V001  → compliant, $ALERT1 alerts, sequence 1 sealed"
 dim "  Stage 13  doc audit V002  → BWM_D2_EXPIRED HIGH, sequence 2 chained"
 dim "  Stage 14  doc audit V003  → flagged fields, review_required, sequence 3 chained"
+dim "  Stage 15  AIS maritime    → $AIS_EVENT_COUNT events, evidence_quality: CERTIFIED"
 echo ""
 dim "  Three documents sealed into a tamper-evident chain:"
 dim "    sequence 1  V001 (compliant)           → $CHAIN1"

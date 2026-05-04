@@ -1083,3 +1083,31 @@ fn ais_track_gap_fires_on_ais_maritime_fixture() {
         a.iter().any(|id| id.as_str() == Some("563023456"))
     }), "AIS_TRACK_GAP must name vessel 563023456");
 }
+
+#[test]
+fn ais_maritime_events_have_certified_evidence_quality() {
+    let frames = TmpFile::new("ais_frames4.jsonl");
+    let events = TmpFile::new("ais_events3.jsonl");
+
+    let r = eds()
+        .args(["ingest", "replay", "--source"]).arg(ais_maritime_fixture_csv())
+        .args(["--out"]).arg(frames.path())
+        .output().unwrap();
+    assert!(r.status.success(), "ingest: {}", stderr(&r));
+
+    let r = eds()
+        .args(["evaluate", "run", "--input"]).arg(frames.path())
+        .args(["--profile"]).arg(sg_maritime_profile_dir())
+        .args(["--out"]).arg(events.path())
+        .output().unwrap();
+    assert!(r.status.success(), "evaluate: {}", stderr(&r));
+
+    let content = fs::read_to_string(events.path()).unwrap();
+    for line in content.lines().filter(|l| !l.contains("eds_schema")) {
+        let v: serde_json::Value = serde_json::from_str(line).unwrap();
+        let quality = v["evidence_quality"].as_str().unwrap_or("");
+        assert_eq!(quality, "CERTIFIED",
+            "AIS events must have CERTIFIED quality, got '{}' for rule '{}'",
+            quality, v["rule_id"].as_str().unwrap_or("?"));
+    }
+}
