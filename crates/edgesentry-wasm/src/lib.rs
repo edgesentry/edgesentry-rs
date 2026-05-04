@@ -364,7 +364,7 @@ mod tests {
         let entity_json = arr[0].to_string();
         let filled_json = fill(&entity_json, "fal-form-1", 0.80).expect("fill");
         let filled: serde_json::Value = serde_json::from_str(&filled_json).unwrap();
-        assert_eq!(filled["review_required"].as_bool().unwrap(), false);
+        assert!(!filled["review_required"].as_bool().unwrap());
     }
 
     #[test]
