@@ -23,5 +23,3 @@ hex                 = { workspace = true }
 # getrandom with js feature is required for rand/ed25519-dalek under wasm32
 getrandom           = { version = "0.2", features = ["js"] }
 
-[dev-dependencies]
-wasm-bindgen-test = "0.3"
