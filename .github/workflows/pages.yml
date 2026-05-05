@@ -6,6 +6,8 @@ on:
     paths:
       - "docs/**"
       - "mkdocs.yml"
+      - "crates/**"
+      - "src/**"
   workflow_dispatch:
 
 permissions:
@@ -25,13 +27,31 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install MkDocs dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install "mkdocs-material>=9.5,<10"
+      - uses: dtolnay/rust-toolchain@stable
 
-      - name: Build docs
+      - name: Cache cargo registry
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93a1d19  # v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Install MkDocs
+        run: pip install "mkdocs-material>=9.5,<10"
+
+      - name: Build MkDocs
         run: mkdocs build --strict
+
+      - name: Build rustdoc
+        run: cargo doc --workspace --no-deps --document-private-items
+
+      - name: Add rustdoc entry point
+        run: |
+          echo '<meta http-equiv="refresh" content="0; url=eds/index.html">' \
+            > target/doc/index.html
+
+      - name: Copy rustdoc into site/api/
+        run: cp -r target/doc site/api
 
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
         with:
