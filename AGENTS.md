@@ -11,8 +11,6 @@ All procedures below apply equally to humans and AI agents.
 
 **After every change, verify consistency across code, tests, and docs.** See [Contributing — Consistency Check](docs/audit/en/src/contributing.md#consistency-check) for the checklist.
 
-**English and Japanese documentation must be updated together.** Every change to `docs/*/en/src/*.md` requires a corresponding update to `docs/*/ja/src/*.md`, and vice versa. Never update one language without updating the other.
-
 ## Build and test
 
 ```bash
