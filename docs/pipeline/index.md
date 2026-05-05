@@ -1,26 +1,26 @@
-# EdgeSentry
+# Pipeline Architecture
 
-EdgeSentry is a collection of reusable Rust crates and a unified CLI (`eds`) for building
-sensor-to-seal compliance pipelines.
+Seven-stage sensor-to-seal pipeline. Each stage is a separate crate piping JSONL to the next.
 
-## Seven-step pipeline
+```
+[Edge]                         [Cloud]
+  Step 1  eds ingest replay    → eds.entity-frame
+  Step 2  eds compute run      → eds.measurement-frame
+  Step 3  eds evaluate run     → eds.risk-event          ← Edge/Cloud boundary
+  ─────────────────────────────────────────────────────
+  Step 4  eds assess
+  Step 5  eds explain
+  Step 6  eds document gen
+  Step 7  eds audit sign-document → AuditRecord (BLAKE3 + Ed25519)
+```
 
-Any domain that needs to capture real-world data, check it against regulations, explain
-deviations, and produce a tamper-evident record fits the same pattern:
+Steps 1–3 are deterministic and suitable for real-time edge execution.
+Steps 4–7 may involve latency, external services, or async scheduling.
 
-| Step | Role | Crate | CLI |
-|------|------|-------|-----|
-| 1 - Ingest | Capture sensor data or parse documents | `edgesentry-ingest` / `edgesentry-parse` | `eds ingest` / `eds parse` |
-| 2 - Compute | Apply physics and geometry operations | `edgesentry-compute` | `eds compute` |
-| 3 - Evaluate | Compare measurements against rules | `edgesentry-evaluate` | `eds evaluate` |
-| 4 - Assess | Find patterns across evaluation results | `edgesentry-assess` | `eds assess` |
-| 5 - Explain | Generate grounded plain-language text | `edgesentry-explain` | `eds explain` |
-| 6 - Document | Format results into reports or documents | `edgesentry-report` / `edgesentry-document` | `eds report` / `eds document` |
-| 7 - Seal | Sign and chain records for tamper detection | `edgesentry-audit` | `eds audit` |
+## Documents
 
-## Quick links
-
-- [Pipeline documentation](introduction.md)
-- [Quickstart - Safety Monitoring](quickstart-safety-monitoring.md)
-- [Quickstart - Document Compliance](quickstart-document-compliance.md)
-- [CLI Reference](cli-reference.md)
+| Document | Covers |
+|---|---|
+| [tier-architecture.md](tier-architecture.md) | Why Edge/Cloud are separated; which crates run where; design principles |
+| [tier-implementation.md](tier-implementation.md) | Concrete Rust types, CLI commands, profile split (`params.toml` edge-only) |
+| [ingest-cv-adapter.md](ingest-cv-adapter.md) | CV adapter contract — Step 0/1 input: camera frames → `eds.entity-frame` JSONL |

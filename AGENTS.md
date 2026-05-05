@@ -1,15 +1,29 @@
-# AGENTS Runbook
+# AGENTS
 
-This repository is a Cargo workspace containing two crates:
+Rust library and CLI for IoT security primitives. No business use cases are implemented here — those live in application repositories (clarus, documaris, arktrace).
 
-- **edgesentry-audit** — cryptographic audit trail (Ed25519 + BLAKE3) for IoT devices and infrastructure
-- **edgesentry-inspect** — edge-first 3D scan vs. reference deviation detection for construction and maritime inspection
+## Crate map
 
-All procedures below apply equally to humans and AI agents.
-
-## Guidelines
-
-**After every change, verify consistency across code, tests, and docs.** See [Contributing — Consistency Check](docs/audit/en/src/contributing.md#consistency-check) for the checklist.
+| Crate | I/O contract |
+|---|---|
+| `edgesentry-types` | Shared types — no I/O |
+| `edgesentry-ingest` | CSV / AIS / PLY → `EntityFrame` JSONL (`eds.entity-frame`) |
+| `edgesentry-compute` | `EntityFrame` JSONL → `MeasurementFrame` JSONL (`eds.measurement-frame`) |
+| `edgesentry-profile` | `rules.json` + `kb/` → loaded `Profile` |
+| `edgesentry-evaluate` | `MeasurementFrame` + `Profile` → `RiskEvent` JSONL |
+| `edgesentry-assess` | `RiskEvent` stream → trend / correlation output |
+| `edgesentry-explain` | `RiskEvent` + KB → plain-language explanation |
+| `edgesentry-report` | pipeline output → Markdown report |
+| `edgesentry-scenario` | config → CSV / UDP synthetic fixture |
+| `edgesentry-store` | `RiskEvent` → trait-abstracted store (in-memory, future backends) |
+| `edgesentry-audit` | any payload → BLAKE3-hashed, Ed25519-signed `AuditRecord` |
+| `edgesentry-inspect` | point cloud → deviation report |
+| `edgesentry-parse` | maritime CSV/Parquet → `DocumentEntity` JSONL |
+| `edgesentry-document` | `DocumentEntity` → filled FAL form + compliance alerts |
+| `edgesentry-wasm` | document pipeline → WASM bindings for browser |
+| `edgesentry-bridge` | `edgesentry-audit` → C/C++ FFI |
+| `edgesentry-image-utils` | frame → ONNX / OpenCV utilities |
+| `eds` | CLI — composes all stages via subcommands |
 
 ## Build and test
 
@@ -20,104 +34,44 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo deny check licenses
 ```
 
-All tests must pass before any commit. No clippy warnings allowed.
-
-## Quick Reference — edgesentry-audit
-
-### Understanding the system
-- **[Roadmap](docs/audit/en/src/roadmap.md)** — phased compliance plan (Singapore → Japan → Europe), implementation mapping to ETSI EN 303 645 / CLS / JC-STAR
-- **[Concepts](docs/audit/en/src/concepts.md)** — tamper-evident design, AuditRecord fields, hash chain, sequence policy, ingest-time verification, storage model
-- **[Architecture](docs/audit/en/src/architecture.md)** — device side vs cloud side responsibilities, resource-constrained design, concrete sign-and-ingest flow
-
-### Running examples and demos
-- **[Library Usage](docs/audit/en/src/quickstart.md)** — run `cargo run -p edgesentry-audit --example lift_inspection_flow`; S3/MinIO backend switching
-- **[Interactive Demo](docs/audit/en/src/demo.md)** — run `bash scripts/run_local_demo.sh`; requires Docker (PostgreSQL + MinIO)
-
-### Using the CLI
-- **[CLI Reference](docs/audit/en/src/cli.md)** — `sign-record`, `verify-record`, `verify-chain` commands with examples; lift inspection end-to-end scenario; tampering detection walkthrough
-
-### Development workflow
-- **[Contributing](CONTRIBUTING.md)** — issue priorities, quick-start commands, links to full per-project guides
-- **[Audit Contributing](docs/audit/en/src/contributing.md)** — macOS prerequisites, run `cargo test --workspace` after every change, static analysis (`clippy`, `cargo-audit`, `cargo-deny`), PR conventions, avoiding conflicts with main
-- **[Inspect Contributing](docs/inspect/en/src/contributing.md)** — crate layout, inspect-specific issue labels, running inspect unit and CLI integration tests
-
-### Release
-- **[Build and Release](docs/audit/en/src/release.md)** — build artifacts, publish to crates.io, GitHub Actions CI/release pipeline, automatic version increment (Conventional Commits)
-
-## Quick Reference — edgesentry-inspect
-
-### Understanding the system
-- **[Requirements](docs/inspect/en/src/requirements.md)** — before designing any feature; defines the 30-min inspection constraint and KPIs
-- **[Architecture](docs/inspect/en/src/architecture.md)** — before writing any code; edge-cloud split, component interfaces, AI inference modes
-- **[Roadmap](docs/inspect/en/src/roadmap.md)** — before picking up a task; milestone sequence and trilink-core dependencies
-- **[Scenarios](docs/inspect/en/src/scenarios.md)** — step-by-step flows, construction and maritime case studies
-
-### Key external dependency: trilink-core
-
-`edgesentry-inspect` depends on `trilink-core` for:
-
-| Symbol | Purpose |
-|---|---|
-| `PointCloud` | Input type for a single LiDAR/ToF sweep |
-| `DepthMap` | Output of `project_to_depth_map` — fed to AI inference |
-| `HeightMap` | Output of `project_to_height_map` — floor-level anomaly view |
-| `project_to_depth_map` | 3D point cloud → 2D depth map (forward projection) |
-| `project_to_height_map` | 3D point cloud → top-down height map |
-| `unproject` | 2D detection + depth → 3D world coordinate |
-| `PoseBuffer` | Pose lookup by timestamp |
-| `Transform4x4`, `CameraIntrinsics`, `Point3D` | Shared geometry types |
-
-These are implemented in the `trilink-core` repo ([issues #30–#34](https://github.com/edgesentry/trilink-core/issues)). Do not reimplement them here.
-
-## Quick Reference — Maritime document pipeline (PIER71 / documaris)
-
-### Understanding the system
-- **[WASM build guide](docs/pipeline/wasm-build.md)** — how to compile edgesentry-wasm, feature flag rationale, API reference, integration with documaris
-- **[PIER71 demo runbook](docs/pipeline/pier71-demo-runbook.md)** — TC1/TC2/TC3 test cases, manual run steps, expected outputs
-- **[Document compliance quickstart](docs/pipeline/quickstart-document-compliance.md)** — end-to-end CLI walkthrough
-
-### Key facts
-- Maritime crates: `edgesentry-parse` → `edgesentry-document` → `edgesentry-audit` → `edgesentry-wasm`
-- WASM build requires `--no-default-features` (disables `parquet-support` and `llm` features — both pull C/ASM deps incompatible with wasm-bindgen)
-- Web app consumer: [documaris](https://documaris.pages.dev) (repo: `edgesentry/documaris`)
-- Demo script: `bash demo/document-pipeline.sh`
-
-## Repository structure
-
-```
-edgesentry-rs/
-  crates/
-    edgesentry-audit/    — cryptographic audit trail (Ed25519, BLAKE3, offline buffer)
-    edgesentry-bridge/   — C/C++ FFI bridge for edgesentry-audit
-    edgesentry-inspect/  — scan-vs-reference engine (implementation begins at M2)
-    edgesentry-parse/    — maritime CSV ingestion → ParsedDocument
-    edgesentry-document/ — FAL form filling, compliance rules, HTML render
-    edgesentry-wasm/     — wasm-bindgen bindings for browser use
-  demo/
-    document-pipeline.sh — FAL Form 1 end-to-end demo (TC1/TC2/TC3)
-  docs/
-    audit/               — audit documentation (English + Japanese)
-    inspect/             — inspect documentation (English + Japanese)
-    pipeline/            — maritime document pipeline docs
-      wasm-build.md      — WASM compilation, feature flags, API reference
-      pier71-demo-runbook.md — PIER71 test cases and demo steps
-  scripts/
-    run_local_demo.sh    — end-to-end audit demo (Docker)
-    preview_docs.sh      — build and serve all docs locally at localhost:8080/edgesentry-rs/
-```
+All tests must pass and clippy must be clean before every commit.
 
 ## Coding conventions
 
 - Rust 2021, stable toolchain
-- `thiserror` for errors; no `unwrap`/`expect` in library code
-- `serde` for serialisation; `f32` for geometry (consistent with trilink-core types)
-- All code must pass `cargo clippy --workspace --all-targets --all-features -- -D warnings`
-- No company names in source code, comments, or docs — use generic terms
+- `thiserror` for errors — no `unwrap`/`expect` in library code
+- `serde` for serialisation — `f32` for geometry (consistent with trilink-core)
+- No company names in source, comments, or docs
 
 ## Commit convention
 
 Conventional Commits:
+- `fix:` → patch
+- `feat:` → minor
+- `feat!:` or `BREAKING CHANGE:` → major
 
-- `fix:` → patch bump
-- `feat:` → minor bump
-- `feat!:` or `BREAKING CHANGE:` → major bump
+## Docs
+
+- Crate I/O contracts and constraints: `docs/crates.md`
+- Roadmaps (valuable — do not delete): `docs/roadmap/core-pipeline.md`, `docs/roadmap/feature-inspect.md`, `docs/roadmap/strategy-compliance.md`
+- Security artifacts (valuable — do not delete): `docs/security/` — threat-model, compliance-matrix, sbom-lifecycle, key-management
+- CV adapter contract: `docs/pipeline/ingest-cv-adapter.md`
+- Edge/cloud split design: `docs/pipeline/tier-architecture.md`
+
+## Agent Skills
+
+Skills live in `.agents/skills/`. Install with:
+
+```bash
+npx skills add edgesentry/edgesentry-rs
+```
+
+| Skill | Trigger |
+|---|---|
+| `/eds-dev-workflow` | Before every commit; when CI fails on `cargo clippy` or `cargo deny` |
+| `/eds-add-profile-rule` | Adding a regulation-backed detection rule; when a `RiskEvent` is missing for a known regulation |
+| `/eds-new-crate` | Adding a new pipeline stage or utility crate to the workspace |
+| `/eds-verify-audit-chain` | After `eds audit sign-document`; when investigating a tamper allegation; before submitting to an assessor |
+| `/eds-deploy` | Setting up a new server; when TLS, PostgreSQL, S3, or systemd configuration is needed |
+| `/eds-ops` | When a health check fails; investigating chain lag; running scheduled backup or restore |
+| `/eds-release` | After all tests pass and a version tag is ready; when crates.io publish fails mid-run |

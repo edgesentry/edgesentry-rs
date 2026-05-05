@@ -2,141 +2,42 @@
 
 [![License](https://img.shields.io/badge/license-Apache%202.0%20OR%20MIT-blue.svg)](LICENSE-APACHE)
 
-Trust and verification for edge infrastructure.
+IoT security primitives: cryptographic audit trail, physics-based rule evaluation, and tamper-evident evidence sealing.
 
-- **Documentation:** [edgesentry.github.io/edgesentry-rs/en/](https://edgesentry.github.io/edgesentry-rs/en/)
+## Crates
 
-This repository is a Cargo workspace. Core crates:
-
-| Crate | Description |
+| Crate | Purpose |
 |---|---|
-| [edgesentry-audit](crates/edgesentry-audit/) | Ed25519 + BLAKE3 cryptographic audit trail for IoT devices and infrastructure |
-| [edgesentry-inspect](crates/edgesentry-inspect/) | Edge-first 3D scan vs. reference deviation detection for construction and maritime inspection |
-| [edgesentry-parse](crates/edgesentry-parse/) | Maritime CSV ingestion — parses vessel, voyage, and cargo fields |
-| [edgesentry-document](crates/edgesentry-document/) | Port call document generation — fills FAL forms, runs compliance rules |
-| [edgesentry-wasm](crates/edgesentry-wasm/) | WebAssembly bindings — exposes the document pipeline for browser apps via wasm-bindgen |
+| `edgesentry-types` | Shared types — `Entity`, `EntityFrame`, `EntityClass`, `SensorReading`, `EvidenceQuality` |
+| `edgesentry-ingest` | Structured data ingestion — CSV replay, AIS stream, PLY/IFC loaders |
+| `edgesentry-compute` | Physics computations — distance, TTC, zone membership, entity confidence |
+| `edgesentry-profile` | Profile loader — validates `rules.json` and KB coverage |
+| `edgesentry-evaluate` | Rule DSL and evaluation engine — produces `RiskEvent` JSONL |
+| `edgesentry-assess` | Trend and correlation analysis — rising frequency, escalating risk |
+| `edgesentry-explain` | LLM-powered plain-language alert explanations |
+| `edgesentry-report` | Markdown safety report generation |
+| `edgesentry-scenario` | Synthetic scenario generation — CSV fixtures and UDP simulation |
+| `edgesentry-store` | Trait-abstracted event store |
+| `edgesentry-audit` | Tamper-evident audit chain — Ed25519 + BLAKE3 |
+| `edgesentry-inspect` | Edge-first 3D scan vs. reference deviation detection |
+| `edgesentry-parse` | Maritime CSV/Parquet → `DocumentEntity` JSONL |
+| `edgesentry-document` | Document compliance — AI field filling, rule checking, HTML render |
+| `edgesentry-wasm` | WebAssembly bindings for the document pipeline |
+| `edgesentry-bridge` | C/C++ FFI bridge |
+| `edgesentry-image-utils` | Shared image processing utilities (ONNX, OpenCV) |
+| `eds` | Unified CLI |
 
-## Maritime document pipeline (PIER71 / documaris)
-
-The maritime crates implement a port call documentation pipeline consumed by **[documaris](https://documaris.pages.dev)** — a browser-based FAL Form 1 generator for the PIER71-11 Smart Port Challenge.
-
-```
-CSV (vessel + voyage data)
-    │
-    ▼
-edgesentry-parse        ← parse fields, detect missing/vague values
-    │
-    ▼
-edgesentry-document     ← fill FAL Form 1, run compliance rules, render HTML
-    │
-    ▼
-edgesentry-audit        ← BLAKE3 hash + Ed25519 signature → AuditRecord
-    │
-    ▼
-edgesentry-wasm         ← compiled to .wasm, loaded in-browser by documaris
-```
-
-### WASM feature flags
-
-Two dependencies are gated behind optional features to keep the WASM binary free of C code (incompatible with wasm-bindgen):
-
-| Crate | Feature | Dep gated | Reason |
-|-------|---------|-----------|--------|
-| `edgesentry-parse` | `parquet-support` *(default on)* | `parquet` (via `snap`) | `snap` uses C bindings |
-| `edgesentry-document` | `llm` *(default on)* | `ureq` (via `rustls` → `ring`) | `ring` uses C/ASM |
-
-Build for WASM (disables both):
+## Quick start
 
 ```bash
-cd crates/edgesentry-wasm
-wasm-pack build --target web --no-default-features
+cargo build --workspace
+cargo test --workspace
 ```
-
-### Demo
-
-```bash
-# FAL Form 1 pipeline — TC1 (compliant), TC2 (BWM expired), TC3 (low-confidence)
-bash demo/document-pipeline.sh
-```
-
-See [demo/document-pipeline.sh](demo/document-pipeline.sh) and the [PIER71 runbook](docs/pipeline/pier71-demo-runbook.md).
-
-## edgesentry-audit
-
-Implements three pillars of trust for IoT deployments:
-
-1. **Identity** — Ed25519 digital signatures to guarantee the authenticity of devices and data
-2. **Integrity** — BLAKE3 hash chains to ensure data immutability and forensic readiness
-3. **Resilience** — Store-and-forward offline buffering for narrow-bandwidth and intermittent-connectivity environments
-
-Designed to support Singapore's Cybersecurity Labelling Scheme (CLS) Level 3/4, iM8, and Japan's Unified Government Standards.
-
-### Documentation — edgesentry-audit
-
-| Document | Description |
-|---|---|
-| [Introduction](docs/audit/en/src/introduction.md) | Vision, three pillars of trust, motivation |
-| [Roadmap](docs/audit/en/src/roadmap.md) | Phased plan: Singapore → Japan → Europe, compliance mapping |
-| [Concepts](docs/audit/en/src/concepts.md) | Tamper-evident design, AuditRecord, hash chain |
-| [Architecture](docs/audit/en/src/architecture.md) | Device side vs cloud side, design flow |
-| [Library Usage](docs/audit/en/src/quickstart.md) | **Start here** — in-memory example, no Docker needed |
-| [Interactive Demo](docs/audit/en/src/demo.md) | End-to-end demo with PostgreSQL + MinIO |
-| [CLI Reference](docs/audit/en/src/cli.md) | CLI commands and lift inspection scenario |
-| [Contributing](docs/audit/en/src/contributing.md) | Prerequisites, tests, static analysis, PR conventions |
-| [Build and Release](docs/audit/en/src/release.md) | Release pipeline and version automation |
-
-## edgesentry-inspect
-
-Detects structural deviations at the field edge by fusing 3D point clouds with reference design data — no cloud round-trip required during inspection.
-
-```
-3D sensor (LiDAR/ToF)
-    │  point cloud
-    ▼
-trilink-core::project          ← 3D → 2D depth map / height map
-    │  depth map (image)
-    ▼
-AI inference                   ← anomaly detection (built-in model or HTTP endpoint)
-    │  bounding boxes + class
-    ▼
-trilink-core::unproject        ← 2D detections → 3D world coords
-    │  world-space anomaly points
-    ▼
-Scan-vs-reference engine       ← compare against reference design geometry
-    │  deviation heatmap + report
-    ▼
-Field display (tablet / AR)    ← inspector sees deviation on site
-    │
-    ▼  (upload report only)
-Cloud audit store              ← immutable evidence + digital twin update
-```
-
-### Target use cases
-
-| Domain | Constraint | How EdgeSentry-Inspect addresses it |
-|---|---|---|
-| Construction site inspection | Full unit scan-and-verdict within 30 min | Edge-only pipeline; no upload before verdict |
-| Maritime structure inspection | Intermittent connectivity; autonomous robot | Local anomaly flag; cloud sync after mission |
-
-### Documentation — edgesentry-inspect
-
-| Document | Description |
-|---|---|
-| [Background](docs/inspect/en/src/background.md) | Problem, pain points, and how it differs from existing solutions |
-| [Requirements](docs/inspect/en/src/requirements.md) | Inspection constraints, KPIs, and regulatory context |
-| [Scenarios](docs/inspect/en/src/scenarios.md) | Step-by-step flows, construction and maritime case studies |
-| [Architecture](docs/inspect/en/src/architecture.md) | Edge-cloud split, AI inference modes, technology choices |
-| [Roadmap](docs/inspect/en/src/roadmap.md) | Milestone plan; links to trilink-core issues for foundation work |
 
 ## Security
 
-To report a vulnerability privately, use [GitHub's private vulnerability reporting](https://github.com/edgesentry/edgesentry-rs/security/advisories/new). See [SECURITY.md](SECURITY.md) for the full disclosure policy, supported versions, response SLAs, and scope.
+Report vulnerabilities via [GitHub private advisory](https://github.com/edgesentry/edgesentry-rs/security/advisories/new). See [SECURITY.md](SECURITY.md).
 
 ## License
 
-This project is licensed under either of:
-
-- [Apache License, Version 2.0](LICENSE-APACHE)
-- [MIT license](LICENSE-MIT)
-
-at your option.
+Apache 2.0 OR MIT — see [LICENSE-APACHE](LICENSE-APACHE) and [LICENSE-MIT](LICENSE-MIT).

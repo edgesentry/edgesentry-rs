@@ -1,4 +1,4 @@
-site_name: edgesentry-rs
+site_name: EdgeSentry-RS
 site_description: Reusable Rust crates and CLI for sensor-to-seal compliance pipelines.
 site_url: https://edgesentry.github.io/edgesentry-rs/
 repo_url: https://github.com/edgesentry/edgesentry-rs
@@ -6,15 +6,6 @@ repo_name: edgesentry/edgesentry-rs
 edit_uri: edit/main/docs/
 
 docs_dir: docs
-
-extra:
-  alternate:
-    - name: English
-      link: /edgesentry-rs/
-      lang: en
-    - name: Japanese
-      link: /edgesentry-rs/ja/
-      lang: ja
 
 theme:
   name: material
@@ -31,52 +22,13 @@ theme:
   features:
     - navigation.sections
     - navigation.top
+    - navigation.tracking
     - search.highlight
     - content.action.edit
     - content.code.copy
 
 plugins:
   - search
-  - i18n:
-      docs_structure: suffix
-      languages:
-        - locale: en
-          default: true
-          name: English
-          build: true
-        - locale: ja
-          name: Japanese
-          build: true
-          nav_translations:
-            Home: ホーム
-            Pipeline: パイプライン
-            Introduction: はじめに
-            Architecture: アーキテクチャ
-            Quickstarts: クイックスタート
-            Safety Monitoring: 安全監視
-            Document Compliance: ドキュメントコンプライアンス
-            Steps: パイプラインステップ
-            Profile Authoring: プロファイル作成
-            CLI Reference: CLIリファレンス
-            Audit: 監査
-            Concepts: コンセプト
-            Quickstart: クイックスタート
-            Key Management: 鍵管理
-            Deployment: デプロイメント
-            Threat Model: 脅威モデル
-            Operations Runbook: 運用ランブック
-            Traceability: トレーサビリティ
-            Inspect: 検査
-            Background: 背景
-            Requirements: 要件
-            Scenarios: シナリオ
-            Security: セキュリティ
-            Overview: 概要
-            Threat Model: 脅威モデル
-            Traceability: トレーサビリティ
-            SBOM: SBOM
-            Legal: 法的要件
-            Admissibility: 証拠能力
 
 extra_javascript:
   - https://unpkg.com/mermaid@10/dist/mermaid.min.js
@@ -95,47 +47,22 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Pipeline:
-    - Introduction: pipeline/introduction.md
-    - Architecture: pipeline/architecture.md
-    - Quickstarts:
-      - Safety Monitoring: pipeline/quickstart-safety-monitoring.md
-      - Document Compliance: pipeline/quickstart-document-compliance.md
-    - Steps:
-      - Step 1 - Ingest: pipeline/step-1-ingest.md
-      - Step 2 - Compute: pipeline/step-2-compute.md
-      - Step 3 - Evaluate: pipeline/step-3-evaluate.md
-      - Step 4 - Assess: pipeline/step-4-assess.md
-      - Step 5 - Explain: pipeline/step-5-explain.md
-      - Step 6 - Document: pipeline/step-6-document.md
-      - Step 7 - Seal: pipeline/step-7-seal.md
-    - Scenario: pipeline/scenario.md
-    - Profile Authoring: pipeline/profile-authoring.md
-    - CV Integration: pipeline/cv-integration.md
-    - Edge / Cloud Split: pipeline/edge-cloud-split.md
-    - Edge / Cloud Implementation: pipeline/edge-cloud-implementation.md
-    - CLI Reference: pipeline/cli-reference.md
-  - Audit:
-    - Introduction: audit/introduction.md
-    - Concepts: audit/concepts.md
-    - Architecture: audit/architecture.md
-    - Quickstart: audit/quickstart.md
-    - CLI Reference: audit/cli.md
-    - Key Management: audit/key_management.md
-    - Deployment: audit/deployment.md
-    - Operations Runbook: audit/operations.md
-  - Security:
+  - Architecture & Pipeline:
+    - Overview: pipeline/index.md
+    - Tier Architecture: pipeline/tier-architecture.md
+    - Tier Implementation: pipeline/tier-implementation.md
+    - CV Adapter Spec: pipeline/ingest-cv-adapter.md
+    - Crate Contracts: crates.md
+    - C/C++ FFI Bridge: ffi-bridge.md
+  - Security & Compliance:
     - Overview: security/index.md
-    - Threat Model: security/threat-model.md
-    - Traceability: security/cls-traceability.md
-    - SBOM: security/sbom.md
-  - Legal:
-    - Admissibility: legal/index.md
-  - Roadmap: roadmap/index.md
-  - Inspect:
-    - Introduction: inspect/introduction.md
-    - Background: inspect/background.md
-    - Requirements: inspect/requirements.md
-    - Scenarios: inspect/scenarios.md
-    - Architecture: inspect/architecture.md
-    - CLI Reference: inspect/cli.md
+    - Compliance Matrix: security/compliance-matrix.md
+    - STRIDE Threat Model: security/threat-model.md
+    - SBOM & Lifecycle: security/sbom-lifecycle.md
+    - Key Management: security/key-management.md
+  - Legal Admissibility: legal.md
+  - Roadmaps:
+    - Overview: roadmap/index.md
+    - Core Pipeline: roadmap/core-pipeline.md
+    - Feature - Inspect: roadmap/feature-inspect.md
+    - Strategy - Compliance: roadmap/strategy-compliance.md

@@ -1,54 +1,84 @@
 # Contributing
 
-Full contribution guidelines:
+## Scope
 
-- **Audit** — [docs/audit/en/src/contributing.md](docs/audit/en/src/contributing.md) (English) · [docs/audit/ja/src/contributing.md](docs/audit/ja/src/contributing.md) (日本語)
-- **Inspect** — [docs/inspect/en/src/contributing.md](docs/inspect/en/src/contributing.md) (English) · [docs/inspect/ja/src/contributing.md](docs/inspect/ja/src/contributing.md) (日本語)
+This repository is a **Rust library and CLI for IoT security primitives**. Business use cases are implemented in application repositories (clarus, documaris, arktrace). Do not add business logic or application-specific documentation here.
 
-## Crate placement principle
+## Crate placement
 
-Every new feature must be placed in the correct layer. The rule is:
-
-| Layer | Crate | What belongs there |
+| Layer | Where | What belongs there |
 |---|---|---|
-| **Pure math / geometry** | [`trilink-core`](https://github.com/edgesentry/trilink-core) | Pinhole projection/unprojection, pose buffer, math types. No I/O, no file formats, no external services. |
-| **OSS inspection pipeline** | `edgesentry-inspect` (this workspace) | Sensor ingress (`FrameSource`, `SensorFrame`, mocks), IFC/PLY parsing, scan pipeline, deviation engine, OSS CLI. |
-| **Commercial application** | [`edgesentry-app`](https://github.com/edgesentry/edgesentry-app) | SQLite egress, BIM server client, PDF compliance reports (CONQUAS/MLIT), Tauri desktop UI. |
+| Pure math / geometry | [`trilink-core`](https://github.com/edgesentry/trilink-core) | Projection, pose buffer, math types — no I/O, no file formats |
+| IoT security primitives | this workspace | Signing, audit chain, physics engine, rule evaluation, document pipeline |
+| Application / business logic | app repos (clarus, documaris, …) | Profiles for specific regulations, business workflows, UI |
 
-**If you are unsure**, ask these questions:
-- Could a non-construction domain (e.g. autonomous vehicles) reuse this? → `trilink-core`
-- Is it inspection-specific but domain-agnostic (open-source)? → `edgesentry-inspect`
-- Does it require a commercial license, SQLite, or proprietary API? → `edgesentry-app`
-
-## Quick start
+## Build and test
 
 ```bash
+cargo build --workspace
 cargo test --workspace
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo deny check licenses
 ```
 
-## Opening issues
+All must pass before committing.
 
-Every new issue must:
+## Language
 
-1. **Carry proper labels** — one type label (`bug`, `enhancement`, `documentation`), one priority label, and one or more category labels (see the per-project contributing guides for the full label reference)
-2. **Be added to the relevant [edgesentry project board](https://github.com/orgs/edgesentry/projects)** with a priority set
+English is the single source of truth for all documentation. Do not create translated (`.ja.md`, etc.) versions — they diverge silently and double the maintenance cost.
+
+## Documentation rules
+
+1. **README.md** — human-facing, high-level only
+2. **AGENTS.md** — agent-facing, high-level only
+3. **Agent Skills** — step-by-step procedures (`npx skills add edgesentry/edgesentry-rs`)
+4. **`docs/`** — supplementary information that fits none of the above
+5. **Do not write what `cargo doc` already shows** — type names, struct fields, method signatures belong in rustdoc only
+6. **No duplication** — each fact lives in exactly one place
+7. **No business use cases** — those belong in application repositories
+8. **Roadmaps** → `docs/roadmap/` (do not delete)
+9. **IoT security compliance** → `docs/security/`
+
+### File naming
+
+All files under `docs/` use `kebab-case.md`. Use role prefixes where they aid discoverability:
+
+| Prefix | Use for |
+|---|---|
+| `feature-` | A specific product feature (e.g. `feature-inspect.md`) |
+| `strategy-` | Market or regulatory strategy (e.g. `strategy-compliance.md`) |
+| `tier-` | Architecture layer documents (e.g. `tier-architecture.md`) |
+| `ingest-` | Pipeline entry-point specs (e.g. `ingest-cv-adapter.md`) |
+
+### Skill-first policy
+
+Before adding a step-by-step procedure to `docs/`, create a Skill instead:
+
+1. `mkdir .agents/skills/<skill-name>`
+2. Write `SKILL.md` with frontmatter (`name`, `description`)
+3. Put reference material in `references/` if the procedure requires it
+4. Link from AGENTS.md skills table
+
+Only add to `docs/` if the content is **reference** (facts, schemas, thresholds), not **procedure** (how-to steps).
+
+## Agent Skills
+
+Skills follow the [agentskills.io](https://agentskills.io/specification) spec and live in `.agents/skills/`.
 
 ```bash
-# Add to the relevant project board after creating the issue
-gh project item-add <project-number> --owner edgesentry --url <issue-url>
+npx skills add edgesentry/edgesentry-rs
 ```
 
-## Issue priorities
+## Issues
+
+Add every new issue to the relevant [project board](https://github.com/orgs/edgesentry/projects) with a priority set.
 
 | Label | Meaning |
-|-------|---------|
-| `priority:P0` | Must have — blocks a release or core functionality |
-| `priority:P1` | Nice to have — high value, scheduled for near-term |
-| `priority:P2` | Good to have — valuable but deferrable |
-| `priority:P3` | Low priority — improvements with no urgency |
+|---|---|
+| `priority:P0` | Blocks a release or core functionality |
+| `priority:P1` | High value, scheduled near-term |
+| `priority:P2` | Valuable but deferrable |
 
-## Reporting a vulnerability
+## Security vulnerabilities
 
-Please see [SECURITY.md](SECURITY.md). Do not open a public issue for security vulnerabilities.
+See [SECURITY.md](SECURITY.md). Do not open a public issue for vulnerabilities.
