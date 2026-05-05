@@ -1,6 +1,5 @@
 # edgesentry-assess
 
-Trend and correlation analysis over a `RiskEvent` stream.
+`eds.risk-event` JSONL → trend and correlation output
 
-## Input → Output
-`RiskEvent` JSONL → trend/correlation output (rising frequency, escalating severity patterns)
+Detects rising frequency and escalating severity patterns across a `RiskEvent` stream.

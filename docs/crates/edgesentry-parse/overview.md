@@ -1,10 +1,5 @@
 # edgesentry-parse
 
-Maritime structured data parsing.
+Maritime CSV/Parquet → `eds.document-entity` JSONL
 
-## Input → Output
-CSV or Parquet (vessel, voyage, cargo fields) → `DocumentEntity` JSONL
-
-## Feature flags
-- `parquet-support` (default on) — enables Parquet; pulls `snap` (C bindings).
-  Disable for WASM: `--no-default-features`.
+`parquet-support` feature (default on) pulls C bindings via `snap`. Disable for WASM builds: `--no-default-features`.
