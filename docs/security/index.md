@@ -32,4 +32,4 @@ edgesentry-rs targets the following certifications. Each document below is a dir
 
 - **[docs/roadmap/strategy-compliance.md](../roadmap/strategy-compliance.md)** — phased plan for SG → JP → EU market compliance
 - **[docs/legal.md](../legal.md)** — legal admissibility of audit records (Evidence Act, RFC 3161)
-- **[docs/pipeline/](../pipeline/)** — edge/cloud split and CV adapter contract
+- **[docs/pipeline/](../pipeline/index.md)** — edge/cloud split and CV adapter contract
