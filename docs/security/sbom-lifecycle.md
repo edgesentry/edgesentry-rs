@@ -70,7 +70,7 @@ The IMDA IoT Cyber Security Guide requires responses across five categories. The
 | Algorithms used | Ed25519 (signing), BLAKE3 (hashing) |
 | Key length | Ed25519: 256-bit; BLAKE3 output: 256-bit |
 | Random number generation | OS CSPRNG via `rand::OsRng` — no custom RNG |
-| Transport encryption | Record-level: Ed25519 signature over payload hash. Native TLS transport is provided: `eds serve-tls --tls-cert / --tls-key` (rustls TLS 1.2/1.3, HTTP) and `eds serve-mqtt --tls-ca-cert` (MQTT over TLS). See [CLS-05 in the Traceability Matrix](cls-traceability.md). |
+| Transport encryption | Record-level: Ed25519 signature over payload hash. Native TLS transport is provided: `eds serve-tls --tls-cert / --tls-key` (rustls TLS 1.2/1.3, HTTP) and `eds serve-mqtt --tls-ca-cert` (MQTT over TLS). See [CLS-05 in the Traceability Matrix](compliance-matrix.md). |
 | Key storage | Public-key registry in memory (`IntegrityPolicyGate`); private key files managed by the deployer. HSM-backed storage planned: [#54](https://github.com/edgesentry/edgesentry-rs/issues/54) |
 | Implementation | `crates/edgesentry-rs/src/identity.rs`, `crates/edgesentry-rs/src/integrity.rs` |
 
@@ -113,7 +113,7 @@ The IMDA IoT Cyber Security Guide requires responses across five categories. The
 | SBOM availability | CycloneDX JSON published with every GitHub Release (see above) |
 | Dependency advisory scanning | `cargo-audit` on every CI build + PR against RustSec Advisory DB |
 | End-of-life policy | `edgesentry-rs` v0.x: current version supported. Security updates are patch releases |
-| Software update integrity | `UpdateVerifier` checks BLAKE3 payload hash and Ed25519 publisher signature before any update is applied — see [CLS-03](cls-traceability.md) |
+| Software update integrity | `UpdateVerifier` checks BLAKE3 payload hash and Ed25519 publisher signature before any update is applied — see [CLS-03](compliance-matrix.md) |
 | Supported versions | See [SECURITY.md](https://github.com/edgesentry/edgesentry-rs/blob/main/SECURITY.md#supported-versions) |
 | CLS reference | CLS-02 / ETSI EN 303 645 §5.2 |
 
@@ -121,4 +121,4 @@ The IMDA IoT Cyber Security Guide requires responses across five categories. The
 
 ## Traceability
 
-This document satisfies Milestone 1.4 in the [Roadmap](../audit/roadmap.md). For the full clause-by-clause compliance mapping see the [Compliance Traceability Matrix](cls-traceability.md).
+This document satisfies Milestone 1.4 in the [Roadmap](../audit/roadmap.md). For the full clause-by-clause compliance mapping see the [Compliance Traceability Matrix](compliance-matrix.md).
