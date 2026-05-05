@@ -121,4 +121,4 @@ The IMDA IoT Cyber Security Guide requires responses across five categories. The
 
 ## Traceability
 
-This document satisfies Milestone 1.4 in the [Roadmap](../audit/roadmap.md). For the full clause-by-clause compliance mapping see the [Compliance Traceability Matrix](compliance-matrix.md).
+This document satisfies Milestone 1.4 in the [Compliance Roadmap](../roadmap/strategy-compliance.md). For the full clause-by-clause compliance mapping see the [Compliance Traceability Matrix](compliance-matrix.md).

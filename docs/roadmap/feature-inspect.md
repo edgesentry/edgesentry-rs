@@ -52,7 +52,7 @@ All foundation items are merged. M2 is also complete. M3 is unblocked.
 - `Cargo.toml` — workspace root; member: `crates/edgesentry-inspect`
 - `src/ifc.rs` — load IFC geometry as `Vec<Point3D>` (design reference cloud)
 - `src/deviation.rs` — k-d tree nearest-neighbour deviation; configurable threshold
-- `src/report.rs` — JSON report serialisation (schema in [architecture.md](architecture.md))
+- `src/report.rs` — JSON report serialisation (schema in `docs/crates.md`)
 - Integration test: load sample IFC fixture → compute deviation against known scan cloud → assert `compliant_pct`, `max_deviation_mm`, `mean_deviation_mm`
 
 ---
@@ -186,7 +186,7 @@ This item is tracked as part of M6. It does not change the `InferenceBackend` tr
 - Offline operation: entire pipeline runs on a single field PC; no cloud dependency during capture.
 - Compliance output: report rendered in BCA submission format.
 
-See [Demo Pipeline](demo.md) for the full walkthrough.
+See `docs/crates.md` for the edgesentry-inspect I/O contract.
 
 ---
 
@@ -194,7 +194,7 @@ See [Demo Pipeline](demo.md) for the full walkthrough.
 
 The ISO 19650 information container schema (BIM status transitions, conformant payload, third-party BIM tool interoperability) is implemented in the edgesentry-rs crate, not here.
 
-See **[edgesentry-audit roadmap — Milestone 2.7](../audit/roadmap.md)** for the implementation plan.
+See **[Compliance roadmap](strategy-compliance.md)** for the implementation plan.
 
 ---
 
