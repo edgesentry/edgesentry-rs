@@ -1,18 +1,7 @@
 # edgesentry-audit
 
-Tamper-evident immutable audit chain.
+Any payload → BLAKE3-hashed, Ed25519-signed `AuditRecord` appended to an immutable chain.
 
-## Input → Output
-Any payload (JSONL, document hash) → `AuditRecord` (BLAKE3 hash + Ed25519 signature)
+Each record hashes its payload and the previous record's hash. `eds audit verify-chain` detects any modification or insertion. Supports offline store-and-forward for intermittent connectivity.
 
-## Design
-- Each record hashes its payload and the hash of the previous record (chain linkage)
-- `verify-chain` detects any modification or insertion
-- Offline buffer: records accumulate locally, sync when connectivity resumes
-
-## CLI
-See `/eds-verify-audit-chain` skill or `eds audit --help`.
-
-## Compliance targets
-CLS Level 3 (Singapore SS 711:2025), JC-STAR (Japan), ETSI EN 303 645 (EU CRA).
-See [docs/roadmap/security-compliance.md).
+Compliance targets: CLS Level 3 (SS 711:2025), JC-STAR, ETSI EN 303 645. See `docs/roadmap/security-compliance.md`.

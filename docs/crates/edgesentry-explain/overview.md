@@ -1,10 +1,5 @@
 # edgesentry-explain
 
-LLM-powered plain-language explanation of `RiskEvent` records.
+`eds.risk-event` + KB file → plain-language explanation string
 
-## Input → Output
-`RiskEvent` + KB file for the rule → natural-language explanation string
-
-## LLM backend
-OpenAI-compatible endpoint (configurable via `--llm-url`). Falls back to structured
-summary without LLM if endpoint is unavailable.
+Calls an OpenAI-compatible endpoint (`--llm-url`). Falls back to a structured summary if the endpoint is unavailable.
