@@ -120,4 +120,4 @@ and which profile files are present — not by build flags or separate binaries.
 The existing `RiskEvent` type is kept for backward compatibility and for the full
 single-tier pipeline (where all steps run at the edge).
 
-For full type definitions and build order, see [edge-cloud-implementation.md](edge-cloud-implementation.md).
+For full type definitions and build order, see [tier-implementation.md](tier-implementation.md).

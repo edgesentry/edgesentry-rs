@@ -3,7 +3,7 @@
 - **Date:** 2026-04-30
 - **Principle:** The edge seals facts. The cloud interprets them.
 - **Constraint:** Same `edgesentry-rs` library used at both edge and cloud. No separate codebase.
-- **Overview:** [edge-cloud-split.md](edge-cloud-split.md)
+- **Overview:** [tier-architecture.md](tier-architecture.md)
 
 ---
 
