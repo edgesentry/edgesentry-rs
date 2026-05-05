@@ -27,7 +27,7 @@ use ed25519_dalek::{SigningKey, VerifyingKey};
 use edgesentry_audit::{
     compute_payload_hash, sign_payload_hash, verify_chain, verify_payload_signature, AuditRecord,
 };
-use rand::rngs::OsRng;
+use rand_core::OsRng;
 
 // ── Thread-local error storage ────────────────────────────────────────────────
 
