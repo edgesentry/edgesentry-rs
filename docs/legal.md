@@ -130,7 +130,7 @@ This means the software version that produced each record must be identifiable.
 
 **Mitigation:** Add `software_version: String` to `AuditRecord` — embed the `eds` binary's
 Git SHA or release tag at compile time via `env!("CARGO_PKG_VERSION")` + build metadata.
-Tracked in the [Roadmap](../roadmap/index.md).
+Tracked in the [Roadmap](../roadmap/core-pipeline.md).
 
 ---
 

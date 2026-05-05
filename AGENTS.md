@@ -53,7 +53,7 @@ Conventional Commits:
 ## Docs
 
 - Crate I/O contracts and constraints: `docs/crates.md`
-- Roadmaps (valuable — do not delete): `docs/roadmap/index.md`, `docs/roadmap/inspect.md`, `docs/roadmap/security-compliance.md`
+- Roadmaps (valuable — do not delete): `docs/roadmap/core-pipeline.md`, `docs/roadmap/feature-inspect.md`, `docs/roadmap/strategy-compliance.md`
 - Security artifacts (valuable — do not delete): `docs/security/` — threat-model, cls-traceability, sbom, key-management
 - CV adapter contract: `docs/pipeline/cv-adapter-spec.md`
 - Edge/cloud split design: `docs/pipeline/edge-cloud-split.md`

@@ -80,7 +80,7 @@ Any payload → BLAKE3-hashed, Ed25519-signed `AuditRecord` appended to an immut
 
 Each record hashes its payload and the previous record's hash. `eds audit verify-chain` detects any modification or insertion. Supports offline store-and-forward for intermittent connectivity.
 
-Compliance targets: CLS Level 3 (SS 711:2025), JC-STAR, ETSI EN 303 645. See `docs/roadmap/security-compliance.md`.
+Compliance targets: CLS Level 3 (SS 711:2025), JC-STAR, ETSI EN 303 645. See `docs/roadmap/strategy-compliance.md`.
 
 # edgesentry-inspect
 
@@ -88,7 +88,7 @@ Point cloud (LiDAR/ToF) → deviation report against a reference geometry.
 
 Depends on `trilink-core` for 3D↔2D projection and unprojection. Do not reimplement those primitives here — they live in `edgesentry/trilink-core`.
 
-See `docs/roadmap/inspect.md`.
+See `docs/roadmap/feature-inspect.md`.
 
 # edgesentry-parse
 
