@@ -130,7 +130,7 @@ This means the software version that produced each record must be identifiable.
 
 **Mitigation:** Add `software_version: String` to `AuditRecord` — embed the `eds` binary's
 Git SHA or release tag at compile time via `env!("CARGO_PKG_VERSION")` + build metadata.
-Tracked in the [Roadmap](../roadmap/core-pipeline.md).
+Tracked in the [Roadmap](roadmap/core-pipeline.md).
 
 ---
 
@@ -204,7 +204,7 @@ The current implementation already exceeds paper-based practice on integrity, co
 
 Legal admissibility overlaps with but is distinct from IoT security certification:
 
-- **IoT security standards** (CLS, ETSI EN 303 645, JC-STAR) define *how* a system should be built — access control, update integrity, network policy. See [`docs/security/`](../security/index.md).
+- **IoT security standards** (CLS, ETSI EN 303 645, JC-STAR) define *how* a system should be built — access control, update integrity, network policy. See [`docs/security/`](security/index.md).
 - **Legal admissibility** defines *what a court or regulator will accept as evidence* — integrity, attribution, trusted timestamp, completeness, non-repudiation. This document covers that.
 
 The two are complementary: a CLS Level 3-certified system is a strong foundation for

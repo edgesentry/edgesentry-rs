@@ -62,7 +62,7 @@ This document is a formal threat-modelling artifact produced for Singapore CLS L
 | M-S-2 | Monotonic sequence numbers and `prev_record_hash` chain continuity are enforced; replayed records are detected as duplicate sequences | `ingest/verify.rs` `check_sequence()` |
 | M-S-3 | Ed25519 signatures bind the payload hash to the private key; a forged `device_id` with the wrong key fails signature verification | `identity.rs` `verify_payload_signature()` |
 
-**Residual risk:** If a device's private key is physically extracted, records can be forged with valid signatures.  Hardware-backed key storage (TPM/SE) is a device-layer control outside the scope of this library; it is noted in the [Roadmap](../audit/roadmap.md).
+**Residual risk:** If a device's private key is physically extracted, records can be forged with valid signatures.  Hardware-backed key storage (TPM/SE) is a device-layer control outside the scope of this library; it is noted in the [Compliance Roadmap](../roadmap/strategy-compliance.md).
 
 ---
 
@@ -85,7 +85,7 @@ This document is a formal threat-modelling artifact produced for Singapore CLS L
 |----|-----------|---------------|
 | M-T-1 | On every ingest the cloud recomputes `BLAKE3(raw_payload)` and compares it to `record.payload_hash`; mismatch → `PayloadHashMismatch` rejection | `ingest/storage.rs` `IngestService::ingest()` |
 | M-T-2 | `payload_hash` is covered by the Ed25519 signature; if the hash is changed the signature no longer verifies | `identity.rs` `verify_payload_signature()` |
-| M-T-3 | Post-ingest tampering of stored objects is detectable by re-verifying the hash from the ledger against the object content; this is an operational control described in the [Operations Runbook](../audit/operations.md) |
+| M-T-3 | Post-ingest tampering of stored objects is detectable by re-verifying the hash from the ledger against the object content; this is an operational control described in the Operations Runbook (see `/eds-ops` skill) |
 | M-T-4 | `prev_record_hash` is validated against the previous accepted record's `hash()`; a break in continuity rejects all subsequent records | `ingest/verify.rs` `check_chain_link()` |
 
 **Residual risk:** Tampering of stored objects after acceptance is a storage-layer concern.  Enabling S3 Object Lock (WORM) or database row-level checksums at the deployment layer eliminates this residual.
@@ -132,11 +132,11 @@ This document is a formal threat-modelling artifact produced for Singapore CLS L
 
 | ID | Mitigation | Code location |
 |----|-----------|---------------|
-| M-I-1 | The HTTP transport is designed to run behind TLS termination (load balancer / Nginx / Cloudflare); raw payload is hex-encoded in the JSON body and must be carried over HTTPS | `transport/http.rs` — TLS is a deployment-layer control; noted in [Operations Runbook](../audit/operations.md) |
+| M-I-1 | The HTTP transport is designed to run behind TLS termination (load balancer / Nginx / Cloudflare); raw payload is hex-encoded in the JSON body and must be carried over HTTPS | `transport/http.rs` — TLS is a deployment-layer control; noted in Operations Runbook (see `/eds-ops` skill) |
 | M-I-2 | Raw payloads are stored by `object_ref` under the caller-specified key; access control is enforced by the storage layer (S3 bucket policy, Postgres GRANT); the library does not expose read APIs to unauthenticated callers | `ingest/storage.rs` `RawDataStore::put()` |
 | M-I-3 | Error messages include `device_id` and `sequence` but never the raw payload bytes; `tracing` spans log `payload_bytes` length only | `ingest/storage.rs` `#[instrument(skip(raw_payload))]` |
 
-**Residual risk:** Encryption at rest for S3 objects and Postgres rows is a deployment-layer control (S3 SSE-KMS, Postgres `pgcrypto` or TDE).  TLS 1.3 for the ingest HTTP endpoint is addressed in the [Roadmap](../audit/roadmap.md) (issue #73).
+**Residual risk:** Encryption at rest for S3 objects and Postgres rows is a deployment-layer control (S3 SSE-KMS, Postgres `pgcrypto` or TDE).  TLS 1.3 for the ingest HTTP endpoint is addressed in the [Compliance Roadmap](../roadmap/strategy-compliance.md) (issue #73).
 
 ---
 

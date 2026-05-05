@@ -11,7 +11,7 @@ Legend:
 
 ## SS 711:2025 Design Principles Coverage
 
-Singapore's national IoT standard SS 711:2025 defines four principles. See the [Roadmap](../audit/roadmap.md) for the full module mapping.
+Singapore's national IoT standard SS 711:2025 defines four principles. See the [Compliance Roadmap](../roadmap/strategy-compliance.md) for the full module mapping.
 
 | Principle | SS 711:2025 Requirement | Status |
 |-----------|------------------------|--------|
@@ -70,7 +70,7 @@ Singapore's national IoT standard SS 711:2025 defines four principles. See the [
 | Implementation | Public key registry: `IntegrityPolicyGate::register_device` ([`src/ingest/policy.rs:20`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/ingest/policy.rs#L20)) |
 | Implementation | Key generation CLI: `eds keygen` ([`src/lib.rs — generate_keypair`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/lib.rs)) |
 | Implementation | Key inspection CLI: `eds inspect-key` ([`src/lib.rs — inspect_key`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/lib.rs)) |
-| Implementation | Provisioning and rotation guidance: [Key Management](../audit/key_management.md) |
+| Implementation | Provisioning and rotation guidance: [Key Management](key-management.md) |
 | Note | HSM-backed key storage (CLS Level 4) is planned in [#54](https://github.com/edgesentry/edgesentry-rs/issues/54) |
 
 ---

@@ -106,7 +106,7 @@ These items are required to demonstrate the full end-to-end pipeline.
 
 ## Legal admissibility — `AuditRecord` hardening
 
-Full requirements analysis: [docs/legal/index.md](../legal/index.md).
+Full requirements analysis: [docs/legal.md](../legal.md).
 The two weakest points are the **trusted timestamp** and the missing **`software_version`** field.
 
 ### Before June 2026 submission (P1)

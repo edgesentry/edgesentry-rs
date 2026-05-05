@@ -65,7 +65,7 @@ Deliver a software reference implementation that satisfies Singapore CLS Level 2
 
 - `edgesentry-bridge` — C-compatible FFI layer exposing Ed25519 signing, signature verification, and hash-chain validation to C/C++ projects
 - **Goal:** inject Singapore-grade security into existing Japanese hardware (gateways, sensors) with minimal modification
-- See [C/C++ FFI Bridge](ffi_bridge.md) for usage, linking instructions, and memory safety conventions
+- See [C/C++ FFI Bridge](../ffi-bridge.md) for usage, linking instructions, and memory safety conventions
 
 ### Milestone 1.3: Compliance Mapping v1.0 ✅ Implemented
 
@@ -157,7 +157,7 @@ ISO 19650 defines the framework for managing information over the whole life cyc
 - Structured BIM status transitions: WIP → Shared → Published, with signed state change records
 - Conformant metadata fields (revision, suitability, classification) mapped to the existing hash-chain record format
 - Interoperability documentation for third-party BIM tool integration
-- This milestone is the audit-crate implementation of the ISO 19650 layer described in the [Inspect roadmap](../inspect/roadmap.md)
+- This milestone is the audit-crate implementation of the ISO 19650 layer described in the [Inspect roadmap](feature-inspect.md)
 
 ---
 
