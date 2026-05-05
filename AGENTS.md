@@ -72,3 +72,6 @@ npx skills add edgesentry/edgesentry-rs
 | `/eds-add-profile-rule` | Adding a new detection rule |
 | `/eds-new-crate` | Scaffolding a new crate |
 | `/eds-verify-audit-chain` | Verifying a sealed audit chain |
+| `/eds-deploy` | Setting up a new deployment (TLS, PostgreSQL, S3, systemd) |
+| `/eds-ops` | Monitoring, backup, or restoring a production instance |
+| `/eds-release` | Publishing a release to crates.io |
