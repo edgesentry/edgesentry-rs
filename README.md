@@ -6,12 +6,60 @@ Trust and verification for edge infrastructure.
 
 - **Documentation:** [edgesentry.github.io/edgesentry-rs/en/](https://edgesentry.github.io/edgesentry-rs/en/)
 
-This repository is a Cargo workspace containing two crates:
+This repository is a Cargo workspace. Core crates:
 
 | Crate | Description |
 |---|---|
 | [edgesentry-audit](crates/edgesentry-audit/) | Ed25519 + BLAKE3 cryptographic audit trail for IoT devices and infrastructure |
 | [edgesentry-inspect](crates/edgesentry-inspect/) | Edge-first 3D scan vs. reference deviation detection for construction and maritime inspection |
+| [edgesentry-parse](crates/edgesentry-parse/) | Maritime CSV ingestion — parses vessel, voyage, and cargo fields |
+| [edgesentry-document](crates/edgesentry-document/) | Port call document generation — fills FAL forms, runs compliance rules |
+| [edgesentry-wasm](crates/edgesentry-wasm/) | WebAssembly bindings — exposes the document pipeline for browser apps via wasm-bindgen |
+
+## Maritime document pipeline (PIER71 / documaris)
+
+The maritime crates implement a port call documentation pipeline consumed by **[documaris](https://documaris.pages.dev)** — a browser-based FAL Form 1 generator for the PIER71-11 Smart Port Challenge.
+
+```
+CSV (vessel + voyage data)
+    │
+    ▼
+edgesentry-parse        ← parse fields, detect missing/vague values
+    │
+    ▼
+edgesentry-document     ← fill FAL Form 1, run compliance rules, render HTML
+    │
+    ▼
+edgesentry-audit        ← BLAKE3 hash + Ed25519 signature → AuditRecord
+    │
+    ▼
+edgesentry-wasm         ← compiled to .wasm, loaded in-browser by documaris
+```
+
+### WASM feature flags
+
+Two dependencies are gated behind optional features to keep the WASM binary free of C code (incompatible with wasm-bindgen):
+
+| Crate | Feature | Dep gated | Reason |
+|-------|---------|-----------|--------|
+| `edgesentry-parse` | `parquet-support` *(default on)* | `parquet` (via `snap`) | `snap` uses C bindings |
+| `edgesentry-document` | `llm` *(default on)* | `ureq` (via `rustls` → `ring`) | `ring` uses C/ASM |
+
+Build for WASM (disables both):
+
+```bash
+cd crates/edgesentry-wasm
+wasm-pack build --target web --no-default-features
+```
+
+### Demo
+
+```bash
+# FAL Form 1 pipeline — TC1 (compliant), TC2 (BWM expired), TC3 (low-confidence)
+bash demo/document-pipeline.sh
+```
+
+See [demo/document-pipeline.sh](demo/document-pipeline.sh) and the [PIER71 runbook](docs/pipeline/pier71-demo-runbook.md).
 
 ## edgesentry-audit
 

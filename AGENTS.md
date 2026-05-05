@@ -11,8 +11,6 @@ All procedures below apply equally to humans and AI agents.
 
 **After every change, verify consistency across code, tests, and docs.** See [Contributing — Consistency Check](docs/audit/en/src/contributing.md#consistency-check) for the checklist.
 
-**English and Japanese documentation must be updated together.** Every change to `docs/*/en/src/*.md` requires a corresponding update to `docs/*/ja/src/*.md`, and vice versa. Never update one language without updating the other.
-
 ## Build and test
 
 ```bash
@@ -71,6 +69,19 @@ All tests must pass before any commit. No clippy warnings allowed.
 
 These are implemented in the `trilink-core` repo ([issues #30–#34](https://github.com/edgesentry/trilink-core/issues)). Do not reimplement them here.
 
+## Quick Reference — Maritime document pipeline (PIER71 / documaris)
+
+### Understanding the system
+- **[WASM build guide](docs/pipeline/wasm-build.md)** — how to compile edgesentry-wasm, feature flag rationale, API reference, integration with documaris
+- **[PIER71 demo runbook](docs/pipeline/pier71-demo-runbook.md)** — TC1/TC2/TC3 test cases, manual run steps, expected outputs
+- **[Document compliance quickstart](docs/pipeline/quickstart-document-compliance.md)** — end-to-end CLI walkthrough
+
+### Key facts
+- Maritime crates: `edgesentry-parse` → `edgesentry-document` → `edgesentry-audit` → `edgesentry-wasm`
+- WASM build requires `--no-default-features` (disables `parquet-support` and `llm` features — both pull C/ASM deps incompatible with wasm-bindgen)
+- Web app consumer: [documaris](https://documaris.pages.dev) (repo: `edgesentry/documaris`)
+- Demo script: `bash demo/document-pipeline.sh`
+
 ## Repository structure
 
 ```
@@ -79,15 +90,19 @@ edgesentry-rs/
     edgesentry-audit/    — cryptographic audit trail (Ed25519, BLAKE3, offline buffer)
     edgesentry-bridge/   — C/C++ FFI bridge for edgesentry-audit
     edgesentry-inspect/  — scan-vs-reference engine (implementation begins at M2)
+    edgesentry-parse/    — maritime CSV ingestion → ParsedDocument
+    edgesentry-document/ — FAL form filling, compliance rules, HTML render
+    edgesentry-wasm/     — wasm-bindgen bindings for browser use
+  demo/
+    document-pipeline.sh — FAL Form 1 end-to-end demo (TC1/TC2/TC3)
   docs/
-    audit/
-      en/src/            — audit documentation (English)
-      ja/src/            — audit documentation (Japanese)
-    inspect/
-      en/src/            — inspect documentation (English)
-      ja/src/            — inspect documentation (Japanese)
+    audit/               — audit documentation (English + Japanese)
+    inspect/             — inspect documentation (English + Japanese)
+    pipeline/            — maritime document pipeline docs
+      wasm-build.md      — WASM compilation, feature flags, API reference
+      pier71-demo-runbook.md — PIER71 test cases and demo steps
   scripts/
-    run_local_demo.sh        — end-to-end audit demo (Docker)
+    run_local_demo.sh    — end-to-end audit demo (Docker)
     preview_docs.sh      — build and serve all docs locally at localhost:8080/edgesentry-rs/
 ```
 

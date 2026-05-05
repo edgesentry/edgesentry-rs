@@ -8,6 +8,9 @@ description = "Maritime structured data parsing — CSV/Parquet → DocumentEnti
 
 [features]
 default = ["parquet-support"]
+# parquet-support: gate the parquet dep behind a feature so WASM builds can disable it.
+# The parquet crate pulls in `snap` which uses C bindings incompatible with wasm-bindgen.
+# Disable with --no-default-features when compiling edgesentry-wasm.
 parquet-support = ["dep:parquet"]
 
 [dependencies]
