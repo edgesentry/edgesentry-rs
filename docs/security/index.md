@@ -26,6 +26,7 @@ modelling, and SBOM artifacts that span the full workspace.
 | [STRIDE Threat Model](threat-model.md) | Full attack-surface analysis: Spoofing, Tampering, Repudiation, Information Disclosure, DoS, Elevation of Privilege — mapped to source code |
 | [CLS / ETSI / JC-STAR Traceability Matrix](cls-traceability.md) | Clause-by-clause mapping of CLS Level 3/4, ETSI EN 303 645, iM8, and JC-STAR requirements to implementation |
 | [SBOM and Vendor Disclosure Checklist](sbom.md) | Software Bill of Materials (CycloneDX format), supply-chain monitoring, and IMDA vendor disclosure checklist responses |
+| [Key Management](key-management.md) | Ed25519 keypair generation, storage practices (HSM/Vault/env), rotation — CLS Provision 5.4 |
 
 ---
 
@@ -54,6 +55,6 @@ Full clause-by-clause breakdown: [CLS / ETSI / JC-STAR Traceability Matrix](cls-
 
 ## Relationship to other doc folders
 
-- **`docs/audit/`** — audit crate internals: `AuditRecord` design, key management, CLI, deployment
+- **`docs/security/key-management.md`** — Ed25519 keypair generation, storage (HSM/Vault/env), rotation
 - **`docs/legal/`** — legally admissible audit log requirements (7-requirement analysis, trusted timestamp, RFC 3161 TSA roadmap)
-- **`docs/pipeline/`** — seven-step pipeline and edge/cloud split design
+- **`docs/pipeline/`** — edge/cloud split design and CV adapter contract

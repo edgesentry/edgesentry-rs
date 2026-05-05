@@ -23,6 +23,10 @@ cargo deny check licenses
 
 All must pass before committing.
 
+## Language
+
+English is the single source of truth for all documentation. Do not create translated (`.ja.md`, etc.) versions — they diverge silently and double the maintenance cost.
+
 ## Documentation rules
 
 1. **README.md** — human-facing, high-level only
