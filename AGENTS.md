@@ -53,7 +53,7 @@ Conventional Commits:
 ## Docs
 
 - Architecture decisions and crate contracts: `docs/crates/<crate>/overview.md`
-- Roadmaps (valuable — do not delete): `docs/crates/edgesentry-audit/roadmap.md`, `docs/crates/edgesentry-inspect/roadmap.md`, `docs/roadmap/index.md`
+- Roadmaps (valuable — do not delete): `docs/roadmap/index.md`, `docs/roadmap/audit.md`, `docs/roadmap/inspect.md`
 - Security artifacts: `docs/security/`
 - CV adapter contract: `docs/pipeline/cv-adapter-spec.md`
 - Edge/cloud split design: `docs/pipeline/edge-cloud-split.md`

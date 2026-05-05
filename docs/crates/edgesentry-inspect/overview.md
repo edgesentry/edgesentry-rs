@@ -20,4 +20,4 @@ point cloud → trilink-core::project → depth map / height map
 Do not reimplement here.
 
 ## Roadmap
-See `roadmap.md`.
+See [docs/roadmap/inspect.md](../../roadmap/inspect.md).
