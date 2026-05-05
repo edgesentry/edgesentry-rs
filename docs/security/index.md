@@ -56,5 +56,5 @@ Full clause-by-clause breakdown: [CLS / ETSI / JC-STAR Traceability Matrix](cls-
 ## Relationship to other doc folders
 
 - **`docs/security/key-management.md`** — Ed25519 keypair generation, storage (HSM/Vault/env), rotation
-- **`docs/legal/`** — legally admissible audit log requirements (7-requirement analysis, trusted timestamp, RFC 3161 TSA roadmap)
+- **`docs/legal.md`** — legally admissible audit log requirements (7-requirement analysis, trusted timestamp, RFC 3161 TSA roadmap)
 - **`docs/pipeline/`** — edge/cloud split design and CV adapter contract
