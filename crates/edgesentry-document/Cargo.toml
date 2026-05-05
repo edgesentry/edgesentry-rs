@@ -8,6 +8,9 @@ description = "Document compliance — AI field filling, rule checking, template
 
 [features]
 default = ["llm"]
+# llm: gate ureq (HTTP client for LLM calls) behind a feature so WASM builds can disable it.
+# ureq pulls in rustls → ring which uses C/ASM code incompatible with wasm-bindgen.
+# Disable with --no-default-features when compiling edgesentry-wasm.
 llm = ["dep:ureq"]
 
 [dependencies]
