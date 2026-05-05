@@ -15,4 +15,4 @@ See `/eds-verify-audit-chain` skill or `eds audit --help`.
 
 ## Compliance targets
 CLS Level 3 (Singapore SS 711:2025), JC-STAR (Japan), ETSI EN 303 645 (EU CRA).
-See [docs/roadmap/audit.md](../../roadmap/audit.md).
+See [docs/security/compliance-roadmap.md).
