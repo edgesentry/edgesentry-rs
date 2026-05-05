@@ -39,6 +39,28 @@ English is the single source of truth for all documentation. Do not create trans
 8. **Roadmaps** → `docs/roadmap/` (do not delete)
 9. **IoT security compliance** → `docs/security/`
 
+### File naming
+
+All files under `docs/` use `kebab-case.md`. Use role prefixes where they aid discoverability:
+
+| Prefix | Use for |
+|---|---|
+| `feature-` | A specific product feature (e.g. `feature-inspect.md`) |
+| `strategy-` | Market or regulatory strategy (e.g. `strategy-compliance.md`) |
+| `tier-` | Architecture layer documents (e.g. `tier-architecture.md`) |
+| `ingest-` | Pipeline entry-point specs (e.g. `ingest-cv-adapter.md`) |
+
+### Skill-first policy
+
+Before adding a step-by-step procedure to `docs/`, create a Skill instead:
+
+1. `mkdir .agents/skills/<skill-name>`
+2. Write `SKILL.md` with frontmatter (`name`, `description`)
+3. Put reference material in `references/` if the procedure requires it
+4. Link from AGENTS.md skills table
+
+Only add to `docs/` if the content is **reference** (facts, schemas, thresholds), not **procedure** (how-to steps).
+
 ## Agent Skills
 
 Skills follow the [agentskills.io](https://agentskills.io/specification) spec and live in `.agents/skills/`.

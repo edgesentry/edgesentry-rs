@@ -66,12 +66,12 @@ Skills live in `.agents/skills/`. Install with:
 npx skills add edgesentry/edgesentry-rs
 ```
 
-| Skill | Use when |
+| Skill | Trigger |
 |---|---|
-| `/eds-dev-workflow` | Before every commit |
-| `/eds-add-profile-rule` | Adding a new detection rule |
-| `/eds-new-crate` | Scaffolding a new crate |
-| `/eds-verify-audit-chain` | Verifying a sealed audit chain |
-| `/eds-deploy` | Setting up a new deployment (TLS, PostgreSQL, S3, systemd) |
-| `/eds-ops` | Monitoring, backup, or restoring a production instance |
-| `/eds-release` | Publishing a release to crates.io |
+| `/eds-dev-workflow` | Before every commit; when CI fails on `cargo clippy` or `cargo deny` |
+| `/eds-add-profile-rule` | Adding a regulation-backed detection rule; when a `RiskEvent` is missing for a known regulation |
+| `/eds-new-crate` | Adding a new pipeline stage or utility crate to the workspace |
+| `/eds-verify-audit-chain` | After `eds audit sign-document`; when investigating a tamper allegation; before submitting to an assessor |
+| `/eds-deploy` | Setting up a new server; when TLS, PostgreSQL, S3, or systemd configuration is needed |
+| `/eds-ops` | When a health check fails; investigating chain lag; running scheduled backup or restore |
+| `/eds-release` | After all tests pass and a version tag is ready; when crates.io publish fails mid-run |
