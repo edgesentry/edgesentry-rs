@@ -151,11 +151,52 @@ pub struct Entity {
     /// `None` until the compute stage populates it. Placeholder — calculation logic is TBD.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub computed_confidence: Option<f32>,
+    /// Named sensor readings — used for non-spatial sensor types (e.g. energy meters, IoT).
+    /// Key: sensor name (e.g. "eui_kwh_m2"), Value: measured value.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sensor_values: Option<std::collections::HashMap<String, f64>>,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ── Entity sensor_values ──────────────────────────────────────────────
+
+    fn base_entity() -> Entity {
+        Entity {
+            id: "TEST-01".into(),
+            class: EntityClass::Person,
+            position: Vec2::new(0.0, 0.0),
+            position_z: None,
+            velocity: Vec2::new(0.0, 0.0),
+            velocity_z: None,
+            timestamp_ms: 0,
+            sensor: None,
+            computed_confidence: None,
+            sensor_values: None,
+        }
+    }
+
+    #[test]
+    fn entity_sensor_values_serialise_round_trip() {
+        let mut vals = std::collections::HashMap::new();
+        vals.insert("eui_kwh_m2".to_string(), 122.5_f64);
+        vals.insert("chiller_cop".to_string(), 0.68_f64);
+        let entity = Entity { sensor_values: Some(vals), ..base_entity() };
+        let json = serde_json::to_string(&entity).unwrap();
+        let decoded: Entity = serde_json::from_str(&json).unwrap();
+        let sv = decoded.sensor_values.unwrap();
+        assert!((sv["eui_kwh_m2"] - 122.5).abs() < 1e-9);
+        assert!((sv["chiller_cop"] - 0.68).abs() < 1e-9);
+    }
+
+    #[test]
+    fn entity_without_sensor_values_is_none() {
+        let json = r#"{"id":"X","class":"Person","position":{"x":0.0,"y":0.0},"velocity":{"x":0.0,"y":0.0},"timestamp_ms":0}"#;
+        let entity: Entity = serde_json::from_str(json).unwrap();
+        assert!(entity.sensor_values.is_none());
+    }
 
     // ── Vec2 ──────────────────────────────────────────────────────────────
 

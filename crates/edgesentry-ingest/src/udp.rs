@@ -53,6 +53,7 @@ impl From<UnityEntityJson> for Entity {
                 position_stddev_z_m: None,
             }),
             computed_confidence: None,
+            sensor_values: None,
         }
     }
 }

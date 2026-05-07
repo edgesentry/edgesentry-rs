@@ -8,3 +8,6 @@ description = "Core entity types — Vec2, Entity, EntityClass — shared across
 
 [dependencies]
 serde = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
