@@ -1,0 +1,37 @@
+[
+  {
+    "rule_id": "EUI_DATA_PRESENT",
+    "field": "eui_kwh_m2",
+    "check": "not_null",
+    "severity": "HIGH",
+    "regulation": "BCA Green Mark 2021 — Section 4.1: Annual Energy Use Intensity (EUI) in kWh/m²/year is mandatory for all submissions. Platinum target: ≤ 115 kWh/m²/year."
+  },
+  {
+    "rule_id": "CHILLER_COP_PRESENT",
+    "field": "chiller_cop",
+    "check": "not_null",
+    "severity": "HIGH",
+    "regulation": "BCA Green Mark 2021 — Section 4.2: Chiller plant efficiency in kW/RT is mandatory for buildings with central chilled water systems. Platinum target: ≤ 0.65 kW/RT."
+  },
+  {
+    "rule_id": "LPD_DATA_PRESENT",
+    "field": "lpd_w_m2",
+    "check": "not_null",
+    "severity": "HIGH",
+    "regulation": "BCA Green Mark 2021 — Section 4.3: Lighting Power Density (LPD) in W/m² is mandatory. Platinum target: ≤ 15 W/m² for retail and commercial spaces."
+  },
+  {
+    "rule_id": "AUDIT_PERIOD_START_PRESENT",
+    "field": "period_start",
+    "check": "not_null",
+    "severity": "MEDIUM",
+    "regulation": "BCA Green Mark 2021 — Section 2: Audit period start date is required to validate 12-month data coverage for renewal submissions."
+  },
+  {
+    "rule_id": "AUDIT_PERIOD_END_PRESENT",
+    "field": "period_end",
+    "check": "not_null",
+    "severity": "MEDIUM",
+    "regulation": "BCA Green Mark 2021 — Section 2: Audit period end date is required to validate 12-month data coverage for renewal submissions."
+  }
+]

@@ -115,6 +115,60 @@ fn make_field(value: Option<String>, threshold: f64) -> FieldValue {
     }
 }
 
+pub fn fill_bca(
+    entity: &edgesentry_parse::BcaOutletEntity,
+    confidence_threshold: f64,
+) -> Result<FilledDocument, String> {
+    let mut fields: HashMap<String, FieldValue> = HashMap::new();
+
+    fields.insert("OUTLET_ID".to_string(), FieldValue {
+        value: entity.outlet_id.clone(),
+        confidence: 0.95,
+        source: FieldSource::Direct,
+        flagged: false,
+    });
+    fields.insert("BUILDING_NAME".to_string(), FieldValue {
+        value: entity.building_name.clone(),
+        confidence: 0.95,
+        source: FieldSource::Direct,
+        flagged: false,
+    });
+    fields.insert("BUILDING_TYPE".to_string(), make_field(entity.building_type.clone(), confidence_threshold));
+    fields.insert("PERIOD_START".to_string(), make_field(entity.period_start.clone(), confidence_threshold));
+    fields.insert("PERIOD_END".to_string(), make_field(entity.period_end.clone(), confidence_threshold));
+    fields.insert(
+        "GROSS_FLOOR_AREA_M2".to_string(),
+        make_field(entity.gross_floor_area_m2.map(|v| v.to_string()), confidence_threshold),
+    );
+    fields.insert(
+        "EUI_KWH_M2".to_string(),
+        make_field(entity.eui_kwh_m2.map(|v| v.to_string()), confidence_threshold),
+    );
+    fields.insert(
+        "CHILLER_COP".to_string(),
+        make_field(entity.chiller_cop.map(|v| v.to_string()), confidence_threshold),
+    );
+    fields.insert(
+        "LPD_W_M2".to_string(),
+        make_field(entity.lpd_w_m2.map(|v| v.to_string()), confidence_threshold),
+    );
+    fields.insert(
+        "WATER_L_M2".to_string(),
+        make_field(entity.water_l_m2.map(|v| v.to_string()), confidence_threshold),
+    );
+    fields.insert("GREEN_MARK_TARGET".to_string(), make_field(entity.green_mark_target.clone(), confidence_threshold));
+    fields.insert("CERTIFYING_BODY".to_string(), make_field(entity.certifying_body.clone(), confidence_threshold));
+
+    let review_required = fields.values().any(|f| f.flagged);
+
+    Ok(FilledDocument {
+        voyage_id: entity.outlet_id.clone(),
+        template: "sg-bca-greenmark".to_string(),
+        fields,
+        review_required,
+    })
+}
+
 pub fn fill(
     entity: &DocumentEntity,
     template: &str,
@@ -354,6 +408,54 @@ mod tests {
             .find(|(k, _)| k == "CREW_COUNT")
             .map(|(_, v)| *v);
         assert_eq!(crew_conf, Some(0.0));
+    }
+
+    // ── BCA fill tests ────────────────────────────────────────────────────────
+
+    fn make_bca_entity(outlet_id: &str, eui: Option<f64>) -> edgesentry_parse::BcaOutletEntity {
+        edgesentry_parse::BcaOutletEntity {
+            outlet_id: outlet_id.to_string(),
+            building_name: "Test Building".to_string(),
+            building_type: Some("Retail".to_string()),
+            period_start: Some("2025-01-01".to_string()),
+            period_end: Some("2025-12-31".to_string()),
+            gross_floor_area_m2: Some(3200.0),
+            eui_kwh_m2: eui,
+            chiller_cop: Some(0.61),
+            lpd_w_m2: Some(13.2),
+            water_l_m2: Some(380.0),
+            green_mark_target: Some("Platinum".to_string()),
+            certifying_body: Some("BCA".to_string()),
+        }
+    }
+
+    #[test]
+    fn fill_bca_compliant_outlet_no_review_required() {
+        let entity = make_bca_entity("B001", Some(108.5));
+        let doc = fill_bca(&entity, 0.80).unwrap();
+        assert!(!doc.review_required, "B001 should not require review");
+        assert_eq!(doc.template, "sg-bca-greenmark");
+        assert_eq!(doc.voyage_id, "B001");
+    }
+
+    #[test]
+    fn fill_bca_missing_eui_flags_review() {
+        let entity = make_bca_entity("B002", None);
+        let doc = fill_bca(&entity, 0.80).unwrap();
+        assert!(doc.review_required, "B002 should require review (EUI missing)");
+        let eui_field = doc.fields.get("EUI_KWH_M2").unwrap();
+        assert!(eui_field.flagged);
+        assert!((eui_field.confidence - 0.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn build_audit_payload_bca_template_id() {
+        let entity = make_bca_entity("B001", Some(108.5));
+        let doc = fill_bca(&entity, 0.80).unwrap();
+        let payload = build_audit_payload(&doc);
+        assert_eq!(payload.template_id, "sg-bca-greenmark");
+        assert_eq!(payload.voyage_id, "B001");
+        assert!(!payload.review_required);
     }
 
     #[test]

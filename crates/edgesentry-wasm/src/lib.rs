@@ -22,6 +22,18 @@ pub fn parse_maritime_csv(csv: &str) -> Result<String, JsError> {
     serde_json::to_string(&entities).map_err(|e| JsError::new(&e.to_string()))
 }
 
+/// Parse a BCA Green Mark outlet CSV string into a JSON array of BcaOutletEntity objects.
+///
+/// Input: CSV text with header:
+/// outlet_id,building_name,building_type,period_start,period_end,gross_floor_area_m2,eui_kwh_m2,chiller_cop,lpd_w_m2,water_l_m2,green_mark_target,certifying_body
+/// Returns: JSON array string, or throws on parse error.
+#[wasm_bindgen]
+pub fn parse_bca_csv(csv: &str) -> Result<String, JsError> {
+    let entities = edgesentry_parse::parse_bca_csv(csv.as_bytes())
+        .map_err(|e| JsError::new(&e))?;
+    serde_json::to_string(&entities).map_err(|e| JsError::new(&e.to_string()))
+}
+
 // ── fill ──────────────────────────────────────────────────────────────────────
 
 /// Fill a FAL form template from a DocumentEntity JSON object.
@@ -40,6 +52,24 @@ pub fn fill(
     let entity: edgesentry_parse::DocumentEntity =
         serde_json::from_str(entity_json).map_err(|e| JsError::new(&e.to_string()))?;
     let filled = edgesentry_document::fill(&entity, template, None, confidence_threshold)
+        .map_err(|e| JsError::new(&e))?;
+    serde_json::to_string(&filled).map_err(|e| JsError::new(&e.to_string()))
+}
+
+/// Fill a BCA Green Mark Section 4 form from a BcaOutletEntity JSON object.
+///
+/// `entity_json`: single BcaOutletEntity (one element from `parse_bca_csv` output)
+/// `confidence_threshold`: fields below this score are flagged (0.0–1.0, default 0.80)
+///
+/// Returns: FilledDocument JSON string with template "sg-bca-greenmark", or throws on error.
+#[wasm_bindgen]
+pub fn fill_bca(
+    entity_json: &str,
+    confidence_threshold: f64,
+) -> Result<String, JsError> {
+    let entity: edgesentry_parse::BcaOutletEntity =
+        serde_json::from_str(entity_json).map_err(|e| JsError::new(&e.to_string()))?;
+    let filled = edgesentry_document::fill_bca(&entity, confidence_threshold)
         .map_err(|e| JsError::new(&e))?;
     serde_json::to_string(&filled).map_err(|e| JsError::new(&e.to_string()))
 }
@@ -77,11 +107,12 @@ pub fn render_html(filled_json: &str, template: &str) -> Result<String, JsError>
         serde_json::from_str(filled_json).map_err(|e| JsError::new(&e.to_string()))?;
 
     let template_html = match template {
-        "fal-form-1"    => include_str!("../../edgesentry-document/templates/fal-form-1.html"),
-        "fal-form-5"    => include_str!("../../edgesentry-document/templates/fal-form-5.html"),
-        "sg-port-entry" => include_str!("../../edgesentry-document/templates/sg-port-entry.html"),
+        "fal-form-1"       => include_str!("../../edgesentry-document/templates/fal-form-1.html"),
+        "fal-form-5"       => include_str!("../../edgesentry-document/templates/fal-form-5.html"),
+        "sg-port-entry"    => include_str!("../../edgesentry-document/templates/sg-port-entry.html"),
+        "sg-bca-greenmark" => include_str!("../../edgesentry-document/templates/sg-bca-greenmark.html"),
         other => return Err(JsError::new(&format!(
-            "unknown template '{other}'; choices: fal-form-1, fal-form-5, sg-port-entry"
+            "unknown template '{other}'; choices: fal-form-1, fal-form-5, sg-port-entry, sg-bca-greenmark"
         ))),
     };
 
@@ -165,6 +196,13 @@ mod tests {
     const CSV_V001: &str = include_str!("../../edgesentry-document/fixtures/voyage_V001_compliant.csv");
     const CSV_V002: &str = include_str!("../../edgesentry-document/fixtures/voyage_V002_bwm_expired.csv");
     const CSV_V003: &str = include_str!("../../edgesentry-document/fixtures/voyage_V003_low_confidence.csv");
+
+    const CSV_B001: &str = include_str!("../../edgesentry-document/fixtures/bca_outlet_B001_compliant.csv");
+    const CSV_B002: &str = include_str!("../../edgesentry-document/fixtures/bca_outlet_B002_missing_eui.csv");
+
+    const BCA_RULES_JSON: &str = include_str!(
+        "../../edgesentry-profile/fixtures/sg-bca-greenmark/rules.json"
+    );
 
     const RULES_JSON: &str = include_str!(
         "../../edgesentry-profile/fixtures/sg-port-compliance/rules.json"
@@ -397,5 +435,45 @@ mod tests {
         let payload_json = build_audit_payload(&filled_json).expect("build_audit_payload");
         let payload: serde_json::Value = serde_json::from_str(&payload_json).unwrap();
         assert_eq!(payload["voyage_id"].as_str().unwrap(), "V001");
+    }
+
+    // ── BCA wasm API tests ────────────────────────────────────────────────────
+
+    #[test]
+    fn wasm_api_parse_bca_csv_returns_valid_json() {
+        let json = parse_bca_csv(CSV_B001).expect("parse_bca_csv");
+        let arr: serde_json::Value = serde_json::from_str(&json).expect("valid JSON");
+        assert!(arr.is_array());
+        assert_eq!(arr[0]["outlet_id"].as_str().unwrap(), "B001");
+        assert_eq!(arr[0]["building_name"].as_str().unwrap(), "Singapore Pools Tampines Hub");
+    }
+
+    #[test]
+    fn wasm_api_fill_bca_compliant_outlet() {
+        let entities_json = parse_bca_csv(CSV_B001).unwrap();
+        let arr: serde_json::Value = serde_json::from_str(&entities_json).unwrap();
+        let entity_json = arr[0].to_string();
+        let filled_json = fill_bca(&entity_json, 0.80).expect("fill_bca");
+        let filled: serde_json::Value = serde_json::from_str(&filled_json).unwrap();
+        assert!(!filled["review_required"].as_bool().unwrap(), "B001 should not require review");
+        assert_eq!(filled["template"].as_str().unwrap(), "sg-bca-greenmark");
+    }
+
+    #[test]
+    fn wasm_api_fill_bca_missing_eui_flags_review() {
+        let entities_json = parse_bca_csv(CSV_B002).unwrap();
+        let arr: serde_json::Value = serde_json::from_str(&entities_json).unwrap();
+        let entity_json = arr[0].to_string();
+        let filled_json = fill_bca(&entity_json, 0.80).expect("fill_bca");
+        let filled: serde_json::Value = serde_json::from_str(&filled_json).unwrap();
+        assert!(filled["review_required"].as_bool().unwrap(), "B002 should require review (EUI missing)");
+
+        // Architecture proof: check() called identically to maritime pipeline
+        let alerts_json = check(&filled_json, BCA_RULES_JSON).expect("check");
+        let alerts: serde_json::Value = serde_json::from_str(&alerts_json).unwrap();
+        assert!(
+            alerts.as_array().unwrap().iter().any(|a| a["rule_id"] == "EUI_DATA_PRESENT"),
+            "EUI_DATA_PRESENT must fire for B002"
+        );
     }
 }

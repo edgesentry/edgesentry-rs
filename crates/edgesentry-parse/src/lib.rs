@@ -186,6 +186,71 @@ pub fn parse_maritime_parquet(path: &Path) -> Result<Vec<DocumentEntity>, String
     Ok(entities)
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BcaOutletEntity {
+    pub outlet_id: String,
+    pub building_name: String,
+    pub building_type: Option<String>,
+    pub period_start: Option<String>,
+    pub period_end: Option<String>,
+    pub gross_floor_area_m2: Option<f64>,
+    pub eui_kwh_m2: Option<f64>,
+    pub chiller_cop: Option<f64>,
+    pub lpd_w_m2: Option<f64>,
+    pub water_l_m2: Option<f64>,
+    pub green_mark_target: Option<String>,
+    pub certifying_body: Option<String>,
+}
+
+pub fn parse_bca_csv(reader: impl std::io::Read) -> Result<Vec<BcaOutletEntity>, String> {
+    let mut bytes = Vec::new();
+    let mut r = reader;
+    std::io::Read::read_to_end(&mut r, &mut bytes).map_err(|e| format!("read error: {e}"))?;
+    let content = String::from_utf8(bytes).map_err(|e| format!("UTF-8 error: {e}"))?;
+
+    let mut lines = content.lines();
+    let header = lines.next().ok_or_else(|| "CSV has no header".to_string())?;
+    let _ = header;
+
+    let mut entities = Vec::new();
+    for (lineno, line) in lines.enumerate() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let fields: Vec<&str> = line.splitn(12, ',').collect();
+        if fields.len() < 12 {
+            return Err(format!("line {}: expected 12 fields, got {}", lineno + 2, fields.len()));
+        }
+
+        let outlet_id = fields[0].trim().to_string();
+        let building_name = fields[1].trim().to_string();
+        if outlet_id.is_empty() {
+            return Err(format!("line {}: outlet_id is required", lineno + 2));
+        }
+        if building_name.is_empty() {
+            return Err(format!("line {}: building_name is required", lineno + 2));
+        }
+
+        entities.push(BcaOutletEntity {
+            outlet_id,
+            building_name,
+            building_type: opt_str(fields[2]),
+            period_start: opt_str(fields[3]),
+            period_end: opt_str(fields[4]),
+            gross_floor_area_m2: opt_f64(fields[5]),
+            eui_kwh_m2: opt_f64(fields[6]),
+            chiller_cop: opt_f64(fields[7]),
+            lpd_w_m2: opt_f64(fields[8]),
+            water_l_m2: opt_f64(fields[9]),
+            green_mark_target: opt_str(fields[10]),
+            certifying_body: opt_str(fields[11]),
+        });
+    }
+
+    Ok(entities)
+}
+
 /// A structured document — key-value pairs extracted from any source.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ParsedDocument {
@@ -351,6 +416,45 @@ V002,MV Star,,MYS,SGSIN,2026-06-18,Steel coils,7208,,32000,2026-04-30,true,QUARA
         let ids: Vec<&str> = frames[0].entities.iter().map(|e| e.id.as_str()).collect();
         assert!(ids.contains(&"FL-01"));
         assert!(ids.contains(&"W-03"));
+    }
+
+    // ── BCA parse tests ───────────────────────────────────────────────────────
+
+    const BCA_FULL_CSV: &str = "\
+outlet_id,building_name,building_type,period_start,period_end,gross_floor_area_m2,eui_kwh_m2,chiller_cop,lpd_w_m2,water_l_m2,green_mark_target,certifying_body
+SP-OUTLET-042,Singapore Pools Tampines Hub,Retail,2025-01-01,2025-12-31,3200,108.5,0.61,13.2,380.0,Platinum,BCA";
+
+    const BCA_MISSING_OPT_CSV: &str = "\
+outlet_id,building_name,building_type,period_start,period_end,gross_floor_area_m2,eui_kwh_m2,chiller_cop,lpd_w_m2,water_l_m2,green_mark_target,certifying_body
+SP-OUTLET-017,Singapore Pools Woodlands CC,Retail,2025-01-01,2025-12-31,2800,,0.63,14.1,395.0,Platinum,BCA";
+
+    #[test]
+    fn parse_bca_csv_all_fields_present() {
+        let result = parse_bca_csv(BCA_FULL_CSV.as_bytes()).unwrap();
+        assert_eq!(result.len(), 1);
+        let e = &result[0];
+        assert_eq!(e.outlet_id, "SP-OUTLET-042");
+        assert_eq!(e.building_name, "Singapore Pools Tampines Hub");
+        assert_eq!(e.building_type, Some("Retail".to_string()));
+        assert_eq!(e.period_start, Some("2025-01-01".to_string()));
+        assert_eq!(e.period_end, Some("2025-12-31".to_string()));
+        assert!((e.gross_floor_area_m2.unwrap() - 3200.0).abs() < 1e-5);
+        assert!((e.eui_kwh_m2.unwrap() - 108.5).abs() < 1e-5);
+        assert!((e.chiller_cop.unwrap() - 0.61).abs() < 1e-5);
+        assert!((e.lpd_w_m2.unwrap() - 13.2).abs() < 1e-5);
+        assert!((e.water_l_m2.unwrap() - 380.0).abs() < 1e-5);
+        assert_eq!(e.green_mark_target, Some("Platinum".to_string()));
+        assert_eq!(e.certifying_body, Some("BCA".to_string()));
+    }
+
+    #[test]
+    fn parse_bca_csv_missing_optional_fields() {
+        let result = parse_bca_csv(BCA_MISSING_OPT_CSV.as_bytes()).unwrap();
+        assert_eq!(result.len(), 1);
+        let e = &result[0];
+        assert_eq!(e.outlet_id, "SP-OUTLET-017");
+        assert!(e.eui_kwh_m2.is_none(), "eui_kwh_m2 should be None when empty");
+        assert!(e.chiller_cop.is_some());
     }
 
     #[test]
