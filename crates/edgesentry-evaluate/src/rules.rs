@@ -25,6 +25,9 @@ pub enum Condition {
     ZoneMember(Vec<Vec2>),
     /// Fire when an AisGap entity's gap duration (velocity.x in seconds) exceeds threshold.
     AisGapGt(f32),
+    /// Fire when a named sensor value on any entity exceeds the threshold.
+    /// Parsed from: "sensor_value:NAME > THRESHOLD"  (only `>` supported)
+    SensorValueGt { name: String, threshold: f32 },
 }
 
 #[derive(Debug, Clone)]
@@ -169,6 +172,20 @@ fn parse_condition(s: &str, zone: Option<Vec<[f32; 2]>>) -> Result<Condition, St
         let t: f32 = rest.trim().parse().map_err(|_| format!("invalid threshold in '{s}'"))?;
         return Ok(Condition::AisGapGt(t));
     }
+    if let Some(rest) = s.strip_prefix("sensor_value:") {
+        // Format: "sensor_value:{name} > {threshold}"
+        let parts: Vec<&str> = rest.splitn(2, " > ").collect();
+        if parts.len() != 2 {
+            return Err(format!("malformed sensor_value condition, expected 'sensor_value:NAME > THRESHOLD', got '{s}'"));
+        }
+        let name = parts[0].trim().to_string();
+        if name.is_empty() {
+            return Err(format!("sensor_value condition missing name in '{s}'"));
+        }
+        let threshold: f32 = parts[1].trim().parse()
+            .map_err(|_| format!("invalid threshold in sensor_value condition '{s}'"))?;
+        return Ok(Condition::SensorValueGt { name, threshold });
+    }
     Err(format!("unknown condition expression: '{s}'"))
 }
 
@@ -289,6 +306,20 @@ pub fn evaluate(rules: &[Rule], entities: &[Entity], timestamp_ms: u64) -> Vec<R
                     }
                 }
             }
+            Condition::SensorValueGt { name, threshold } => {
+                for entity in entities {
+                    if let Some(ref sv) = entity.sensor_values {
+                        if let Some(&val) = sv.get(name.as_str()) {
+                            if val as f32 > *threshold {
+                                events.push(make_event(rule,
+                                    vec![entity.id.clone()],
+                                    val as f32, *threshold, timestamp_ms,
+                                    1.0, EvidenceQuality::Certified));
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -313,6 +344,7 @@ mod tests {
             timestamp_ms: 0,
             sensor: None,
             computed_confidence: None,
+            sensor_values: None,
         }
     }
 
@@ -555,6 +587,7 @@ mod tests {
             timestamp_ms: 0,
             sensor: Some(SensorReading::ais()),
             computed_confidence: None,
+            sensor_values: None,
         }
     }
 
@@ -635,7 +668,7 @@ mod tests {
             velocity: Vec2::new(0.0, 0.0),
             timestamp_ms: 0,
             sensor: None,
-            position_z: None, velocity_z: None, computed_confidence: None,
+            position_z: None, velocity_z: None, computed_confidence: None, sensor_values: None,
         };
         let events = evaluate(&rules, &[vessel], 0);
         assert!(events.iter().any(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH"),
@@ -656,7 +689,7 @@ mod tests {
             velocity: Vec2::new(0.0, 0.0),
             timestamp_ms: 0,
             sensor: None,
-            position_z: None, velocity_z: None, computed_confidence: None,
+            position_z: None, velocity_z: None, computed_confidence: None, sensor_values: None,
         };
         let events = evaluate(&rules, &[vessel], 0);
         assert!(!events.iter().any(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH"),
@@ -805,11 +838,11 @@ mod tests {
 
         let outside = Entity {
             id: "V-001".into(), class: EntityClass::Vessel,
-            position: Vec2::new(299.0, 350.0), velocity: Vec2::new(0.0, 0.0), timestamp_ms: 0, sensor: None, position_z: None, velocity_z: None, computed_confidence: None,
+            position: Vec2::new(299.0, 350.0), velocity: Vec2::new(0.0, 0.0), timestamp_ms: 0, sensor: None, position_z: None, velocity_z: None, computed_confidence: None, sensor_values: None,
         };
         let inside = Entity {
             id: "V-001".into(), class: EntityClass::Vessel,
-            position: Vec2::new(301.0, 350.0), velocity: Vec2::new(0.0, 0.0), timestamp_ms: 0, sensor: None, position_z: None, velocity_z: None, computed_confidence: None,
+            position: Vec2::new(301.0, 350.0), velocity: Vec2::new(0.0, 0.0), timestamp_ms: 0, sensor: None, position_z: None, velocity_z: None, computed_confidence: None, sensor_values: None,
         };
 
         assert!(evaluate(&rules, &[outside], 0).is_empty(),
@@ -852,7 +885,7 @@ mod tests {
         let rules = load_rules(SG_MARITIME_RULES).unwrap();
         let vessel = Entity {
             id: "V-001".into(), class: EntityClass::Vessel,
-            position: Vec2::new(150.0, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 75_000, sensor: None, position_z: None, velocity_z: None, computed_confidence: None,
+            position: Vec2::new(150.0, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 75_000, sensor: None, position_z: None, velocity_z: None, computed_confidence: None, sensor_values: None,
         };
         let events = evaluate(&rules, &[vessel], 75_000);
         assert!(events.is_empty(), "no alert before zone entry at x=150");
@@ -864,7 +897,7 @@ mod tests {
         let rules = load_rules(SG_MARITIME_RULES).unwrap();
         let vessel = Entity {
             id: "V-001".into(), class: EntityClass::Vessel,
-            position: Vec2::new(350.0, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 175_000, sensor: None, position_z: None, velocity_z: None, computed_confidence: None,
+            position: Vec2::new(350.0, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 175_000, sensor: None, position_z: None, velocity_z: None, computed_confidence: None, sensor_values: None,
         };
         let events = evaluate(&rules, &[vessel], 175_000);
         let ev = events.iter().find(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH");
@@ -879,7 +912,7 @@ mod tests {
         for (x, should_fire) in [(299.0f32, false), (301.0f32, true)] {
             let vessel = Entity {
                 id: "V-001".into(), class: EntityClass::Vessel,
-                position: Vec2::new(x, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 0, sensor: None, position_z: None, velocity_z: None, computed_confidence: None,
+                position: Vec2::new(x, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: 0, sensor: None, position_z: None, velocity_z: None, computed_confidence: None, sensor_values: None,
             };
             let fired = evaluate(&rules, &[vessel], 0)
                 .iter().any(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH");
@@ -902,7 +935,7 @@ mod tests {
         for &(ts, x, should_fire) in x_positions {
             let vessel = Entity {
                 id: "V-001".into(), class: EntityClass::Vessel,
-                position: Vec2::new(x, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: ts, sensor: None, position_z: None, velocity_z: None, computed_confidence: None,
+                position: Vec2::new(x, 350.0), velocity: Vec2::new(2.0, 0.0), timestamp_ms: ts, sensor: None, position_z: None, velocity_z: None, computed_confidence: None, sensor_values: None,
             };
             let fired = evaluate(&rules, &[vessel], ts)
                 .iter().any(|e| e.rule_id == "ZONE_ENTRY");
@@ -1148,12 +1181,70 @@ mod tests {
             ..Entity {
                 id: "V-001".into(), class: EntityClass::Vessel,
                 position: Vec2::new(350.0, 350.0), velocity: Vec2::new(2.0, 0.0),
-                timestamp_ms: 0, sensor: None, position_z: None, velocity_z: None, computed_confidence: None,
+                timestamp_ms: 0, sensor: None, position_z: None, velocity_z: None, computed_confidence: None, sensor_values: None,
             }
         };
         let events = evaluate(&rules, &[vessel], 0);
         let evt = events.iter().find(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH").unwrap();
         assert_eq!(evt.evidence_quality, EvidenceQuality::Certified);
         assert!((evt.confidence_cv - 1.0).abs() < 1e-6);
+    }
+
+    // ── SensorValueGt ─────────────────────────────────────────────────────────
+
+    const BCA_RULES_JSON: &str = r#"[
+        {"rule_id":"EUI_PLATINUM_EXCEEDED","condition":"sensor_value:eui_kwh_m2 > 115.0","severity":"HIGH","regulation":"BCA Green Mark 2021 Section 4.1"}
+    ]"#;
+
+    fn bca_entity(id: &str, eui: f64) -> Entity {
+        let mut vals = std::collections::HashMap::new();
+        vals.insert("eui_kwh_m2".to_string(), eui);
+        Entity { sensor_values: Some(vals), ..entity(id, 0.0, 0.0, 0.0, 0.0) }
+    }
+
+    #[test]
+    fn parse_condition_sensor_value_gt() {
+        let rules = load_rules(BCA_RULES_JSON).unwrap();
+        assert_eq!(rules.len(), 1);
+        match &rules[0].condition {
+            Condition::SensorValueGt { name, threshold } => {
+                assert_eq!(name, "eui_kwh_m2");
+                assert!((*threshold - 115.0).abs() < 1e-5);
+            }
+            other => panic!("expected SensorValueGt, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn sensor_value_gt_fires_when_exceeded() {
+        let rules = load_rules(BCA_RULES_JSON).unwrap();
+        let entities = vec![bca_entity("OUTLET-SENSORS", 122.5)];
+        let events = evaluate(&rules, &entities, 1000);
+        let evt = events.iter().find(|e| e.rule_id == "EUI_PLATINUM_EXCEEDED")
+            .expect("EUI_PLATINUM_EXCEEDED must fire when eui=122.5 > 115.0");
+        assert!((evt.measured_value - 122.5).abs() < 0.01);
+        assert!((evt.threshold - 115.0).abs() < 1e-5);
+        assert_eq!(evt.evidence_quality, EvidenceQuality::Certified);
+        assert!((evt.confidence_cv - 1.0).abs() < 1e-6);
+        assert_eq!(evt.entity_ids, vec!["OUTLET-SENSORS"]);
+    }
+
+    #[test]
+    fn sensor_value_gt_no_fire_when_below() {
+        let rules = load_rules(BCA_RULES_JSON).unwrap();
+        let entities = vec![bca_entity("OUTLET-SENSORS", 108.0)];
+        let events = evaluate(&rules, &entities, 0);
+        assert!(!events.iter().any(|e| e.rule_id == "EUI_PLATINUM_EXCEEDED"),
+            "EUI_PLATINUM_EXCEEDED must NOT fire when eui=108.0 < 115.0");
+    }
+
+    #[test]
+    fn sensor_value_gt_no_fire_when_key_absent() {
+        let rules = load_rules(BCA_RULES_JSON).unwrap();
+        // entity has no sensor_values at all
+        let entities = vec![entity("OUTLET-SENSORS", 0.0, 0.0, 0.0, 0.0)];
+        let events = evaluate(&rules, &entities, 0);
+        assert!(!events.iter().any(|e| e.rule_id == "EUI_PLATINUM_EXCEEDED"),
+            "EUI_PLATINUM_EXCEEDED must NOT fire when sensor_values is None");
     }
 }

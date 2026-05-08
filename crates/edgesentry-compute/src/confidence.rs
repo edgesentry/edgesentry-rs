@@ -119,6 +119,7 @@ mod tests {
             timestamp_ms,
             sensor: Some(reading),
             computed_confidence: None,
+            sensor_values: None,
         }
     }
 
@@ -178,6 +179,7 @@ mod tests {
             timestamp_ms: 1000,
             sensor: None,
             computed_confidence: None,
+            sensor_values: None,
         };
         assert!(compute_entity_confidence(&e, &ctx(1000, 0.0)).is_none());
     }

@@ -225,6 +225,28 @@ fn validate_condition(
             }
             Some(zone) => validate_zone(zone, rule_id, idx, report),
         }
+    } else if let Some(rest) = cond.strip_prefix("ais_gap > ") {
+        match rest.trim().parse::<f64>() {
+            Ok(n) if n > 0.0 => {}
+            Ok(_) => report.errors.push(format!(
+                "Rule {idx} ({rule_id}): ais_gap threshold must be > 0"
+            )),
+            Err(_) => report.errors.push(format!(
+                "Rule {idx} ({rule_id}): invalid number in condition \"{cond}\""
+            )),
+        }
+    } else if let Some(rest) = cond.strip_prefix("sensor_value:") {
+        // Format: "sensor_value:{name} > {threshold}"
+        let parts: Vec<&str> = rest.splitn(2, " > ").collect();
+        if parts.len() != 2 || parts[0].trim().is_empty() {
+            report.errors.push(format!(
+                "Rule {idx} ({rule_id}): malformed sensor_value condition, expected 'sensor_value:NAME > THRESHOLD', got \"{cond}\""
+            ));
+        } else if parts[1].trim().parse::<f64>().is_err() {
+            report.errors.push(format!(
+                "Rule {idx} ({rule_id}): invalid threshold in sensor_value condition \"{cond}\""
+            ));
+        }
     } else {
         report.errors.push(format!(
             "Rule {idx} ({rule_id}): unknown condition \"{cond}\""

@@ -291,6 +291,7 @@ impl AisAdapter {
                 timestamp_ms: now_ms,
                 sensor: Some(SensorReading::ais()),
                 computed_confidence: None,
+                sensor_values: None,
             });
         }
 
@@ -316,6 +317,7 @@ impl AisAdapter {
                 timestamp_ms: now_ms,
                 sensor: Some(SensorReading::ais()),
                 computed_confidence: None,
+                sensor_values: None,
             });
         }
 

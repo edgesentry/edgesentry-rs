@@ -64,6 +64,7 @@ impl FileReplayAdapter {
                 timestamp_ms: ts,
                 sensor: Some(sensor),
                 computed_confidence: None,
+                sensor_values: None,
             });
         }
 

@@ -115,6 +115,60 @@ fn make_field(value: Option<String>, threshold: f64) -> FieldValue {
     }
 }
 
+pub fn fill_bca(
+    entity: &edgesentry_parse::BcaOutletEntity,
+    confidence_threshold: f64,
+) -> Result<FilledDocument, String> {
+    let mut fields: HashMap<String, FieldValue> = HashMap::new();
+
+    fields.insert("OUTLET_ID".to_string(), FieldValue {
+        value: entity.outlet_id.clone(),
+        confidence: 0.95,
+        source: FieldSource::Direct,
+        flagged: false,
+    });
+    fields.insert("BUILDING_NAME".to_string(), FieldValue {
+        value: entity.building_name.clone(),
+        confidence: 0.95,
+        source: FieldSource::Direct,
+        flagged: false,
+    });
+    fields.insert("BUILDING_TYPE".to_string(), make_field(entity.building_type.clone(), confidence_threshold));
+    fields.insert("PERIOD_START".to_string(), make_field(entity.period_start.clone(), confidence_threshold));
+    fields.insert("PERIOD_END".to_string(), make_field(entity.period_end.clone(), confidence_threshold));
+    fields.insert(
+        "GROSS_FLOOR_AREA_M2".to_string(),
+        make_field(entity.gross_floor_area_m2.map(|v| v.to_string()), confidence_threshold),
+    );
+    fields.insert(
+        "EUI_KWH_M2".to_string(),
+        make_field(entity.eui_kwh_m2.map(|v| v.to_string()), confidence_threshold),
+    );
+    fields.insert(
+        "CHILLER_COP".to_string(),
+        make_field(entity.chiller_cop.map(|v| v.to_string()), confidence_threshold),
+    );
+    fields.insert(
+        "LPD_W_M2".to_string(),
+        make_field(entity.lpd_w_m2.map(|v| v.to_string()), confidence_threshold),
+    );
+    fields.insert(
+        "WATER_L_M2".to_string(),
+        make_field(entity.water_l_m2.map(|v| v.to_string()), confidence_threshold),
+    );
+    fields.insert("GREEN_MARK_TARGET".to_string(), make_field(entity.green_mark_target.clone(), confidence_threshold));
+    fields.insert("CERTIFYING_BODY".to_string(), make_field(entity.certifying_body.clone(), confidence_threshold));
+
+    let review_required = fields.values().any(|f| f.flagged);
+
+    Ok(FilledDocument {
+        voyage_id: entity.outlet_id.clone(),
+        template: "sg-bca-greenmark".to_string(),
+        fields,
+        review_required,
+    })
+}
+
 pub fn fill(
     entity: &DocumentEntity,
     template: &str,
@@ -169,6 +223,7 @@ struct RuleSpec {
     check: String,
     severity: String,
     regulation: String,
+    threshold: Option<f64>,
 }
 
 const DEMO_TODAY: &str = "2026-06-15";
@@ -207,20 +262,44 @@ pub fn check(doc: &FilledDocument, rules_json: &str) -> Result<Vec<ComplianceAle
                     Some(fv) => fv.value.trim().to_lowercase() == "true",
                 }
             }
+            // Fires when the numeric field value is strictly above the threshold.
+            // Missing or empty fields do not fire (use not_null for that separately).
+            "above_threshold" => {
+                match (rule.threshold, field_val) {
+                    (Some(threshold), Some(fv)) if !fv.value.is_empty() => {
+                        fv.value.trim().parse::<f64>().map(|v| v > threshold).unwrap_or(false)
+                    }
+                    _ => false,
+                }
+            }
             other => {
                 return Err(format!("unknown check type: '{other}'"));
             }
         };
 
         if fires {
+            let field_val_str = field_val.map(|fv| fv.value.as_str()).unwrap_or("");
+            let message = match rule.check.as_str() {
+                "above_threshold" => {
+                    if let Some(threshold) = rule.threshold {
+                        format!(
+                            "{} {} exceeds target of ≤ {}",
+                            rule.field, field_val_str, threshold
+                        )
+                    } else {
+                        format!("{} exceeds threshold", rule.field)
+                    }
+                }
+                "not_expired" => format!("{} has expired ({})", rule.field, field_val_str),
+                "not_null" => format!("{} is missing or empty", rule.field),
+                "not_true" => format!("{} must not be set to true", rule.field),
+                _ => format!("Rule '{}' failed on field '{}'", rule.rule_id, rule.field),
+            };
             alerts.push(ComplianceAlert {
                 rule_id: rule.rule_id.clone(),
                 severity: rule.severity.clone(),
                 field: rule.field.clone(),
-                message: format!(
-                    "Rule '{}' failed check '{}' on field '{}'",
-                    rule.rule_id, rule.check, rule.field
-                ),
+                message,
                 regulation: rule.regulation.clone(),
                 voyage_id: doc.voyage_id.clone(),
             });
@@ -356,6 +435,54 @@ mod tests {
         assert_eq!(crew_conf, Some(0.0));
     }
 
+    // ── BCA fill tests ────────────────────────────────────────────────────────
+
+    fn make_bca_entity(outlet_id: &str, eui: Option<f64>) -> edgesentry_parse::BcaOutletEntity {
+        edgesentry_parse::BcaOutletEntity {
+            outlet_id: outlet_id.to_string(),
+            building_name: "Test Building".to_string(),
+            building_type: Some("Retail".to_string()),
+            period_start: Some("2025-01-01".to_string()),
+            period_end: Some("2025-12-31".to_string()),
+            gross_floor_area_m2: Some(3200.0),
+            eui_kwh_m2: eui,
+            chiller_cop: Some(0.61),
+            lpd_w_m2: Some(13.2),
+            water_l_m2: Some(380.0),
+            green_mark_target: Some("Platinum".to_string()),
+            certifying_body: Some("BCA".to_string()),
+        }
+    }
+
+    #[test]
+    fn fill_bca_compliant_outlet_no_review_required() {
+        let entity = make_bca_entity("B001", Some(108.5));
+        let doc = fill_bca(&entity, 0.80).unwrap();
+        assert!(!doc.review_required, "B001 should not require review");
+        assert_eq!(doc.template, "sg-bca-greenmark");
+        assert_eq!(doc.voyage_id, "B001");
+    }
+
+    #[test]
+    fn fill_bca_missing_eui_flags_review() {
+        let entity = make_bca_entity("B002", None);
+        let doc = fill_bca(&entity, 0.80).unwrap();
+        assert!(doc.review_required, "B002 should require review (EUI missing)");
+        let eui_field = doc.fields.get("EUI_KWH_M2").unwrap();
+        assert!(eui_field.flagged);
+        assert!((eui_field.confidence - 0.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn build_audit_payload_bca_template_id() {
+        let entity = make_bca_entity("B001", Some(108.5));
+        let doc = fill_bca(&entity, 0.80).unwrap();
+        let payload = build_audit_payload(&doc);
+        assert_eq!(payload.template_id, "sg-bca-greenmark");
+        assert_eq!(payload.voyage_id, "B001");
+        assert!(!payload.review_required);
+    }
+
     #[test]
     fn build_audit_payload_is_json_serialisable() {
         let entity = make_entity("V001", Some("2027-03-01"), Some(23));
@@ -365,5 +492,51 @@ mod tests {
         let round_tripped: DocumentAuditPayload = serde_json::from_str(&json).unwrap();
         assert_eq!(round_tripped.voyage_id, payload.voyage_id);
         assert_eq!(round_tripped.template_id, payload.template_id);
+    }
+
+    // ── above_threshold check type ────────────────────────────────────────────
+
+    fn make_bca_doc_with_eui(eui: &str) -> FilledDocument {
+        let mut fields = std::collections::HashMap::new();
+        fields.insert("EUI_KWH_M2".to_string(), FieldValue {
+            value: eui.to_string(),
+            confidence: 0.95,
+            source: FieldSource::Direct,
+            flagged: false,
+        });
+        FilledDocument {
+            voyage_id: "MCH-OUTLET-001".to_string(),
+            template: "sg-bca-greenmark".to_string(),
+            fields,
+            review_required: false,
+        }
+    }
+
+    const BCA_THRESHOLD_RULE: &str = r#"[
+      {"rule_id":"EUI_PLATINUM_EXCEEDED","field":"eui_kwh_m2","check":"above_threshold","threshold":115.0,"severity":"HIGH","regulation":"BCA Green Mark 2021"}
+    ]"#;
+
+    #[test]
+    fn above_threshold_fires_when_value_exceeds() {
+        let doc = make_bca_doc_with_eui("122.5");
+        let alerts = check(&doc, BCA_THRESHOLD_RULE).unwrap();
+        assert!(alerts.iter().any(|a| a.rule_id == "EUI_PLATINUM_EXCEEDED"),
+            "should fire when EUI 122.5 > 115");
+    }
+
+    #[test]
+    fn above_threshold_does_not_fire_when_value_at_or_below() {
+        let doc = make_bca_doc_with_eui("114.9");
+        let alerts = check(&doc, BCA_THRESHOLD_RULE).unwrap();
+        assert!(!alerts.iter().any(|a| a.rule_id == "EUI_PLATINUM_EXCEEDED"),
+            "should not fire when EUI 114.9 ≤ 115");
+    }
+
+    #[test]
+    fn above_threshold_does_not_fire_on_missing_field() {
+        let doc = make_bca_doc_with_eui("");
+        let alerts = check(&doc, BCA_THRESHOLD_RULE).unwrap();
+        assert!(!alerts.iter().any(|a| a.rule_id == "EUI_PLATINUM_EXCEEDED"),
+            "missing value should not fire above_threshold");
     }
 }

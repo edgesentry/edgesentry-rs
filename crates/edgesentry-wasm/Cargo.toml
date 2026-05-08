@@ -22,4 +22,6 @@ js-sys              = "0.3"
 hex                 = { workspace = true }
 # getrandom with js feature is required for rand/ed25519-dalek under wasm32
 getrandom           = { version = "0.2", features = ["js"] }
+# getrandom 0.3 (pulled by rand 0.9 / rand_core 0.9) also needs wasm_js under wasm32
+getrandom03         = { package = "getrandom", version = "0.3", features = ["wasm_js"] }
 

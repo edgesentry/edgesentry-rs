@@ -102,6 +102,7 @@ mod tests {
             timestamp_ms: 0,
             sensor: None,
             computed_confidence: None,
+            sensor_values: None,
         }
     }
 

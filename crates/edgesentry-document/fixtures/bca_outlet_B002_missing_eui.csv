@@ -1,0 +1,2 @@
+outlet_id,building_name,building_type,period_start,period_end,gross_floor_area_m2,eui_kwh_m2,chiller_cop,lpd_w_m2,water_l_m2,green_mark_target,certifying_body
+B002,Singapore Pools Woodlands CC,Retail,2025-01-01,2025-12-31,2800,,0.63,14.1,395.0,Platinum,BCA
