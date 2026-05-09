@@ -19,6 +19,7 @@ IoT security primitives: cryptographic audit trail, physics-based rule evaluatio
 | `edgesentry-scenario` | Synthetic scenario generation — CSV fixtures and UDP simulation |
 | `edgesentry-store` | Trait-abstracted event store |
 | `edgesentry-audit` | Tamper-evident audit chain — Ed25519 + BLAKE3 |
+| `edgesentry-zkp` | Zero-knowledge proof trait — `ZkProgram`, `ZkProof`, mock + SP1 framework support |
 | `edgesentry-inspect` | Edge-first 3D scan vs. reference deviation detection |
 | `edgesentry-parse` | Maritime CSV/Parquet → `DocumentEntity` JSONL |
 | `edgesentry-document` | Document compliance — AI field filling, rule checking, HTML render |

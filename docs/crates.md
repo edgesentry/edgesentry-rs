@@ -82,6 +82,16 @@ Each record hashes its payload and the previous record's hash. `eds audit verify
 
 Compliance targets: CLS Level 3 (SS 711:2025), JC-STAR, ETSI EN 303 645. See `docs/roadmap/strategy-compliance.md`.
 
+# edgesentry-zkp
+
+Generic ZKP infrastructure — `ZkProgram` trait, `ZkProof` envelope, `ZkFramework` enum.
+
+Implementing crates call `prover.prove(private_inputs)` → `ZkProof { framework, program_id, proof_bytes, public_values }` where `public_values` is base64-encoded JSON (the public attestation). `verify()` checks program_id and framework.
+
+SP1 SDK is intentionally NOT a dependency of this crate — it belongs in the implementing crate (e.g. clarus/edge). This avoids licence conflicts (LGPL/MPL transitive deps from SP1) and keeps the trait crate Apache 2.0 / MIT clean.
+
+Current implementations: `GreenMarkProgram` (BCA Green Mark EUI/COP/LPD attestation, in clarus) · `OtIntegrityProgram` (OT software integrity allowlist check, in clarus).
+
 # edgesentry-inspect
 
 Point cloud (LiDAR/ToF) → deviation report against a reference geometry.

@@ -25,7 +25,6 @@
 /// would force every consumer of `edgesentry-zkp` (including embedded targets)
 /// to build them.  Instead, the proving SDK is declared only in the crate that
 /// implements [`ZkProgram`] for a specific domain.
-
 pub mod proof;
 pub mod program;
 pub mod error;
