@@ -1,5 +1,6 @@
 [workspace]
 members = [
+  "crates/edgesentry-zkp",
   "crates/edgesentry-types",
   "crates/eds",
   "crates/edgesentry-audit",
@@ -28,6 +29,7 @@ version = "0.2.0"
 repository = "https://github.com/edgesentry/edgesentry-rs"
 
 [workspace.dependencies]
+base64 = "0.22"
 blake3 = "1.8"
 ed25519-dalek = { version = "2.1", features = ["rand_core"] }
 postcard = { version = "1.1", default-features = false, features = ["alloc"] }

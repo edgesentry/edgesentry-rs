@@ -1,0 +1,29 @@
+[package]
+name = "edgesentry-zkp"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Generic ZKP prove/verify infrastructure for edgesentry-rs"
+
+[features]
+default = []
+# Enable SP1 proof generation (requires x86_64; disabled on embedded targets)
+sp1 = ["dep:sp1-sdk"]
+# Enable SP1 proof verification only (lighter; works on any target)
+sp1-verifier = ["dep:sp1-verifier"]
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+hex = { workspace = true }
+base64 = { workspace = true }
+
+# SP1 proving SDK (optional — heavy, x86_64 only)
+sp1-sdk = { version = "4", optional = true }
+# SP1 standalone verifier (lightweight)
+sp1-verifier = { version = "4", optional = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

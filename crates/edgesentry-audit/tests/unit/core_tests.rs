@@ -15,6 +15,8 @@ fn dummy_record(sequence: u64, prev_record_hash: [u8; 32]) -> AuditRecord {
         signature: [9u8; 64],
         prev_record_hash,
         object_ref: format!("s3://bucket/lift-01/{sequence}.bin"),
+        #[cfg(feature = "zkp")]
+        zk_proof: None,
     }
 }
 
