@@ -9,23 +9,26 @@
 ///
 /// ```text
 /// edgesentry-zkp  (this crate)
-///   ├── ZkProgram trait  — implemented by each application
+///   ├── ZkProgram trait  — implemented by each application crate
 ///   ├── ZkProof          — serialisable proof envelope stored in AuditRecord
-///   └── verify()         — lightweight verification, no proving key required
+///   └── verify()         — lightweight verification (mock only here;
+///                          real SP1/Risc Zero verifiers live in the implementing crate)
 ///
-/// clarus / green_mark.rs  — implements ZkProgram for BCA Green Mark
-/// arktrace / ais_integrity.rs — implements ZkProgram for AIS position proofs
+/// clarus / green_mark    — implements ZkProgram for BCA Green Mark via SP1
+/// arktrace / ais_proof   — implements ZkProgram for AIS position integrity
 /// ```
+///
+/// # Why no SP1 dependency here?
+///
+/// `sp1-sdk` and `risc0-zkvm` are heavyweight build-time dependencies that
+/// require a specific toolchain and target architecture.  Adding them here
+/// would force every consumer of `edgesentry-zkp` (including embedded targets)
+/// to build them.  Instead, the proving SDK is declared only in the crate that
+/// implements [`ZkProgram`] for a specific domain.
 
 pub mod proof;
 pub mod program;
 pub mod error;
-
-#[cfg(feature = "sp1")]
-pub mod sp1;
-
-#[cfg(feature = "sp1-verifier")]
-pub mod sp1_verify;
 
 pub use error::ZkError;
 pub use proof::{ZkProof, ZkFramework};
