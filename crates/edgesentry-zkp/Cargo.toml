@@ -1,0 +1,23 @@
+[package]
+name = "edgesentry-zkp"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Generic ZKP prove/verify infrastructure for edgesentry-rs"
+
+# SP1 and Risc Zero dependencies are NOT declared here intentionally.
+# The trait and proof envelope are framework-agnostic; the actual proving SDK
+# (sp1-sdk, risc0-zkvm) is a heavyweight build-time dependency that belongs in
+# the crate that implements ZkProgram (e.g. the clarus BCA Green Mark prover).
+# This keeps edgesentry-zkp compilable on all targets including embedded.
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+hex = { workspace = true }
+base64 = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

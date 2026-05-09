@@ -1363,6 +1363,7 @@ dependencies = [
  "blake3",
  "clap",
  "ed25519-dalek",
+ "edgesentry-zkp",
  "hex",
  "hyper-util",
  "postcard",
@@ -1544,6 +1545,17 @@ dependencies = [
  "js-sys",
  "serde_json",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "edgesentry-zkp"
+version = "0.2.0"
+dependencies = [
+ "base64",
+ "hex",
+ "serde",
+ "serde_json",
+ "thiserror",
 ]
 
 [[package]]

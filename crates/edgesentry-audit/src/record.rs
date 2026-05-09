@@ -13,6 +13,14 @@ pub struct AuditRecord {
     pub signature: Signature64,
     pub prev_record_hash: Hash32,
     pub object_ref: String,
+    /// Optional ZKP proof attached to this record.
+    ///
+    /// When present, a verifier can confirm that the computation described by
+    /// `object_ref` was performed correctly without accessing the raw sensor
+    /// data.  Absent on records that pre-date ZKP support (`None` ≡ legacy).
+    #[cfg(feature = "zkp")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub zk_proof: Option<edgesentry_zkp::ZkProof>,
 }
 
 impl AuditRecord {

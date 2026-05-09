@@ -30,5 +30,7 @@ pub fn build_signed_record(
         signature,
         prev_record_hash,
         object_ref,
+        #[cfg(feature = "zkp")]
+        zk_proof: None,
     }
 }

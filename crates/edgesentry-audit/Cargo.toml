@@ -46,8 +46,10 @@ s3 = [
 ]
 postgres = ["dep:postgres"]
 buffer-sqlite = ["dep:rusqlite"]
+zkp = ["dep:edgesentry-zkp"]
 
 [dependencies]
+edgesentry-zkp = { path = "../edgesentry-zkp", optional = true }
 blake3.workspace = true
 clap.workspace = true
 ed25519-dalek.workspace = true
