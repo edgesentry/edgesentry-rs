@@ -127,6 +127,8 @@ fn to_audit_record(r: &EdsAuditRecord) -> AuditRecord {
         signature: r.signature,
         prev_record_hash: r.prev_record_hash,
         object_ref: read_str_from_buf(&r.object_ref),
+        #[cfg(feature = "zkp")]
+        zk_proof: None,
     }
 }
 
