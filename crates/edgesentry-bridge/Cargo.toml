@@ -12,6 +12,9 @@ documentation = "https://edgesentry.github.io/edgesentry-rs/audit/ffi_bridge/"
 [lib]
 crate-type = ["cdylib", "staticlib", "rlib"]
 
+[features]
+zkp = ["edgesentry-audit/zkp"]
+
 [dependencies]
 edgesentry-audit = { path = "../edgesentry-audit" }
 ed25519-dalek.workspace = true
