@@ -49,7 +49,7 @@ buffer-sqlite = ["dep:rusqlite"]
 zkp = ["dep:edgesentry-zkp"]
 
 [dependencies]
-edgesentry-zkp = { path = "../edgesentry-zkp", optional = true }
+edgesentry-zkp = { path = "../edgesentry-zkp", version = "0.2.0", optional = true }
 blake3.workspace = true
 clap.workspace = true
 ed25519-dalek.workspace = true
