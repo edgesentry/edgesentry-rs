@@ -290,6 +290,12 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Publish dry-run (edgesentry-rs)
-        run: |
-          cargo publish --dry-run --locked -p edgesentry-audit
+      - name: Publish dry-run (edgesentry-types)
+        run: cargo publish --dry-run --locked -p edgesentry-types
+
+      - name: Publish dry-run (edgesentry-zkp)
+        # Dry-run edgesentry-zkp before edgesentry-audit: audit has an optional dep on
+        # zkp and cargo resolves all deps (including optional) against the registry when
+        # packaging. edgesentry-audit can be added back here once edgesentry-zkp is live
+        # on crates.io.
+        run: cargo publish --dry-run --locked -p edgesentry-zkp
