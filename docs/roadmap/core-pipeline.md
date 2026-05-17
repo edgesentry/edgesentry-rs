@@ -58,6 +58,7 @@ is inspectable; the profiles are valuable because they require domain expertise.
 | 6a — Safety report | `edgesentry-report` | `eds report generate` | ✅ Markdown + PDF done |
 | 6b — Document compliance | `edgesentry-document` | `eds document fill / check / gen` | ✅ Done |
 | 7 — Seal | `edgesentry-audit` | `eds audit sign / verify` | ✅ Done |
+| 8 — Evidence export | `edgesentry-audit` | `eds audit export-aims` | ✅ Done ([#397](https://github.com/edgesentry/edgesentry-rs/issues/397)) |
 
 **Supporting crates:**
 
