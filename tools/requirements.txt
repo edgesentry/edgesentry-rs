@@ -1,0 +1,2 @@
+# tools/aisstream_udp_bridge.py only — nmea_udp_replay uses stdlib
+websockets>=12.0
