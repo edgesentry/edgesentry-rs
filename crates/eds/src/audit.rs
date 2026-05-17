@@ -9,7 +9,9 @@ use edgesentry_audit::{
     write_record_json, write_records_json, AuditRecord,
 };
 use edgesentry_document::{build_audit_payload, FilledDocument};
+use edgesentry_evaluate::RiskEvent;
 use edgesentry_ingest::jsonl::JsonlReader;
+use serde::Serialize;
 
 #[derive(Debug, Subcommand)]
 pub enum AuditCommand {
@@ -117,6 +119,28 @@ pub enum AuditCommand {
         #[cfg(feature = "transport-mqtt-tls")]
         #[arg(long)]
         tls_ca_cert: Option<PathBuf>,
+    },
+    /// Export an ISO/IEC 42001 Annex A.4 evidence pack from an audit chain.
+    ///
+    /// Produces a control-mapped JSON bundle (and optional Markdown summary) aligned to
+    /// A.4.2–A.4.6. This is evidence for a *customer's* AIMS audit — not an ISO 42001
+    /// certificate for Edge Sentry Pte. Ltd.
+    ExportAims {
+        /// AuditRecord JSON array produced by `eds audit sign-record` / `sign-document`.
+        #[arg(long)]
+        chain: PathBuf,
+        /// Optional RiskEvent JSONL for A.4.3 data-resource documentation.
+        #[arg(long)]
+        events: Option<PathBuf>,
+        /// Optional profile directory for A.4.4 tooling documentation.
+        #[arg(long)]
+        profile_dir: Option<PathBuf>,
+        /// Output path for the JSON evidence bundle.
+        #[arg(long)]
+        out: PathBuf,
+        /// Optional path for a human-readable Markdown summary.
+        #[arg(long)]
+        md: Option<PathBuf>,
     },
     /// Sign a filled compliance document and produce a tamper-evident AuditRecord.
     ///
@@ -570,6 +594,10 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
             println!("SIGNED: {} document record(s) written to {}", records.len(), out.display());
         }
 
+            AuditCommand::ExportAims { chain, events, profile_dir, out, md } => {
+            run_export_aims(&chain, events.as_deref(), profile_dir.as_deref(), &out, md.as_deref())?;
+        }
+
         AuditCommand::VerifyDocument { payload, chain } => {
             // Read FilledDocument JSONL (skip schema header via JsonlReader).
             let file = std::fs::File::open(&payload)?;
@@ -629,4 +657,323 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+// ── ISO/IEC 42001 Annex A.4 evidence pack ────────────────────────────────────
+
+#[derive(Serialize)]
+struct AimsEvidencePack {
+    generated_at_ms: u64,
+    eds_version: &'static str,
+    disclaimer: &'static str,
+    a4_2_resource_documentation: A42ResourceDocumentation,
+    a4_3_data_resources: A43DataResources,
+    a4_4_tooling_resources: A44ToolingResources,
+    a4_5_system_resources: A45SystemResources,
+    a4_6_human_resources: A46HumanResources,
+}
+
+#[derive(Serialize)]
+struct A42ResourceDocumentation {
+    audit_chain_file: String,
+    record_count: usize,
+    device_ids: Vec<String>,
+    timestamp_first_ms: Option<u64>,
+    timestamp_last_ms: Option<u64>,
+    chain_valid: bool,
+    chain_error: Option<String>,
+    object_ref_types: Vec<String>,
+}
+
+#[derive(Serialize)]
+struct A43DataResources {
+    data_sources_from_object_refs: Vec<String>,
+    regulations_referenced: Vec<String>,
+    risk_event_count: usize,
+    event_rule_ids: Vec<String>,
+}
+
+#[derive(Serialize)]
+struct A44ToolingResources {
+    eds_version: &'static str,
+    rules_engine_crate: &'static str,
+    profile_dir: Option<String>,
+    rule_count: Option<usize>,
+    rule_ids: Vec<String>,
+}
+
+#[derive(Serialize)]
+struct A45SystemResources {
+    note: &'static str,
+}
+
+#[derive(Serialize)]
+struct A46HumanResources {
+    document_audit_record_count: usize,
+    document_object_refs: Vec<String>,
+    note: &'static str,
+}
+
+fn run_export_aims(
+    chain_path: &std::path::Path,
+    events_path: Option<&std::path::Path>,
+    profile_dir: Option<&std::path::Path>,
+    out_path: &std::path::Path,
+    md_path: Option<&std::path::Path>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let records: Vec<AuditRecord> =
+        serde_json::from_str(&std::fs::read_to_string(chain_path)?)?;
+
+    let chain_valid_result = verify_chain_records(&records);
+    let (chain_valid, chain_error) = match &chain_valid_result {
+        Ok(()) => (true, None),
+        Err(e) => (false, Some(e.to_string())),
+    };
+
+    let (ts_first, ts_last) = {
+        let mut tss: Vec<u64> = records.iter().map(|r| r.timestamp_ms).collect();
+        tss.sort_unstable();
+        (tss.first().copied(), tss.last().copied())
+    };
+
+    let mut device_ids: Vec<String> = records.iter().map(|r| r.device_id.clone()).collect();
+    device_ids.sort();
+    device_ids.dedup();
+
+    let mut object_ref_types: Vec<String> = records
+        .iter()
+        .map(|r| {
+            r.object_ref
+                .split_once(':')
+                .map(|(prefix, _)| prefix.to_string())
+                .unwrap_or_else(|| r.object_ref.clone())
+        })
+        .collect();
+    object_ref_types.sort();
+    object_ref_types.dedup();
+
+    let document_refs: Vec<String> = records
+        .iter()
+        .filter(|r| r.object_ref.starts_with("document:"))
+        .map(|r| r.object_ref.clone())
+        .collect();
+
+    let data_sources: Vec<String> = records
+        .iter()
+        .map(|r| r.object_ref.clone())
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .collect();
+
+    let (risk_event_count, regulations, event_rule_ids) = if let Some(ep) = events_path {
+        let file = std::fs::File::open(ep)?;
+        let mut reader = JsonlReader::open(file)
+            .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
+        let events: Vec<RiskEvent> = reader
+            .records()
+            .collect::<Result<_, _>>()
+            .map_err(|e| -> Box<dyn std::error::Error> { format!("JSONL read: {e}").into() })?;
+
+        let mut regs: Vec<String> =
+            events.iter().map(|e| e.regulation.clone()).collect();
+        regs.sort();
+        regs.dedup();
+
+        let mut rule_ids: Vec<String> =
+            events.iter().map(|e| e.rule_id.clone()).collect();
+        rule_ids.sort();
+        rule_ids.dedup();
+
+        (events.len(), regs, rule_ids)
+    } else {
+        (0, vec![], vec![])
+    };
+
+    let (profile_dir_str, rule_count, rule_ids_from_profile) =
+        if let Some(pd) = profile_dir {
+            match edgesentry_profile::load_profile(pd) {
+                Ok(rules) => {
+                    let mut ids: Vec<String> =
+                        rules.iter().map(|r| r.rule_id.clone()).collect();
+                    ids.sort();
+                    (Some(pd.display().to_string()), Some(ids.len()), ids)
+                }
+                Err(e) => {
+                    eprintln!("warning: could not load profile: {e}");
+                    (Some(pd.display().to_string()), None, vec![])
+                }
+            }
+        } else {
+            (None, None, vec![])
+        };
+
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+
+    let pack = AimsEvidencePack {
+        generated_at_ms: now_ms,
+        eds_version: env!("CARGO_PKG_VERSION"),
+        disclaimer: "Control-aligned evidence for customer AIMS audits — \
+            not an ISO/IEC 42001 certificate for Edge Sentry Pte. Ltd.",
+        a4_2_resource_documentation: A42ResourceDocumentation {
+            audit_chain_file: chain_path.display().to_string(),
+            record_count: records.len(),
+            device_ids,
+            timestamp_first_ms: ts_first,
+            timestamp_last_ms: ts_last,
+            chain_valid,
+            chain_error,
+            object_ref_types,
+        },
+        a4_3_data_resources: A43DataResources {
+            data_sources_from_object_refs: data_sources,
+            regulations_referenced: regulations,
+            risk_event_count,
+            event_rule_ids,
+        },
+        a4_4_tooling_resources: A44ToolingResources {
+            eds_version: env!("CARGO_PKG_VERSION"),
+            rules_engine_crate: "edgesentry-evaluate",
+            profile_dir: profile_dir_str,
+            rule_count,
+            rule_ids: rule_ids_from_profile,
+        },
+        a4_5_system_resources: A45SystemResources {
+            note: "Per-inference compute logging is Phase 2 (edgesentry-rs #399). \
+                Instrument `eds evaluate` with --resource-log to capture CPU%, RSS, and wall time.",
+        },
+        a4_6_human_resources: A46HumanResources {
+            document_audit_record_count: document_refs.len(),
+            document_object_refs: document_refs,
+            note: "HITL review records are identified from object_refs prefixed 'document:' \
+                in the audit chain. Payload content (review_required, fields_flagged) is \
+                sealed at signing time.",
+        },
+    };
+
+    let json = serde_json::to_string_pretty(&pack)?;
+    std::fs::write(out_path, &json)?;
+    println!("AIMS_EXPORT: {} record(s) → {}", pack.a4_2_resource_documentation.record_count, out_path.display());
+    println!("  chain_valid: {}", pack.a4_2_resource_documentation.chain_valid);
+    println!("  controls:    A.4.2 A.4.3 A.4.4 A.4.5 A.4.6");
+
+    if let Some(mp) = md_path {
+        let markdown = render_aims_markdown(&pack);
+        std::fs::write(mp, &markdown)?;
+        println!("  markdown:    {}", mp.display());
+    }
+
+    Ok(())
+}
+
+fn render_aims_markdown(pack: &AimsEvidencePack) -> String {
+    let a42 = &pack.a4_2_resource_documentation;
+    let a43 = &pack.a4_3_data_resources;
+    let a44 = &pack.a4_4_tooling_resources;
+    let a46 = &pack.a4_6_human_resources;
+
+    let ts_range = match (a42.timestamp_first_ms, a42.timestamp_last_ms) {
+        (Some(f), Some(l)) => format!("{f} – {l} ms"),
+        _ => "—".to_string(),
+    };
+    let chain_status = if a42.chain_valid {
+        "VALID".to_string()
+    } else {
+        format!("INVALID — {}", a42.chain_error.as_deref().unwrap_or("unknown error"))
+    };
+
+    let mut lines = vec![
+        "# ISO/IEC 42001 Annex A.4 — AI Resource Governance Evidence Pack".to_string(),
+        "".to_string(),
+        format!("> **Disclaimer:** {}", pack.disclaimer),
+        "".to_string(),
+        format!("Generated: `{}` (eds v{})", pack.generated_at_ms, pack.eds_version),
+        "".to_string(),
+        "---".to_string(),
+        "".to_string(),
+        "## A.4.2 — Resource Documentation".to_string(),
+        "".to_string(),
+        format!("| Field | Value |"),
+        format!("|---|---|"),
+        format!("| Audit chain file | `{}` |", a42.audit_chain_file),
+        format!("| Record count | {} |", a42.record_count),
+        format!("| Device IDs | {} |", a42.device_ids.join(", ")),
+        format!("| Timestamp range | {} |", ts_range),
+        format!("| Chain integrity | {} |", chain_status),
+        format!("| Object ref types | {} |", a42.object_ref_types.join(", ")),
+        "".to_string(),
+        "## A.4.3 — Data Resources".to_string(),
+        "".to_string(),
+    ];
+
+    if a43.risk_event_count > 0 {
+        lines.push(format!("**Risk events:** {}", a43.risk_event_count));
+        lines.push("".to_string());
+        if !a43.event_rule_ids.is_empty() {
+            lines.push(format!("**Rule IDs triggered:** {}", a43.event_rule_ids.join(", ")));
+            lines.push("".to_string());
+        }
+        if !a43.regulations_referenced.is_empty() {
+            lines.push("**Regulations referenced:**".to_string());
+            lines.push("".to_string());
+            for reg in &a43.regulations_referenced {
+                lines.push(format!("- {reg}"));
+            }
+            lines.push("".to_string());
+        }
+    } else {
+        lines.push("_No RiskEvent JSONL provided. Pass `--events` to populate._".to_string());
+        lines.push("".to_string());
+    }
+
+    if !a43.data_sources_from_object_refs.is_empty() {
+        lines.push("**Data sources (from audit chain object_refs):**".to_string());
+        lines.push("".to_string());
+        for src in &a43.data_sources_from_object_refs {
+            lines.push(format!("- `{src}`"));
+        }
+        lines.push("".to_string());
+    }
+
+    lines.push("## A.4.4 — Tooling Resources".to_string());
+    lines.push("".to_string());
+    lines.push("| Field | Value |".to_string());
+    lines.push("|---|---|".to_string());
+    lines.push(format!("| eds version | {} |", a44.eds_version));
+    lines.push(format!("| Rules engine | `{}` |", a44.rules_engine_crate));
+    if let Some(pd) = &a44.profile_dir {
+        lines.push(format!("| Profile dir | `{pd}` |"));
+    }
+    if let Some(rc) = a44.rule_count {
+        lines.push(format!("| Rule count | {rc} |"));
+    }
+    if !a44.rule_ids.is_empty() {
+        lines.push(format!("| Rule IDs | {} |", a44.rule_ids.join(", ")));
+    }
+    lines.push("".to_string());
+
+    lines.push("## A.4.5 — System and Computing Resources".to_string());
+    lines.push("".to_string());
+    lines.push(format!("> {}", pack.a4_5_system_resources.note));
+    lines.push("".to_string());
+
+    lines.push("## A.4.6 — Human Resources".to_string());
+    lines.push("".to_string());
+    lines.push(format!(
+        "**HITL document records in chain:** {}",
+        a46.document_audit_record_count
+    ));
+    lines.push("".to_string());
+    if !a46.document_object_refs.is_empty() {
+        for r in &a46.document_object_refs {
+            lines.push(format!("- `{r}`"));
+        }
+        lines.push("".to_string());
+    }
+    lines.push(format!("> {}", a46.note));
+    lines.push("".to_string());
+
+    lines.join("\n")
 }
