@@ -1111,3 +1111,45 @@ fn ais_maritime_events_have_certified_evidence_quality() {
             quality, v["rule_id"].as_str().unwrap_or("?"));
     }
 }
+
+#[test]
+fn export_aims_exits_zero_and_writes_json_bundle() {
+    let n = FILE_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let chain = TmpFile::new(&format!("chain_{n}.json"));
+    let bundle = TmpFile::new(&format!("aims_{n}.json"));
+    let md = TmpFile::new(&format!("aims_{n}.md"));
+
+    eds()
+        .args(["audit", "demo-lift-inspection", "--out-file"])
+        .arg(chain.path())
+        .output()
+        .expect("demo-lift-inspection");
+
+    let out = eds()
+        .args(["audit", "export-aims", "--chain"])
+        .arg(chain.path())
+        .args(["--out"])
+        .arg(bundle.path())
+        .args(["--md"])
+        .arg(md.path())
+        .output()
+        .expect("eds audit export-aims");
+
+    assert!(out.status.success(), "export-aims failed: {}", stderr(&out));
+    let s = stdout(&out);
+    assert!(s.contains("AIMS_EXPORT"), "stdout must contain AIMS_EXPORT");
+    assert!(s.contains("chain_valid: true"), "chain must be valid");
+    assert!(s.contains("controls:    A.4.2 A.4.3 A.4.4 A.4.5 A.4.6"), "all controls present");
+
+    let json: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(bundle.path()).expect("bundle.json"))
+            .expect("bundle must be valid JSON");
+    assert!(json["a4_2_resource_documentation"]["chain_valid"].as_bool() == Some(true));
+    assert!(json["a4_2_resource_documentation"]["record_count"].as_u64() == Some(3));
+    assert!(json["disclaimer"].is_string());
+
+    let md_content = fs::read_to_string(md.path()).expect("aims.md");
+    assert!(md_content.contains("A.4.2"), "markdown must have A.4.2 section");
+    assert!(md_content.contains("A.4.6"), "markdown must have A.4.6 section");
+    assert!(md_content.contains("Disclaimer"), "markdown must include disclaimer");
+}
