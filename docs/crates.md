@@ -82,6 +82,24 @@ Each record hashes its payload and the previous record's hash. `eds audit verify
 
 Compliance targets: CLS Level 3 (SS 711:2025), JC-STAR, ETSI EN 303 645. See `docs/roadmap/strategy-compliance.md`.
 
+## eds audit export-aims
+
+**Input:** AuditRecord JSON array (`--chain`) · optional `RiskEvent` JSONL (`--events`) · optional profile directory (`--profile-dir`)
+
+**Output:** JSON evidence bundle (`--out`) · optional Markdown summary (`--md`)
+
+Maps the chain to ISO/IEC 42001 Annex A.4 controls:
+
+| Control | What is populated |
+|---|---|
+| A.4.2 Resource documentation | Record count, device IDs, timestamp range, chain validity, `object_ref` types |
+| A.4.3 Data resources | Unique `object_ref`s, rule IDs triggered, regulations referenced (from `--events`) |
+| A.4.4 Tooling resources | `eds` version, `edgesentry-evaluate` crate, rule count and IDs (from `--profile-dir`) |
+| A.4.5 System and computing resources | Phase 2 placeholder — see issue [#399](https://github.com/edgesentry/edgesentry-rs/issues/399) |
+| A.4.6 Human resources | `document:` object refs counted as HITL-reviewed records |
+
+All output includes a disclaimer: *control-aligned evidence for a customer's AIMS audit — not an ISO/IEC 42001 certificate.*
+
 # edgesentry-zkp
 
 Generic ZKP infrastructure — `ZkProgram` trait, `ZkProof` envelope, `ZkFramework` enum.
