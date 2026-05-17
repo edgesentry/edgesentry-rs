@@ -250,6 +250,12 @@ impl AisAdapter {
     ///
     /// Gap entities are emitted at most once per gap event: the MMSI is
     /// removed from `last_seen_ms` after a gap fires.
+    /// Bound UDP address (for tests and diagnostics).
+    #[cfg(test)]
+    pub fn local_addr(&self) -> std::io::Result<std::net::SocketAddr> {
+        self.socket.local_addr()
+    }
+
     pub fn recv_entities(&mut self) -> Result<Vec<Entity>, String> {
         let mut buf = [0u8; 65535];
         let (len, _) = self
@@ -466,6 +472,63 @@ mod tests {
         let cs = body.bytes().fold(0u8, |a, b| a ^ b);
         let sentence = format!("!{body}*{cs:02X}");
         assert!(parse_vdm(&sentence).is_none());
+    }
+
+    #[test]
+    fn parse_sg_maritime_ais_fixture_file() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("fixtures/sg_maritime_ais.nmea");
+        let content = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        let mut count = 0usize;
+        for line in content.lines() {
+            let line = line.trim();
+            if !line.starts_with("!AIVDM") {
+                continue;
+            }
+            let report = parse_vdm(line)
+                .unwrap_or_else(|| panic!("fixture sentence must parse: {line}"));
+            assert_eq!(report.mmsi, 563_012_345);
+            count += 1;
+        }
+        assert_eq!(count, 5, "sg_maritime_ais.nmea should contain 5 sentences");
+    }
+
+    #[test]
+    fn parse_demo_sg_strait_15min_fixture_file() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../demo/sg-strait-15min.nmea");
+        let content = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        let mut count = 0usize;
+        for line in content.lines() {
+            let line = line.trim();
+            if !line.starts_with("!AIVDM") {
+                continue;
+            }
+            parse_vdm(line)
+                .unwrap_or_else(|| panic!("demo fixture sentence must parse: {line}"));
+            count += 1;
+        }
+        assert_eq!(count, 30, "sg-strait-15min.nmea should contain 30 sentences");
+    }
+
+    #[test]
+    fn ais_adapter_udp_receives_type1_sentence() {
+        let toml = r#"
+[reference_point]
+lat_deg = 1.2640
+lon_deg = 103.8200
+"#;
+        let port_ref = load_port_ref(toml).unwrap();
+        let mut adapter = AisAdapter::bind("127.0.0.1:0", port_ref).unwrap();
+        let dest = adapter.local_addr().unwrap();
+        let sender = std::net::UdpSocket::bind("127.0.0.1:0").unwrap();
+        let sentence = encode_type1(563_012_345, 1.2658, 103.8200, 5.0, 0.0);
+        sender.send_to(sentence.as_bytes(), dest).unwrap();
+        let entities = adapter.recv_entities().unwrap();
+        assert_eq!(entities.len(), 1);
+        assert_eq!(entities[0].id, "563012345");
     }
 
     // ── load_port_ref tests ───────────────────────────────────────────────

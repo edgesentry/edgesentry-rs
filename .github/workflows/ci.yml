@@ -76,6 +76,14 @@ jobs:
       - name: CLI integration tests (serve + serve-tls)
         run: cargo test -p eds --features transport-http,transport-tls --test cli_integration
 
+      - name: AIS NMEA tools unit tests (ubuntu only)
+        if: matrix.os == 'ubuntu-latest'
+        run: python3 -m unittest discover -s tools -p 'test_*.py' -v
+
+      - name: AIS UDP demo benchmark (offline, ubuntu only)
+        if: matrix.os == 'ubuntu-latest'
+        run: ./demo/rpi5_live_ais_benchmark.sh --skip-build --duration 18 --speed 30
+
   license_check:
     name: OSS License Check
     runs-on: ubuntu-latest
