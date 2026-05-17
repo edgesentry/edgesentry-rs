@@ -9,6 +9,14 @@ Utilities for **issue [#404](https://github.com/edgesentry/edgesentry-rs/issues/
 | `aisstream_udp_bridge.py` | aisstream.io WebSocket → NMEA UDP (needs `AISSTREAM_API_KEY`) |
 | `generate_sg_strait_fixture.py` | Regenerate `demo/sg-strait-15min.nmea` |
 
+## Tests
+
+```bash
+cargo test -p edgesentry-ingest ais_nmea
+cargo test -p edgesentry-evaluate sg_maritime_nmea
+python3 -m unittest discover -s tools -p 'test_*.py' -v
+```
+
 ## Quick start (offline)
 
 ```bash

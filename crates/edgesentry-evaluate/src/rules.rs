@@ -655,6 +655,60 @@ mod tests {
     }
 
     #[test]
+    fn sg_maritime_nmea_fixture_triggers_restricted_zone_approach() {
+        use edgesentry_compute::latlon_to_local;
+        use edgesentry_ingest::ais_nmea::{load_port_ref, parse_vdm};
+
+        let nmea = include_str!("../../edgesentry-ingest/fixtures/sg_maritime_ais.nmea");
+        let params = include_str!(
+            "../../edgesentry-profile/fixtures/sg-maritime-security/params.toml"
+        );
+        let rules_json = include_str!(
+            "../../edgesentry-profile/fixtures/sg-maritime-security/rules.json"
+        );
+        let port_ref = load_port_ref(params).expect("sg-maritime-security params.toml");
+        let rules = load_rules(rules_json).expect("sg-maritime-security rules.json");
+
+        let mut zone_fired = false;
+        for (i, line) in nmea.lines().enumerate() {
+            let line = line.trim();
+            if !line.starts_with("!AIVDM") {
+                continue;
+            }
+            let report = parse_vdm(line).expect("fixture NMEA must parse");
+            let (x, y) = latlon_to_local(
+                report.lat_deg,
+                report.lon_deg,
+                port_ref.lat_deg,
+                port_ref.lon_deg,
+            );
+            let vessel = Entity {
+                id: report.mmsi.to_string(),
+                class: EntityClass::Vessel,
+                position: Vec2::new(x, y),
+                velocity: Vec2::new(0.0, 0.0),
+                timestamp_ms: (i as u64) * 30_000,
+                sensor: None,
+                position_z: None,
+                velocity_z: None,
+                computed_confidence: None,
+                sensor_values: None,
+            };
+            let events = evaluate(&rules, &[vessel], (i as u64) * 30_000);
+            if events
+                .iter()
+                .any(|e| e.rule_id == "RESTRICTED_ZONE_APPROACH")
+            {
+                zone_fired = true;
+            }
+        }
+        assert!(
+            zone_fired,
+            "vessel track in sg_maritime_ais.nmea must enter restricted zone"
+        );
+    }
+
+    #[test]
     fn evaluate_maritime_zone_fires_for_vessel_inside() {
         let rules_json = include_str!(
             "../../edgesentry-profile/fixtures/maritime-zone-test/rules.json"
