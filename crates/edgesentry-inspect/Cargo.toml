@@ -24,7 +24,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 rstar = "0.12"
-glam = "0.32.1"
+glam = "0.33.0"
 image = { version = "0.25", default-features = false, features = ["png"] }
 toml = "1"
 ureq = "2"
