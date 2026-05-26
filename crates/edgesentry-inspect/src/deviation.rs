@@ -43,7 +43,7 @@ pub fn per_point_deviations_mm(scan: &[Point3D], reference: &[Point3D]) -> Vec<f
 
     scan.iter()
         .map(|pt| {
-            let nearest = tree.nearest_neighbor(&[pt.x, pt.y, pt.z]).unwrap();
+            let nearest = tree.nearest_neighbor([pt.x, pt.y, pt.z]).unwrap();
             let dist_sq: f32 = nearest
                 .iter()
                 .zip([pt.x, pt.y, pt.z])
