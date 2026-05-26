@@ -4817,7 +4817,7 @@ dependencies = [
 [[package]]
 name = "trilink-core"
 version = "0.1.1"
-source = "git+https://github.com/edgesentry/trilink-core.git?rev=72afa31#72afa31795b8d338134935434de534b90ccc965d"
+source = "git+https://github.com/edgesentry/trilink-core.git?rev=b8dada7ee696315d0b93f462c9ff27f001483dfd#b8dada7ee696315d0b93f462c9ff27f001483dfd"
 dependencies = [
  "glam",
  "serde",
