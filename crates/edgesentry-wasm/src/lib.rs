@@ -74,6 +74,18 @@ pub fn fill_bca(
     serde_json::to_string(&filled).map_err(|e| JsError::new(&e.to_string()))
 }
 
+/// Fill port cyber clearance certificate from indago `*_facts.json`.
+///
+/// `facts_json`: ClearanceFacts JSON (indago `write_evaluation_artifacts`)
+/// `verify_url`: third-party verification URL printed on the certificate
+#[wasm_bindgen]
+pub fn fill_clearance(facts_json: &str, verify_url: &str) -> Result<String, JsError> {
+    let facts = edgesentry_document::parse_clearance_facts_json(facts_json)
+        .map_err(|e| JsError::new(&e))?;
+    let filled = edgesentry_document::fill_clearance(&facts, verify_url);
+    serde_json::to_string(&filled).map_err(|e| JsError::new(&e.to_string()))
+}
+
 // ── check ─────────────────────────────────────────────────────────────────────
 
 /// Check a FilledDocument against a compliance rules JSON array.
@@ -107,12 +119,13 @@ pub fn render_html(filled_json: &str, template: &str) -> Result<String, JsError>
         serde_json::from_str(filled_json).map_err(|e| JsError::new(&e.to_string()))?;
 
     let template_html = match template {
-        "fal-form-1"       => include_str!("../../edgesentry-document/templates/fal-form-1.html"),
-        "fal-form-5"       => include_str!("../../edgesentry-document/templates/fal-form-5.html"),
-        "sg-port-entry"    => include_str!("../../edgesentry-document/templates/sg-port-entry.html"),
-        "sg-bca-greenmark" => include_str!("../../edgesentry-document/templates/sg-bca-greenmark.html"),
+        "fal-form-1"             => include_str!("../../edgesentry-document/templates/fal-form-1.html"),
+        "fal-form-5"             => include_str!("../../edgesentry-document/templates/fal-form-5.html"),
+        "sg-port-entry"          => include_str!("../../edgesentry-document/templates/sg-port-entry.html"),
+        "sg-bca-greenmark"       => include_str!("../../edgesentry-document/templates/sg-bca-greenmark.html"),
+        "port-cyber-clearance"   => include_str!("../../edgesentry-document/templates/port-cyber-clearance.html"),
         other => return Err(JsError::new(&format!(
-            "unknown template '{other}'; choices: fal-form-1, fal-form-5, sg-port-entry, sg-bca-greenmark"
+            "unknown template '{other}'; choices: fal-form-1, fal-form-5, sg-port-entry, sg-bca-greenmark, port-cyber-clearance"
         ))),
     };
 
@@ -475,5 +488,46 @@ mod tests {
             alerts.as_array().unwrap().iter().any(|a| a["rule_id"] == "EUI_DATA_PRESENT"),
             "EUI_DATA_PRESENT must fire for B002"
         );
+    }
+
+    // ── Port cyber clearance (W5) wasm API tests ─────────────────────────────
+
+    const HOLD_FACTS: &str =
+        include_str!("../../edgesentry-document/fixtures/clearance/vessel-hold_facts.json");
+    const CLEAN_FACTS: &str =
+        include_str!("../../edgesentry-document/fixtures/clearance/vessel-clean_facts.json");
+    const VERIFY_URL: &str = "https://verify.example/clearance/wasm-test";
+
+    #[test]
+    fn wasm_api_fill_clearance_hold() {
+        let filled_json = fill_clearance(HOLD_FACTS, VERIFY_URL).expect("fill_clearance");
+        let filled: serde_json::Value = serde_json::from_str(&filled_json).unwrap();
+        assert!(filled["review_required"].as_bool().unwrap());
+        assert_eq!(filled["template"].as_str().unwrap(), "port-cyber-clearance");
+        assert_eq!(
+            filled["fields"]["OUTCOME"]["value"].as_str().unwrap(),
+            "HOLD"
+        );
+    }
+
+    #[test]
+    fn wasm_api_fill_clearance_pass() {
+        let filled_json = fill_clearance(CLEAN_FACTS, VERIFY_URL).expect("fill_clearance");
+        let filled: serde_json::Value = serde_json::from_str(&filled_json).unwrap();
+        assert!(!filled["review_required"].as_bool().unwrap());
+        assert_eq!(
+            filled["fields"]["OUTCOME"]["value"].as_str().unwrap(),
+            "PASS"
+        );
+    }
+
+    #[test]
+    fn wasm_api_render_clearance_html_hold() {
+        let filled_json = fill_clearance(HOLD_FACTS, VERIFY_URL).expect("fill_clearance");
+        let html = render_html(&filled_json, "port-cyber-clearance").expect("render_html");
+        assert!(html.contains("HOLD"));
+        assert!(html.contains("vessel-hold"));
+        assert!(html.contains(VERIFY_URL));
+        assert!(html.contains("SG-CC-001"));
     }
 }

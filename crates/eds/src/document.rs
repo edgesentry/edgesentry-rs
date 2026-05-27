@@ -2,7 +2,10 @@ use clap::Subcommand;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use edgesentry_document::{check, fill, render_html, ComplianceAlert, FilledDocument};
+use edgesentry_document::{
+    check, fill, fill_clearance, parse_clearance_facts_json, render_html, ComplianceAlert,
+    FilledDocument, PORT_CYBER_CLEARANCE_HTML,
+};
 use edgesentry_ingest::jsonl::{JsonlReader, JsonlWriter};
 use edgesentry_parse::DocumentEntity;
 
@@ -43,6 +46,15 @@ pub enum DocumentCommand {
         #[arg(long)]
         out: PathBuf,
     },
+    /// Render port cyber clearance HTML from indago `*_facts.json` (Cap Vista W5).
+    RenderClearance {
+        #[arg(long)]
+        facts: PathBuf,
+        #[arg(long, default_value = "https://verify.edgesentry.io/clearance/poc")]
+        verify_url: String,
+        #[arg(long)]
+        out: PathBuf,
+    },
 }
 
 pub fn run(cmd: DocumentCommand) -> Result<(), Box<dyn std::error::Error>> {
@@ -55,6 +67,9 @@ pub fn run(cmd: DocumentCommand) -> Result<(), Box<dyn std::error::Error>> {
         }
         DocumentCommand::Gen { input, template, out } => {
             run_gen(&input, &template, &out)
+        }
+        DocumentCommand::RenderClearance { facts, verify_url, out } => {
+            run_render_clearance(&facts, &verify_url, &out)
         }
     }
 }
@@ -151,13 +166,38 @@ fn run_gen(
         "fal-form-1" => FAL_FORM_1,
         "fal-form-5" => FAL_FORM_5,
         "sg-port-entry" => SG_PORT_ENTRY,
+        "port-cyber-clearance" => PORT_CYBER_CLEARANCE_HTML,
         other => {
-            return Err(format!("unknown template '{}'; choices: fal-form-1, fal-form-5, sg-port-entry", other).into());
+            return Err(format!(
+                "unknown template '{}'; choices: fal-form-1, fal-form-5, sg-port-entry, port-cyber-clearance",
+                other
+            )
+            .into());
         }
     };
 
     let rendered = render_html(&doc, template_html);
     fs::write(out, rendered)?;
     eprintln!("document gen: rendered '{}' → {}", template, out.display());
+    Ok(())
+}
+
+fn run_render_clearance(
+    facts_path: &PathBuf,
+    verify_url: &str,
+    out: &PathBuf,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let content = fs::read_to_string(facts_path)?;
+    let facts = parse_clearance_facts_json(&content)
+        .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
+    let doc = fill_clearance(&facts, verify_url);
+    let rendered = render_html(&doc, PORT_CYBER_CLEARANCE_HTML);
+    fs::write(out, rendered)?;
+    eprintln!(
+        "document render-clearance: {} → {} ({})",
+        facts_path.display(),
+        out.display(),
+        doc.fields.get("OUTCOME").map(|f| f.value.as_str()).unwrap_or("?")
+    );
     Ok(())
 }

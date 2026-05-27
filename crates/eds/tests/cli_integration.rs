@@ -1292,3 +1292,64 @@ fn run_sign_verify_clearance(manifest_path: &PathBuf) {
     assert!(verify.status.success(), "verify-clearance: {}", stderr(&verify));
     assert!(stdout(&verify).contains("VERIFIED"));
 }
+
+// ── port cyber clearance document (W5) ────────────────────────────────────────
+
+fn clearance_facts_fixture(name: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../edgesentry-document/fixtures/clearance")
+        .join(name)
+}
+
+#[test]
+fn render_clearance_hold_writes_html() {
+    let facts = clearance_facts_fixture("vessel-hold_facts.json");
+    assert!(facts.is_file(), "missing fixture: {}", facts.display());
+
+    let out = TmpFile::new("clearance_hold.html");
+    let render = eds()
+        .args(["document", "render-clearance", "--facts"])
+        .arg(&facts)
+        .args([
+            "--verify-url",
+            "https://verify.example/clearance/hold-demo",
+            "--out",
+        ])
+        .arg(out.path())
+        .output()
+        .expect("eds document render-clearance");
+
+    assert!(render.status.success(), "render-clearance: {}", stderr(&render));
+    assert!(
+        stderr(&render).contains("HOLD"),
+        "stderr should report HOLD outcome: {}",
+        stderr(&render)
+    );
+
+    let html = fs::read_to_string(out.path()).expect("read html");
+    assert!(html.contains("HOLD"));
+    assert!(html.contains("vessel-hold"));
+    assert!(html.contains("SG-CC-001"));
+    assert!(html.contains("https://verify.example/clearance/hold-demo"));
+    assert!(!html.contains("{{OUTCOME}}"));
+}
+
+#[test]
+fn render_clearance_pass_writes_html() {
+    let facts = clearance_facts_fixture("vessel-clean_facts.json");
+    let out = TmpFile::new("clearance_pass.html");
+
+    let render = eds()
+        .args(["document", "render-clearance", "--facts"])
+        .arg(&facts)
+        .args(["--verify-url", "https://verify.example/clearance/pass-demo", "--out"])
+        .arg(out.path())
+        .output()
+        .expect("eds document render-clearance");
+
+    assert!(render.status.success(), "render-clearance: {}", stderr(&render));
+    let html = fs::read_to_string(out.path()).expect("read html");
+    assert!(html.contains("PASS"));
+    assert!(html.contains("vessel-clean"));
+    assert!(!html.contains("SG-CC-001"));
+}
