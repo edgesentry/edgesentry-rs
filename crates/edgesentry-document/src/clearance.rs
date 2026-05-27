@@ -287,6 +287,44 @@ mod tests {
     }
 
     #[test]
+    fn hold_facts_parse_audit_evidence_fields() {
+        let facts = parse_clearance_facts_json(HOLD_FACTS).unwrap();
+        assert!(facts.bom_baseline_ref.is_some());
+        assert!(facts.cve_snapshot_ref.is_some());
+        assert_eq!(
+            facts.integrated_snapshot_fingerprint.as_deref(),
+            Some("e4a3bb87687d7686c16a26c785714660960abc9d9849d278919d9c0992c89ae5"),
+        );
+        assert_eq!(facts.impacted_paths.len(), 1);
+        assert_eq!(
+            facts.impacted_paths[0].component_purl.as_deref(),
+            Some("pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"),
+        );
+    }
+
+    #[test]
+    fn audit_evidence_html_renders_g11_g12_hashes_and_impacted_path() {
+        let facts = parse_clearance_facts_json(HOLD_FACTS).unwrap();
+        let doc = fill_clearance(&facts, "https://verify.example/clearance/demo");
+        let section = doc.fields.get("AUDIT_EVIDENCE_HTML").expect("field").value.as_str();
+        assert!(section.contains("ad9e87da1c02487a746f5c086fb2d315719cbc48e2aa3bb5ed60c3e27ab27f06"));
+        assert!(section.contains("490d61991f404f6004d94657a81a0ce8b24724eade8e5ddf532d3bcb8c9cbe43"));
+        assert!(section.contains("e4a3bb87687d7686c16a26c785714660960abc9d9849d278919d9c0992c89ae5"));
+        assert!(section.contains("log4j-core"));
+        assert!(section.contains("GHSA-jfhr-c2vg-8q4j"));
+        assert!(section.contains("10.0"));
+    }
+
+    #[test]
+    fn audit_evidence_html_pass_vessel_shows_no_impacted_paths() {
+        let facts = parse_clearance_facts_json(CLEAN_FACTS).unwrap();
+        let doc = fill_clearance(&facts, "https://verify.example/clearance/demo");
+        let section = doc.fields.get("AUDIT_EVIDENCE_HTML").expect("field").value.as_str();
+        assert!(section.contains("No impacted paths on evaluation"));
+        assert!(facts.impacted_paths.is_empty());
+    }
+
+    #[test]
     fn render_clearance_html_contains_outcome_and_verify() {
         let facts = parse_clearance_facts_json(HOLD_FACTS).unwrap();
         let doc = fill_clearance(&facts, "https://verify.example/clearance/abc123");
@@ -295,8 +333,9 @@ mod tests {
         assert!(html.contains("vessel-hold"));
         assert!(html.contains("https://verify.example/clearance/abc123"));
         assert!(html.contains("SG-CC-001"));
-        assert!(html.contains("Audit evidence"));
-        assert!(html.contains("Integrated BOM"));
+        assert!(html.contains("Audit evidence (G11 / G12)"));
+        assert!(html.contains("Frozen BOM baseline"));
+        assert!(html.contains("ad9e87da1c02487a746f5c086fb2d315719cbc48e2aa3bb5ed60c3e27ab27f06"));
         assert!(!html.contains("{{OUTCOME}}"));
         assert!(!html.contains("{{AUDIT_EVIDENCE_HTML}}"));
     }

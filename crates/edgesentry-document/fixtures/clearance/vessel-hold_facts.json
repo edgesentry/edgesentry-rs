@@ -4,13 +4,13 @@
   "outcome": "hold",
   "decision_hash": "04398d601ec92d5e5ee92046b4a0099acb82e3704685d66e74277b21373e4a78",
   "bom_baseline_ref": {
-    "asset_map_path": "/Users/yoheionishi/work/edgesentry/indago/fixtures/asset_map.yaml",
+    "asset_map_path": "indago/fixtures/asset_map.yaml",
     "asset_map_sha256": "94627670cc4cb7fb37e030d76cc7504a35cc57b7e022f3fa479853476e4a57bf",
-    "sbom_path": "/Users/yoheionishi/work/edgesentry/indago/fixtures/sbom/vessel-hold.json",
+    "sbom_path": "indago/fixtures/sbom/vessel-hold.json",
     "sbom_sha256": "ad9e87da1c02487a746f5c086fb2d315719cbc48e2aa3bb5ed60c3e27ab27f06"
   },
   "cve_snapshot_ref": {
-    "cve_snapshot_path": "/Users/yoheionishi/work/edgesentry/indago/fixtures/cve/snapshot-2026-05-26.json",
+    "cve_snapshot_path": "indago/fixtures/cve/snapshot-2026-05-26.json",
     "cve_snapshot_sha256": "490d61991f404f6004d94657a81a0ce8b24724eade8e5ddf532d3bcb8c9cbe43"
   },
   "integrated_snapshot_fingerprint": "e4a3bb87687d7686c16a26c785714660960abc9d9849d278919d9c0992c89ae5",
