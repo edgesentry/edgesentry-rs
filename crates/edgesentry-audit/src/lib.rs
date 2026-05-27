@@ -1,4 +1,5 @@
 mod agent;
+pub mod clearance;
 pub mod buffer;
 pub mod identity;
 pub mod integrity;
@@ -28,6 +29,10 @@ pub use ingest::{PostgresAuditLedger, PostgresOperationLog, PostgresStoreError};
 pub use ingest::{
     AsyncAuditLedger, AsyncInMemoryAuditLedger, AsyncInMemoryOperationLog,
     AsyncInMemoryRawDataStore, AsyncIngestService, AsyncOperationLogStore, AsyncRawDataStore,
+};
+pub use clearance::{
+    build_clearance_payload_bytes, manifest_body_from_value, parse_clearance_manifest_json,
+    payload_hash_hex, ClearanceAuditPayload, ClearanceManifestBody,
 };
 pub use record::{AuditRecord, Hash32, Signature64};
 

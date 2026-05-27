@@ -1153,3 +1153,142 @@ fn export_aims_exits_zero_and_writes_json_bundle() {
     assert!(md_content.contains("A.4.6"), "markdown must have A.4.6 section");
     assert!(md_content.contains("Disclaimer"), "markdown must include disclaimer");
 }
+
+// ── port cyber clearance (W4) ─────────────────────────────────────────────────
+
+fn clearance_manifest_fixture() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../edgesentry-audit/fixtures/clearance/vessel-hold_evaluation_manifest.json")
+}
+
+#[test]
+fn sign_clearance_verify_chain_and_manifest() {
+    let manifest_path = clearance_manifest_fixture();
+    assert!(manifest_path.exists(), "fixture missing: {}", manifest_path.display());
+
+    let chain = TmpFile::new("clearance_chain.json");
+    let sign = eds()
+        .args([
+            "audit",
+            "sign-clearance",
+            "--manifest",
+        ])
+        .arg(&manifest_path)
+        .args(["--key", PRIV_HEX, "--device-id", "port-clearance-poc", "--out"])
+        .arg(chain.path())
+        .output()
+        .expect("sign-clearance");
+    assert!(sign.status.success(), "sign-clearance: {}", stderr(&sign));
+
+    let chain_check = eds()
+        .args(["audit", "verify-chain", "--records-file"])
+        .arg(chain.path())
+        .output()
+        .expect("verify-chain");
+    assert!(chain_check.status.success(), "verify-chain: {}", stderr(&chain_check));
+    assert!(stdout(&chain_check).contains("CHAIN_VALID"));
+
+    let verify = eds()
+        .args([
+            "audit",
+            "verify-clearance",
+            "--manifest",
+        ])
+        .arg(&manifest_path)
+        .args(["--chain"])
+        .arg(chain.path())
+        .output()
+        .expect("verify-clearance");
+    assert!(verify.status.success(), "verify-clearance: {}", stderr(&verify));
+    let vout = stdout(&verify);
+    assert!(vout.contains("VERIFIED"));
+    assert!(vout.contains("vessel-hold"));
+    assert!(vout.contains("hold"));
+}
+
+fn indago_repo_root() -> Option<PathBuf> {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../indago");
+    let eval = root.join("pipelines/maritime_cyber/eval.py");
+    if eval.is_file() {
+        Some(root)
+    } else {
+        None
+    }
+}
+
+/// Generate a manifest via indago `evaluate_port_clearance`, then sign with eds (W4 smoke).
+#[test]
+fn sign_clearance_with_indago_generated_manifest() {
+    let indago = match indago_repo_root() {
+        Some(p) => p,
+        None => {
+            eprintln!("skip: sibling indago repo not found");
+            return;
+        }
+    };
+
+    let out_dir = TmpFile::new("indago_eval_out");
+    fs::create_dir_all(out_dir.path()).expect("mkdir");
+
+    let py = format!(
+        r#"
+import json
+from pathlib import Path
+from pipelines.maritime_cyber.eval import evaluate_port_clearance, write_evaluation_artifacts
+from pipelines.maritime_cyber.graph import build_maritime_cyber_graph
+
+g = build_maritime_cyber_graph(["vessel-hold"])
+r = evaluate_port_clearance("vessel-hold", graph_result=g)
+paths = write_evaluation_artifacts(r, Path("{}"))
+print(json.dumps({{"manifest": str(paths["manifest"])}}))
+"#,
+        out_dir.path().display()
+    );
+
+    let gen = Command::new("uv")
+        .args(["run", "python", "-c", &py])
+        .current_dir(&indago)
+        .output()
+        .expect("uv run indago eval");
+
+    if !gen.status.success() {
+        let uv = Command::new("python3")
+            .args(["-c", &py])
+            .current_dir(&indago)
+            .env("PYTHONPATH", indago.to_str().unwrap())
+            .output()
+            .expect("python indago eval");
+        assert!(uv.status.success(), "indago eval failed:\n{}\n{}", stderr(&uv), stdout(&uv));
+        let meta: serde_json::Value = serde_json::from_str(stdout(&uv).trim()).expect("json");
+        let manifest = PathBuf::from(meta["manifest"].as_str().expect("manifest path"));
+        run_sign_verify_clearance(&manifest);
+        return;
+    }
+
+    let meta: serde_json::Value = serde_json::from_str(stdout(&gen).trim()).expect("json");
+    let manifest = PathBuf::from(meta["manifest"].as_str().expect("manifest path"));
+    run_sign_verify_clearance(&manifest);
+}
+
+fn run_sign_verify_clearance(manifest_path: &PathBuf) {
+    assert!(manifest_path.exists(), "manifest missing: {}", manifest_path.display());
+    let chain = TmpFile::new("indago_clearance_chain.json");
+    let sign = eds()
+        .args(["audit", "sign-clearance", "--manifest"])
+        .arg(manifest_path)
+        .args(["--key", PRIV_HEX, "--device-id", "port-clearance-poc", "--out"])
+        .arg(chain.path())
+        .output()
+        .expect("sign-clearance");
+    assert!(sign.status.success(), "sign-clearance: {}", stderr(&sign));
+
+    let verify = eds()
+        .args(["audit", "verify-clearance", "--manifest"])
+        .arg(manifest_path)
+        .args(["--chain"])
+        .arg(chain.path())
+        .output()
+        .expect("verify-clearance");
+    assert!(verify.status.success(), "verify-clearance: {}", stderr(&verify));
+    assert!(stdout(&verify).contains("VERIFIED"));
+}

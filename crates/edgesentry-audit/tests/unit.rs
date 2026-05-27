@@ -1,3 +1,5 @@
+#[path = "unit/clearance_tests.rs"]
+mod clearance_tests;
 #[path = "unit/core_tests.rs"]
 mod core_tests;
 #[path = "unit/network_policy_tests.rs"]
