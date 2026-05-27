@@ -1,0 +1,10 @@
+{
+  "vessel_key": "vessel-clean",
+  "port_call_id": "port-call-demo-sgsin",
+  "outcome": "pass",
+  "decision_hash": "23f3c166a82b4d614ebccea7b26ec1aeaaa96bb854b487fbc37093cf4de31889",
+  "rules_fired": [],
+  "paths": [],
+  "cve_ids": [],
+  "disclaimer": "PoC clearance from public CVE snapshot and synthetic SBOM/asset_map fixtures. Not an official port-state or MPA berth approval."
+}

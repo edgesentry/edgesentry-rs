@@ -1,0 +1,83 @@
+{
+  "vessel_key": "vessel-hold",
+  "port_call_id": "port-call-demo-sgsin",
+  "outcome": "hold",
+  "decision_hash": "cf645aac3a633b4308b9ca3c267ab811c66f1a2563cd04f02daca08b2b1ec867",
+  "rules_fired": [
+    {
+      "id": "SG-CC-001",
+      "title": "Critical CVE on safety-related CBS",
+      "severity": "critical",
+      "requirements": [
+        "IACS-E26-1",
+        "IACS-E27-2",
+        "IMO-428-5"
+      ],
+      "evidence": {
+        "path": [
+          "asset:vessel-hold:ecdis-01",
+          "firmware:vessel-hold:ecdis-fw-2023.4",
+          "component:vessel-hold:27620e88ddac",
+          "cve:CVE-2021-44228"
+        ],
+        "cve_id": "cve:CVE-2021-44228",
+        "cvss_score": 10.0,
+        "cbs_category": "navigation"
+      }
+    },
+    {
+      "id": "SG-CC-002",
+      "title": "High CVE on navigation or ECDIS software path",
+      "severity": "high",
+      "requirements": [
+        "IACS-E26-1",
+        "IACS-E27-2",
+        "IMO-428-5"
+      ],
+      "evidence": {
+        "path": [
+          "asset:vessel-hold:ecdis-01",
+          "firmware:vessel-hold:ecdis-fw-2023.4",
+          "component:vessel-hold:27620e88ddac",
+          "cve:CVE-2021-44228"
+        ],
+        "cve_id": "cve:CVE-2021-44228",
+        "cvss_score": 10.0,
+        "cbs_category": "navigation"
+      }
+    },
+    {
+      "id": "SG-CC-007",
+      "title": "Known exploited vulnerability present on vessel SBOM path",
+      "severity": "critical",
+      "requirements": [
+        "IMO-428-5",
+        "OSV-1"
+      ],
+      "evidence": {
+        "cve_id": "cve:CVE-2021-44228",
+        "in_kev": true
+      }
+    }
+  ],
+  "paths": [
+    {
+      "rule_ids": [
+        "SG-CC-001",
+        "SG-CC-002",
+        "SG-CC-007"
+      ],
+      "nodes": [
+        "asset:vessel-hold:ecdis-01",
+        "firmware:vessel-hold:ecdis-fw-2023.4",
+        "component:vessel-hold:27620e88ddac",
+        "cve:CVE-2021-44228"
+      ],
+      "summary": "None \u2192 GHSA-jfhr-c2vg-8q4j (CVSS 10.0)"
+    }
+  ],
+  "cve_ids": [
+    "cve:CVE-2021-44228"
+  ],
+  "disclaimer": "PoC clearance from public CVE snapshot and synthetic SBOM/asset_map fixtures. Not an official port-state or MPA berth approval."
+}

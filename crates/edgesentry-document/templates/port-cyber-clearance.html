@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Port Cyber Clearance — {{VESSEL_KEY}}</title>
+<style>
+  @page { size: A4; margin: 18mm; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 11px; color: #0f172a; margin: 0; line-height: 1.45; }
+  .header-band {
+    background: linear-gradient(135deg, #0c2340 0%, #1e4a7a 100%);
+    color: #fff;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+  }
+  .header-band h1 { margin: 0; font-size: 16px; letter-spacing: 0.04em; font-weight: 700; }
+  .header-band .sub { font-size: 10px; opacity: 0.9; margin-top: 6px; }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 24px;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+  }
+  .meta-grid dt { font-size: 9px; text-transform: uppercase; color: #64748b; margin: 0 0 2px; }
+  .meta-grid dd { margin: 0; font-weight: 600; font-size: 11px; }
+  .outcome-badge {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+  }
+  .outcome-hold { background: #fef2f2; color: #b91c1c; border: 2px solid #dc2626; }
+  .outcome-pass { background: #ecfdf5; color: #047857; border: 2px solid #10b981; }
+  .section-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #1e4a7a;
+    border-bottom: 2px solid #1e4a7a;
+    padding-bottom: 4px;
+    margin: 18px 0 8px;
+  }
+  .summary { margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 10px; }
+  th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #e2e8f0; font-weight: 600; }
+  .muted { color: #64748b; font-style: italic; }
+  .hash-box {
+    font-family: ui-monospace, monospace;
+    font-size: 9px;
+    word-break: break-all;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 8px 10px;
+    margin: 8px 0;
+  }
+  .verify-box {
+    background: #eff6ff;
+    border: 1px solid #93c5fd;
+    padding: 10px 12px;
+    margin: 12px 0;
+    font-size: 10px;
+  }
+  .verify-box a { color: #1d4ed8; word-break: break-all; }
+  .disclaimer {
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid #cbd5e1;
+    font-size: 9px;
+    color: #64748b;
+  }
+  .footer { font-size: 8px; color: #94a3b8; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<div class="header-band">
+  <h1>EDGESENTRY PORT CYBER CLEARANCE</h1>
+  <div class="sub">Deterministic SBOM × CVE × rules evaluation · Cap Vista PoC · Generated {{GENERATED_DATE}}</div>
+</div>
+
+<div class="meta-grid">
+  <div><dt>Vessel</dt><dd>{{VESSEL_KEY}}</dd></div>
+  <div><dt>Port call</dt><dd>{{PORT_CALL_ID}}</dd></div>
+  <div><dt>Rules fired</dt><dd>{{RULES_COUNT}}</dd></div>
+  <div><dt>CVE IDs (paths)</dt><dd>{{CVE_IDS}}</dd></div>
+</div>
+
+<p><span class="outcome-badge {{OUTCOME_CLASS}}">{{OUTCOME}}</span></p>
+
+<div class="section-title">1. Executive summary</div>
+<p class="summary">{{SUMMARY_HTML}}</p>
+
+<div class="section-title">2. Rules fired</div>
+<table>
+  <thead>
+    <tr><th>Rule ID</th><th>Title</th><th>Severity</th><th>Requirements</th></tr>
+  </thead>
+  <tbody>
+    {{RULES_TABLE_ROWS}}
+  </tbody>
+</table>
+
+<div class="section-title">3. Cited vulnerability paths</div>
+<table>
+  <thead>
+    <tr><th>Rules</th><th>Summary</th><th>Graph path</th></tr>
+  </thead>
+  <tbody>
+    {{PATHS_TABLE_ROWS}}
+  </tbody>
+</table>
+
+<div class="section-title">4. Decision integrity</div>
+<p class="muted">Canonical evaluation hash (indago manifest, excludes this field):</p>
+<div class="hash-box">{{DECISION_HASH}}</div>
+
+<div class="section-title">5. Independent verification</div>
+<div class="verify-box">
+  Third parties can verify the signed audit chain and manifest match using <code>eds audit verify-clearance</code>.
+  Portal placeholder (W6): <a href="{{VERIFY_URL}}">{{VERIFY_URL}}</a>
+</div>
+
+<div class="disclaimer">
+  <strong>Disclaimer:</strong> {{DISCLAIMER}}
+</div>
+
+<div class="footer">EdgeSentry · Port Cyber Clearance PoC · Not an official MPA or port-state berth approval</div>
+
+</body>
+</html>

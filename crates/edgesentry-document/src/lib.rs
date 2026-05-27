@@ -3,6 +3,13 @@ use std::collections::HashMap;
 use edgesentry_parse::DocumentEntity;
 use serde::{Deserialize, Serialize};
 
+pub mod clearance;
+
+pub use clearance::{
+    fill_clearance, parse_clearance_facts_json, ClearanceFacts, ClearancePath, ClearanceRuleHit,
+    TEMPLATE_HTML as PORT_CYBER_CLEARANCE_HTML, TEMPLATE_ID as PORT_CYBER_CLEARANCE_TEMPLATE,
+};
+
 /// Payload sealed into the audit chain for a generated compliance document.
 ///
 /// Constructed from a [`FilledDocument`] immediately before signing.
