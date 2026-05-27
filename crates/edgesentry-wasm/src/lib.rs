@@ -82,7 +82,7 @@ pub fn fill_bca(
 pub fn fill_clearance(facts_json: &str, verify_url: &str) -> Result<String, JsError> {
     let facts = edgesentry_document::parse_clearance_facts_json(facts_json)
         .map_err(|e| JsError::new(&e))?;
-    let filled = edgesentry_document::fill_clearance(&facts, verify_url);
+    let filled = edgesentry_document::fill_clearance(&facts, verify_url, None);
     serde_json::to_string(&filled).map_err(|e| JsError::new(&e.to_string()))
 }
 

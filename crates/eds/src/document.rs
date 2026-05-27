@@ -47,14 +47,19 @@ pub enum DocumentCommand {
         out: PathBuf,
     },
     /// Render port cyber clearance HTML from indago `*_facts.json` (Cap Vista W5).
-    RenderClearance {
-        #[arg(long)]
-        facts: PathBuf,
-        #[arg(long, default_value = "https://verify.edgesentry.io/clearance/poc")]
-        verify_url: String,
-        #[arg(long)]
-        out: PathBuf,
-    },
+    RenderClearance(RenderClearanceArgs),
+}
+
+#[derive(Debug, clap::Args)]
+pub struct RenderClearanceArgs {
+    #[arg(long)]
+    pub facts: PathBuf,
+    #[arg(long, default_value = "https://verify.edgesentry.io/clearance/poc")]
+    pub verify_url: String,
+    #[arg(long)]
+    pub operator_explanation: Option<PathBuf>,
+    #[arg(long)]
+    pub out: PathBuf,
 }
 
 pub fn run(cmd: DocumentCommand) -> Result<(), Box<dyn std::error::Error>> {
@@ -68,9 +73,12 @@ pub fn run(cmd: DocumentCommand) -> Result<(), Box<dyn std::error::Error>> {
         DocumentCommand::Gen { input, template, out } => {
             run_gen(&input, &template, &out)
         }
-        DocumentCommand::RenderClearance { facts, verify_url, out } => {
-            run_render_clearance(&facts, &verify_url, &out)
-        }
+        DocumentCommand::RenderClearance(args) => run_render_clearance(
+            &args.facts,
+            &args.verify_url,
+            args.operator_explanation.as_ref(),
+            &args.out,
+        ),
     }
 }
 
@@ -185,12 +193,21 @@ fn run_gen(
 fn run_render_clearance(
     facts_path: &PathBuf,
     verify_url: &str,
+    operator_explanation_path: Option<&PathBuf>,
     out: &PathBuf,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let content = fs::read_to_string(facts_path)?;
     let facts = parse_clearance_facts_json(&content)
         .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
-    let doc = fill_clearance(&facts, verify_url);
+    let operator_explanation = operator_explanation_path
+        .map(|p| fs::read_to_string(p))
+        .transpose()
+        .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
+    let doc = fill_clearance(
+        &facts,
+        verify_url,
+        operator_explanation.as_deref(),
+    );
     let rendered = render_html(&doc, PORT_CYBER_CLEARANCE_HTML);
     fs::write(out, rendered)?;
     eprintln!(
