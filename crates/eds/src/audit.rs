@@ -4,9 +4,10 @@ use std::path::PathBuf;
 
 use clap::Subcommand;
 use edgesentry_audit::{
-    build_lift_inspection_demo_records_with_payloads, generate_keypair, inspect_key,
-    parse_fixed_hex, sign_record, verify_chain_file, verify_chain_records, verify_record,
-    write_record_json, write_records_json, AuditRecord,
+    build_clearance_payload_bytes, build_lift_inspection_demo_records_with_payloads,
+    generate_keypair, inspect_key, parse_clearance_manifest_json, parse_fixed_hex, sign_record,
+    verify_chain_file, verify_chain_records, verify_record, write_record_json, write_records_json,
+    AuditRecord,
 };
 use edgesentry_document::{build_audit_payload, FilledDocument};
 use edgesentry_evaluate::RiskEvent;
@@ -177,6 +178,31 @@ pub enum AuditCommand {
         #[arg(long)]
         payload: PathBuf,
         /// AuditRecord JSON array to search (output of sign-document).
+        #[arg(long)]
+        chain: PathBuf,
+    },
+    /// Sign an indago port cyber clearance evaluation manifest.
+    ///
+    /// Reads `*_evaluation_manifest.json` from `port_clearance_eval`, seals a
+    /// canonical `ClearanceAuditPayload`, and appends an `AuditRecord` to the chain.
+    SignClearance {
+        /// Evaluation manifest JSON (indago `write_evaluation_artifacts` output).
+        #[arg(long)]
+        manifest: PathBuf,
+        /// Ed25519 private key hex (32 bytes).
+        #[arg(long)]
+        key: String,
+        #[arg(long, default_value = "port-clearance")]
+        device_id: String,
+        #[arg(long)]
+        chain: Option<PathBuf>,
+        #[arg(long)]
+        out: PathBuf,
+    },
+    /// Verify a clearance manifest matches its AuditRecord and validate the chain.
+    VerifyClearance {
+        #[arg(long)]
+        manifest: PathBuf,
         #[arg(long)]
         chain: PathBuf,
     },
@@ -592,6 +618,85 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
 
             write_records_json(&out, &records)?;
             println!("SIGNED: {} document record(s) written to {}", records.len(), out.display());
+        }
+
+        AuditCommand::SignClearance { manifest, key, device_id, chain, out } => {
+            let manifest_body = parse_clearance_manifest_json(&std::fs::read_to_string(&manifest)?)?;
+            let payload_bytes = build_clearance_payload_bytes(&manifest_body)?;
+            let object_ref = format!(
+                "clearance:{}/{}",
+                manifest_body.vessel_key, manifest_body.port_call_id
+            );
+
+            let (sequence, prev_hash, prior_records) = if let Some(ref chain_path) = chain {
+                let existing: Vec<AuditRecord> =
+                    serde_json::from_str(&std::fs::read_to_string(chain_path)?)?;
+                let seq = existing.last().map(|r| r.sequence + 1).unwrap_or(1);
+                let ph = existing.last().map(|r| r.hash()).unwrap_or(AuditRecord::zero_hash());
+                (seq, ph, existing)
+            } else {
+                (1u64, AuditRecord::zero_hash(), Vec::new())
+            };
+
+            let timestamp_ms = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as u64)
+                .unwrap_or(0);
+
+            let record = sign_record(
+                device_id,
+                sequence,
+                timestamp_ms,
+                payload_bytes,
+                prev_hash,
+                object_ref,
+                &key,
+            )?;
+
+            let mut records = prior_records;
+            records.push(record);
+            verify_chain_records(&records)?;
+            write_records_json(&out, &records)?;
+            println!(
+                "SIGNED: clearance {} → {} ({} record(s))",
+                manifest_body.vessel_key,
+                manifest_body.outcome,
+                records.len()
+            );
+        }
+
+        AuditCommand::VerifyClearance { manifest, chain } => {
+            let manifest_content = std::fs::read_to_string(&manifest)?;
+            let manifest_body = parse_clearance_manifest_json(&manifest_content)?;
+            let payload_bytes = build_clearance_payload_bytes(&manifest_body)?;
+            let payload_hash = *blake3::hash(&payload_bytes).as_bytes();
+
+            let records: Vec<AuditRecord> =
+                serde_json::from_str(&std::fs::read_to_string(&chain)?)?;
+            verify_chain_records(&records)?;
+
+            let matched = records.iter().find(|r| r.payload_hash == payload_hash);
+            match matched {
+                Some(record) => {
+                    println!("VERIFIED");
+                    println!("  vessel_key:    {}", manifest_body.vessel_key);
+                    println!("  port_call_id:  {}", manifest_body.port_call_id);
+                    println!("  outcome:       {}", manifest_body.outcome);
+                    println!("  rules_fired:   {}", manifest_body.rules_fired.join(", "));
+                    println!("  sequence:      {}", record.sequence);
+                    println!("  device_id:     {}", record.device_id);
+                    if let Ok(full) = serde_json::from_str::<serde_json::Value>(&manifest_content) {
+                        if let Some(dh) = full.get("decision_hash").and_then(|v| v.as_str()) {
+                            println!("  decision_hash: {dh}");
+                        }
+                    }
+                    println!("CHAIN_VALID");
+                }
+                None => {
+                    eprintln!("NOT_FOUND: no AuditRecord matches this clearance manifest");
+                    std::process::exit(2);
+                }
+            }
         }
 
             AuditCommand::ExportAims { chain, events, profile_dir, out, md } => {

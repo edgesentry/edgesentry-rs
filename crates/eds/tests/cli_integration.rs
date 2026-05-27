@@ -1153,3 +1153,55 @@ fn export_aims_exits_zero_and_writes_json_bundle() {
     assert!(md_content.contains("A.4.6"), "markdown must have A.4.6 section");
     assert!(md_content.contains("Disclaimer"), "markdown must include disclaimer");
 }
+
+// ── port cyber clearance (W4) ─────────────────────────────────────────────────
+
+fn clearance_manifest_fixture() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../edgesentry-audit/fixtures/clearance/vessel-hold_evaluation_manifest.json")
+}
+
+#[test]
+fn sign_clearance_verify_chain_and_manifest() {
+    let manifest_path = clearance_manifest_fixture();
+    assert!(manifest_path.exists(), "fixture missing: {}", manifest_path.display());
+
+    let chain = TmpFile::new("clearance_chain.json");
+    let sign = eds()
+        .args([
+            "audit",
+            "sign-clearance",
+            "--manifest",
+        ])
+        .arg(&manifest_path)
+        .args(["--key", PRIV_HEX, "--device-id", "port-clearance-poc", "--out"])
+        .arg(chain.path())
+        .output()
+        .expect("sign-clearance");
+    assert!(sign.status.success(), "sign-clearance: {}", stderr(&sign));
+
+    let chain_check = eds()
+        .args(["audit", "verify-chain", "--records-file"])
+        .arg(chain.path())
+        .output()
+        .expect("verify-chain");
+    assert!(chain_check.status.success(), "verify-chain: {}", stderr(&chain_check));
+    assert!(stdout(&chain_check).contains("CHAIN_VALID"));
+
+    let verify = eds()
+        .args([
+            "audit",
+            "verify-clearance",
+            "--manifest",
+        ])
+        .arg(&manifest_path)
+        .args(["--chain"])
+        .arg(chain.path())
+        .output()
+        .expect("verify-clearance");
+    assert!(verify.status.success(), "verify-clearance: {}", stderr(&verify));
+    let vout = stdout(&verify);
+    assert!(vout.contains("VERIFIED"));
+    assert!(vout.contains("vessel-hold"));
+    assert!(vout.contains("hold"));
+}

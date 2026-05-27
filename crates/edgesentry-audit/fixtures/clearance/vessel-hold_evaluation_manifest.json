@@ -1,0 +1,14 @@
+{
+  "vessel_key": "vessel-hold",
+  "port_call_id": "port-call-demo-sgsin",
+  "rule_pack_id": "sg-cyber-clearance-v0",
+  "rule_pack_version": "0.1.0",
+  "rule_pack_sha256": "0000000000000000000000000000000000000000000000000000000000000001",
+  "cve_snapshot_sha256": "0000000000000000000000000000000000000000000000000000000000000002",
+  "sbom_sha256": "0000000000000000000000000000000000000000000000000000000000000003",
+  "outcome": "hold",
+  "rules_fired": ["SG-CC-001", "SG-CC-002", "SG-CC-007"],
+  "graph_node_count": 6,
+  "graph_edge_count": 5,
+  "decision_hash": "cf645aac3a633b4308b9ca3c267ab811c66f1a2563cd04f02daca08b2b1ec867"
+}
