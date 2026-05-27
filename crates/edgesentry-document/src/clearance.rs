@@ -20,6 +20,34 @@ pub struct ClearanceFacts {
     #[serde(default)]
     pub cve_ids: Vec<String>,
     pub disclaimer: String,
+    #[serde(default)]
+    pub bom_baseline_ref: Option<serde_json::Value>,
+    #[serde(default)]
+    pub cve_snapshot_ref: Option<serde_json::Value>,
+    #[serde(default)]
+    pub integrated_snapshot_fingerprint: Option<String>,
+    #[serde(default)]
+    pub impacted_paths: Vec<ImpactedPath>,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+pub struct ImpactedPath {
+    #[serde(default)]
+    pub asset_name: Option<String>,
+    #[serde(default)]
+    pub asset_id: Option<String>,
+    #[serde(default)]
+    pub component_name: Option<String>,
+    #[serde(default)]
+    pub component_purl: Option<String>,
+    #[serde(default)]
+    pub cve_id: Option<String>,
+    #[serde(default)]
+    pub cve_osv_id: Option<String>,
+    #[serde(default)]
+    pub cvss_score: Option<f64>,
+    #[serde(default)]
+    pub path_nodes: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -79,6 +107,67 @@ fn rules_table_rows(rules: &[ClearanceRuleHit]) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+fn audit_evidence_html(facts: &ClearanceFacts) -> String {
+    let bom = facts
+        .bom_baseline_ref
+        .as_ref()
+        .and_then(|v| v.as_object())
+        .cloned()
+        .unwrap_or_default();
+    let cve = facts
+        .cve_snapshot_ref
+        .as_ref()
+        .and_then(|v| v.as_object())
+        .cloned()
+        .unwrap_or_default();
+
+    let bom_sbom_sha = bom
+        .get("sbom_sha256")
+        .and_then(|v| v.as_str())
+        .unwrap_or("—");
+    let cve_sha = cve
+        .get("cve_snapshot_sha256")
+        .and_then(|v| v.as_str())
+        .unwrap_or("—");
+    let fingerprint = facts
+        .integrated_snapshot_fingerprint
+        .as_deref()
+        .unwrap_or("—");
+
+    let mut rows = String::from(
+        "<table><thead><tr><th>Asset</th><th>Component</th><th>CVE</th><th>CVSS</th></tr></thead><tbody>",
+    );
+    if facts.impacted_paths.is_empty() {
+        rows.push_str("<tr><td colspan=\"4\" class=\"muted\">No impacted paths on evaluation</td></tr>");
+    } else {
+        for p in &facts.impacted_paths {
+            rows.push_str(&format!(
+                "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
+                escape_html(p.asset_name.as_deref().unwrap_or("—")),
+                escape_html(
+                    p.component_purl
+                        .as_deref()
+                        .or(p.component_name.as_deref())
+                        .unwrap_or("—"),
+                ),
+                escape_html(p.cve_osv_id.as_deref().or(p.cve_id.as_deref()).unwrap_or("—")),
+                p.cvss_score
+                    .map(|s| format!("{s:.1}"))
+                    .unwrap_or_else(|| "—".to_string()),
+            ));
+        }
+    }
+    rows.push_str("</tbody></table>");
+
+    format!(
+        "<p><strong>Frozen BOM baseline</strong> (SBOM SHA-256): <code>{bom_sbom_sha}</code></p>\
+         <p><strong>CVE snapshot at audit time</strong> (SHA-256): <code>{cve_sha}</code></p>\
+         <p><strong>Integrated BOM×CVE fingerprint</strong> (G11): <code>{fingerprint}</code></p>\
+         <p class=\"muted\">Latest CVE intelligence applied to pinned SBOM baseline — G12 impacted paths:</p>\
+         {rows}"
+    )
 }
 
 fn paths_table_rows(paths: &[ClearancePath]) -> String {
@@ -150,6 +239,10 @@ pub fn fill_clearance(facts: &ClearanceFacts, verify_url: &str) -> FilledDocumen
     fields.insert("RULES_TABLE_ROWS".to_string(), direct(rules_table_rows(&facts.rules_fired)));
     fields.insert("PATHS_TABLE_ROWS".to_string(), direct(paths_table_rows(&facts.paths)));
     fields.insert(
+        "AUDIT_EVIDENCE_HTML".to_string(),
+        direct(audit_evidence_html(facts)),
+    );
+    fields.insert(
         "RULES_COUNT".to_string(),
         direct(facts.rules_fired.len().to_string()),
     );
@@ -194,6 +287,44 @@ mod tests {
     }
 
     #[test]
+    fn hold_facts_parse_audit_evidence_fields() {
+        let facts = parse_clearance_facts_json(HOLD_FACTS).unwrap();
+        assert!(facts.bom_baseline_ref.is_some());
+        assert!(facts.cve_snapshot_ref.is_some());
+        assert_eq!(
+            facts.integrated_snapshot_fingerprint.as_deref(),
+            Some("e4a3bb87687d7686c16a26c785714660960abc9d9849d278919d9c0992c89ae5"),
+        );
+        assert_eq!(facts.impacted_paths.len(), 1);
+        assert_eq!(
+            facts.impacted_paths[0].component_purl.as_deref(),
+            Some("pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"),
+        );
+    }
+
+    #[test]
+    fn audit_evidence_html_renders_g11_g12_hashes_and_impacted_path() {
+        let facts = parse_clearance_facts_json(HOLD_FACTS).unwrap();
+        let doc = fill_clearance(&facts, "https://verify.example/clearance/demo");
+        let section = doc.fields.get("AUDIT_EVIDENCE_HTML").expect("field").value.as_str();
+        assert!(section.contains("ad9e87da1c02487a746f5c086fb2d315719cbc48e2aa3bb5ed60c3e27ab27f06"));
+        assert!(section.contains("490d61991f404f6004d94657a81a0ce8b24724eade8e5ddf532d3bcb8c9cbe43"));
+        assert!(section.contains("e4a3bb87687d7686c16a26c785714660960abc9d9849d278919d9c0992c89ae5"));
+        assert!(section.contains("log4j-core"));
+        assert!(section.contains("GHSA-jfhr-c2vg-8q4j"));
+        assert!(section.contains("10.0"));
+    }
+
+    #[test]
+    fn audit_evidence_html_pass_vessel_shows_no_impacted_paths() {
+        let facts = parse_clearance_facts_json(CLEAN_FACTS).unwrap();
+        let doc = fill_clearance(&facts, "https://verify.example/clearance/demo");
+        let section = doc.fields.get("AUDIT_EVIDENCE_HTML").expect("field").value.as_str();
+        assert!(section.contains("No impacted paths on evaluation"));
+        assert!(facts.impacted_paths.is_empty());
+    }
+
+    #[test]
     fn render_clearance_html_contains_outcome_and_verify() {
         let facts = parse_clearance_facts_json(HOLD_FACTS).unwrap();
         let doc = fill_clearance(&facts, "https://verify.example/clearance/abc123");
@@ -202,6 +333,10 @@ mod tests {
         assert!(html.contains("vessel-hold"));
         assert!(html.contains("https://verify.example/clearance/abc123"));
         assert!(html.contains("SG-CC-001"));
+        assert!(html.contains("Audit evidence (G11 / G12)"));
+        assert!(html.contains("Frozen BOM baseline"));
+        assert!(html.contains("ad9e87da1c02487a746f5c086fb2d315719cbc48e2aa3bb5ed60c3e27ab27f06"));
         assert!(!html.contains("{{OUTCOME}}"));
+        assert!(!html.contains("{{AUDIT_EVIDENCE_HTML}}"));
     }
 }

@@ -2,7 +2,19 @@
   "vessel_key": "vessel-clean",
   "port_call_id": "port-call-demo-sgsin",
   "outcome": "pass",
-  "decision_hash": "23f3c166a82b4d614ebccea7b26ec1aeaaa96bb854b487fbc37093cf4de31889",
+  "decision_hash": "e4c5c861d376c14ad8f25e076c2e7139bbe882a9eeb00b71fc4b6c3b86e74602",
+  "bom_baseline_ref": {
+    "asset_map_path": "indago/fixtures/asset_map.yaml",
+    "asset_map_sha256": "94627670cc4cb7fb37e030d76cc7504a35cc57b7e022f3fa479853476e4a57bf",
+    "sbom_path": "indago/fixtures/sbom/vessel-clean.json",
+    "sbom_sha256": "f14957cf59ec7104d6aee7082d9f73a228f18e5540a9ae95878bdd52ebcf71c4"
+  },
+  "cve_snapshot_ref": {
+    "cve_snapshot_path": "indago/fixtures/cve/snapshot-2026-05-26.json",
+    "cve_snapshot_sha256": "490d61991f404f6004d94657a81a0ce8b24724eade8e5ddf532d3bcb8c9cbe43"
+  },
+  "integrated_snapshot_fingerprint": "9c779e305b5614416cff473757dc9c572510b80ec3f3b8f36ad16a5a5216beff",
+  "impacted_paths": [],
   "rules_fired": [],
   "paths": [],
   "cve_ids": [],
