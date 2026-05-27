@@ -489,4 +489,45 @@ mod tests {
             "EUI_DATA_PRESENT must fire for B002"
         );
     }
+
+    // ── Port cyber clearance (W5) wasm API tests ─────────────────────────────
+
+    const HOLD_FACTS: &str =
+        include_str!("../../edgesentry-document/fixtures/clearance/vessel-hold_facts.json");
+    const CLEAN_FACTS: &str =
+        include_str!("../../edgesentry-document/fixtures/clearance/vessel-clean_facts.json");
+    const VERIFY_URL: &str = "https://verify.example/clearance/wasm-test";
+
+    #[test]
+    fn wasm_api_fill_clearance_hold() {
+        let filled_json = fill_clearance(HOLD_FACTS, VERIFY_URL).expect("fill_clearance");
+        let filled: serde_json::Value = serde_json::from_str(&filled_json).unwrap();
+        assert!(filled["review_required"].as_bool().unwrap());
+        assert_eq!(filled["template"].as_str().unwrap(), "port-cyber-clearance");
+        assert_eq!(
+            filled["fields"]["OUTCOME"]["value"].as_str().unwrap(),
+            "HOLD"
+        );
+    }
+
+    #[test]
+    fn wasm_api_fill_clearance_pass() {
+        let filled_json = fill_clearance(CLEAN_FACTS, VERIFY_URL).expect("fill_clearance");
+        let filled: serde_json::Value = serde_json::from_str(&filled_json).unwrap();
+        assert!(!filled["review_required"].as_bool().unwrap());
+        assert_eq!(
+            filled["fields"]["OUTCOME"]["value"].as_str().unwrap(),
+            "PASS"
+        );
+    }
+
+    #[test]
+    fn wasm_api_render_clearance_html_hold() {
+        let filled_json = fill_clearance(HOLD_FACTS, VERIFY_URL).expect("fill_clearance");
+        let html = render_html(&filled_json, "port-cyber-clearance").expect("render_html");
+        assert!(html.contains("HOLD"));
+        assert!(html.contains("vessel-hold"));
+        assert!(html.contains(VERIFY_URL));
+        assert!(html.contains("SG-CC-001"));
+    }
 }
