@@ -200,7 +200,7 @@ fn run_render_clearance(
     let facts = parse_clearance_facts_json(&content)
         .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
     let operator_explanation = operator_explanation_path
-        .map(|p| fs::read_to_string(p))
+        .map(fs::read_to_string)
         .transpose()
         .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
     let doc = fill_clearance(
