@@ -188,6 +188,28 @@ fn paths_table_rows(paths: &[ClearancePath]) -> String {
         .join("\n")
 }
 
+fn operator_explanation_section(text: Option<&str>) -> String {
+    let Some(raw) = text.map(str::trim).filter(|s| !s.is_empty()) else {
+        return String::new();
+    };
+    let body = raw
+        .split("\n\n")
+        .map(str::trim)
+        .filter(|p| !p.is_empty())
+        .map(|p| format!("<p>{}</p>", escape_html(p).replace('\n', "<br/>")))
+        .collect::<Vec<_>>()
+        .join("\n");
+    format!(
+        "<div class=\"section-title\">1a. Operator explanation (facts-derived, non-authoritative)</div>\
+         <div class=\"ai-narrative\">\
+         <p class=\"muted\"><strong>AI automates explanation, not compliance judgment.</strong> \
+         This section is synthesized from evaluation facts for operator context only. \
+         It does not change the deterministic outcome or <code>decision_hash</code>.</p>\
+         {body}\
+         </div>"
+    )
+}
+
 fn summary_paragraph(facts: &ClearanceFacts) -> String {
     let outcome_upper = facts.outcome.to_uppercase();
     if facts.outcome == "hold" {
@@ -211,7 +233,11 @@ fn summary_paragraph(facts: &ClearanceFacts) -> String {
 }
 
 /// Map indago facts + verify URL into a `FilledDocument` for `port-cyber-clearance.html`.
-pub fn fill_clearance(facts: &ClearanceFacts, verify_url: &str) -> FilledDocument {
+pub fn fill_clearance(
+    facts: &ClearanceFacts,
+    verify_url: &str,
+    operator_explanation: Option<&str>,
+) -> FilledDocument {
     let outcome_upper = facts.outcome.to_uppercase();
     let outcome_class = if facts.outcome == "hold" {
         "outcome-hold"
@@ -236,6 +262,10 @@ pub fn fill_clearance(facts: &ClearanceFacts, verify_url: &str) -> FilledDocumen
     fields.insert("CVE_IDS".to_string(), direct(cve_line));
     fields.insert("DISCLAIMER".to_string(), direct(&facts.disclaimer));
     fields.insert("SUMMARY_HTML".to_string(), direct(summary_paragraph(facts)));
+    fields.insert(
+        "OPERATOR_EXPLANATION_SECTION".to_string(),
+        direct(operator_explanation_section(operator_explanation)),
+    );
     fields.insert("RULES_TABLE_ROWS".to_string(), direct(rules_table_rows(&facts.rules_fired)));
     fields.insert("PATHS_TABLE_ROWS".to_string(), direct(paths_table_rows(&facts.paths)));
     fields.insert(
@@ -272,7 +302,7 @@ mod tests {
     #[test]
     fn fill_clearance_hold_marks_review_required() {
         let facts = parse_clearance_facts_json(HOLD_FACTS).unwrap();
-        let doc = fill_clearance(&facts, "https://verify.example/clearance/demo");
+        let doc = fill_clearance(&facts, "https://verify.example/clearance/demo", None);
         assert!(doc.review_required);
         assert_eq!(doc.template, TEMPLATE_ID);
         assert_eq!(doc.fields.get("OUTCOME").unwrap().value, "HOLD");
@@ -281,7 +311,7 @@ mod tests {
     #[test]
     fn fill_clearance_pass_no_review() {
         let facts = parse_clearance_facts_json(CLEAN_FACTS).unwrap();
-        let doc = fill_clearance(&facts, "https://verify.example/clearance/demo");
+        let doc = fill_clearance(&facts, "https://verify.example/clearance/demo", None);
         assert!(!doc.review_required);
         assert_eq!(doc.fields.get("OUTCOME").unwrap().value, "PASS");
     }
@@ -305,7 +335,7 @@ mod tests {
     #[test]
     fn audit_evidence_html_renders_g11_g12_hashes_and_impacted_path() {
         let facts = parse_clearance_facts_json(HOLD_FACTS).unwrap();
-        let doc = fill_clearance(&facts, "https://verify.example/clearance/demo");
+        let doc = fill_clearance(&facts, "https://verify.example/clearance/demo", None);
         let section = doc.fields.get("AUDIT_EVIDENCE_HTML").expect("field").value.as_str();
         assert!(section.contains("ad9e87da1c02487a746f5c086fb2d315719cbc48e2aa3bb5ed60c3e27ab27f06"));
         assert!(section.contains("490d61991f404f6004d94657a81a0ce8b24724eade8e5ddf532d3bcb8c9cbe43"));
@@ -318,7 +348,7 @@ mod tests {
     #[test]
     fn audit_evidence_html_pass_vessel_shows_no_impacted_paths() {
         let facts = parse_clearance_facts_json(CLEAN_FACTS).unwrap();
-        let doc = fill_clearance(&facts, "https://verify.example/clearance/demo");
+        let doc = fill_clearance(&facts, "https://verify.example/clearance/demo", None);
         let section = doc.fields.get("AUDIT_EVIDENCE_HTML").expect("field").value.as_str();
         assert!(section.contains("No impacted paths on evaluation"));
         assert!(facts.impacted_paths.is_empty());
@@ -327,7 +357,7 @@ mod tests {
     #[test]
     fn render_clearance_html_contains_outcome_and_verify() {
         let facts = parse_clearance_facts_json(HOLD_FACTS).unwrap();
-        let doc = fill_clearance(&facts, "https://verify.example/clearance/abc123");
+        let doc = fill_clearance(&facts, "https://verify.example/clearance/abc123", None);
         let html = render_html(&doc, TEMPLATE_HTML);
         assert!(html.contains("HOLD"));
         assert!(html.contains("vessel-hold"));
@@ -338,5 +368,29 @@ mod tests {
         assert!(html.contains("ad9e87da1c02487a746f5c086fb2d315719cbc48e2aa3bb5ed60c3e27ab27f06"));
         assert!(!html.contains("{{OUTCOME}}"));
         assert!(!html.contains("{{AUDIT_EVIDENCE_HTML}}"));
+    }
+
+    #[test]
+    fn render_clearance_html_includes_operator_explanation_when_provided() {
+        let facts = parse_clearance_facts_json(HOLD_FACTS).unwrap();
+        let narrative = "Operator context for vessel-hold. The rule engine recorded clearance outcome HOLD.";
+        let doc = fill_clearance(&facts, "https://verify.example/clearance/abc123", Some(narrative));
+        let html = render_html(&doc, TEMPLATE_HTML);
+        assert!(html.contains("Operator explanation (facts-derived, non-authoritative)"));
+        assert!(html.contains("AI automates explanation, not compliance judgment"));
+        assert!(html.contains("vessel-hold"));
+    }
+
+    #[test]
+    fn operator_explanation_section_empty_when_none() {
+        let facts = parse_clearance_facts_json(HOLD_FACTS).unwrap();
+        let doc = fill_clearance(&facts, "https://verify.example/clearance/demo", None);
+        let section = doc
+            .fields
+            .get("OPERATOR_EXPLANATION_SECTION")
+            .expect("field")
+            .value
+            .as_str();
+        assert!(section.is_empty());
     }
 }

@@ -1335,6 +1335,41 @@ fn render_clearance_hold_writes_html() {
 }
 
 #[test]
+fn render_clearance_with_operator_explanation_writes_section() {
+    let facts = clearance_facts_fixture("vessel-hold_facts.json");
+    let explanation = TmpFile::new("operator_explanation.txt");
+    fs::write(
+        explanation.path(),
+        "Operator context for vessel-hold. The rule engine recorded clearance outcome HOLD.",
+    )
+    .expect("write explanation");
+
+    let out = TmpFile::new("clearance_hold_with_narrative.html");
+    let render = eds()
+        .args(["document", "render-clearance", "--facts"])
+        .arg(&facts)
+        .arg("--operator-explanation")
+        .arg(explanation.path())
+        .args([
+            "--verify-url",
+            "https://verify.example/clearance/hold-narrative",
+            "--out",
+        ])
+        .arg(out.path())
+        .output()
+        .expect("eds document render-clearance");
+
+    assert!(
+        render.status.success(),
+        "render-clearance with operator explanation: {}",
+        stderr(&render)
+    );
+    let html = fs::read_to_string(out.path()).expect("read html");
+    assert!(html.contains("Operator explanation (facts-derived, non-authoritative)"));
+    assert!(html.contains("AI automates explanation, not compliance judgment"));
+}
+
+#[test]
 fn render_clearance_pass_writes_html() {
     let facts = clearance_facts_fixture("vessel-clean_facts.json");
     let out = TmpFile::new("clearance_pass.html");

@@ -75,6 +75,15 @@
     color: #64748b;
   }
   .footer { font-size: 8px; color: #94a3b8; margin-top: 8px; }
+  .ai-narrative {
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    font-size: 10px;
+  }
+  .ai-narrative p { margin: 0 0 8px; }
+  .ai-narrative p:last-child { margin-bottom: 0; }
 </style>
 </head>
 <body>
@@ -95,6 +104,8 @@
 
 <div class="section-title">1. Executive summary</div>
 <p class="summary">{{SUMMARY_HTML}}</p>
+
+{{OPERATOR_EXPLANATION_SECTION}}
 
 <div class="section-title">2. Rules fired</div>
 <table>
