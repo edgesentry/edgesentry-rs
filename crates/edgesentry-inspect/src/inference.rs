@@ -211,7 +211,7 @@ pub fn onnx_infer(model_path: &Path, depth_map: &DepthMap) -> Result<Vec<BBox2D>
 
     // Step 4 — decode output [1, 5]: normalised [u0, v0, u1, v1, confidence].
     let output = result[0]
-        .to_array_view::<f32>()
+        .to_plain_array_view::<f32>()
         .map_err(|e| InferenceError::Onnx(e.to_string()))?;
 
     let confidence = output[[0, 4]];
