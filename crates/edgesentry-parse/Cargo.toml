@@ -18,4 +18,4 @@ edgesentry-ingest = { path = "../edgesentry-ingest" }
 edgesentry-types = { path = "../edgesentry-types" }
 serde = { workspace = true }
 serde_json = { workspace = true }
-parquet = { version = "58", default-features = false, features = ["snap"], optional = true }
+parquet = { version = "59", default-features = false, features = ["snap"], optional = true }
