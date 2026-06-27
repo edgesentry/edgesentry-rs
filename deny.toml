@@ -21,6 +21,12 @@ ignore = [
   # paste is a proc-macro used only at compile time and ships no runtime code,
   # so the unmaintained status carries no security risk at runtime.
   { id = "RUSTSEC-2024-0436", reason = "paste is a compile-time proc-macro pulled in by parquet v55; no runtime exposure. parquet upstream must adopt an alternative before this can be resolved." },
+
+  # RUSTSEC-2026-0187: lopdf stack overflow on deeply nested PDF objects when parsing
+  # untrusted input. printpdf v0.7 pins lopdf 0.31.0 exactly; no patched release exists
+  # until printpdf adopts lopdf >= 0.42. edgesentry-report only generates PDFs from
+  # trusted pipeline output and does not parse untrusted PDF files.
+  { id = "RUSTSEC-2026-0187", reason = "lopdf pinned by printpdf v0.7; no upgrade path. PDF output is generated only, never parsed from untrusted input." },
 ]
 
 [bans]
@@ -57,6 +63,12 @@ allow = [
 # MPL-2.0 copyleft does not extend to generated artifacts or our source.
 allow = ["MPL-2.0"]
 name = "cbindgen"
+
+[[licenses.exceptions]]
+# dyn-eq is a small trait helper pulled in by tract-core for ONNX inference.
+# Used only as a linked library; we do not modify its source.
+allow = ["MPL-2.0"]
+name = "dyn-eq"
 
 [sources]
 unknown-registry = "deny"
