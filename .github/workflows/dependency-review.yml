@@ -36,6 +36,7 @@ jobs:
             pkg:cargo/unicode-properties,
             pkg:cargo/cbindgen,
             pkg:cargo/dyn-eq,
+            pkg:cargo/string-interner,
             pkg:cargo/colored,
             pkg:cargo/axum,
             pkg:cargo/rusqlite,
