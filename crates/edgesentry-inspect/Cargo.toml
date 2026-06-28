@@ -29,7 +29,7 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 toml = "1"
 ureq = "2"
 tempfile = "3"
-tract-onnx = "0.22"
+tract-onnx = "0.23"
 
 [dev-dependencies]
 mockito  = "1"
