@@ -4549,9 +4549,9 @@ dependencies = [
 
 [[package]]
 name = "tract-core"
-version = "0.23.1"
+version = "0.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "666998e926c772fdcaba566fa1ae9c3c52c27e2aafb9f1c4b2407c2390ee5041"
+checksum = "422015c415e86e73ecf4cafcacb68e98ed3b72a6d8df410398fe1208db61df5e"
 dependencies = [
  "anyhow",
  "anymap3",
@@ -4579,9 +4579,9 @@ dependencies = [
 
 [[package]]
 name = "tract-data"
-version = "0.23.1"
+version = "0.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba42a87db3dd9951b121baf8f43bd8ac5050f1adad5f1d8948f2008f8463931b"
+checksum = "72bb8d458786c307552cdefd5066b0eb74377be784dee40ae2d7f95fab989b26"
 dependencies = [
  "anyhow",
  "downcast-rs",
@@ -4606,9 +4606,9 @@ dependencies = [
 
 [[package]]
 name = "tract-extra"
-version = "0.23.1"
+version = "0.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7064da339a5231bd4e35108bafbed504f7e27aa3b9ac9c0fb1f61cee23d20007"
+checksum = "845805f6e805c657278552ecee8d9def14321f9e55287757fab2e254bca5eaa3"
 dependencies = [
  "tract-nnef",
  "tract-pulse",
@@ -4616,9 +4616,9 @@ dependencies = [
 
 [[package]]
 name = "tract-hir"
-version = "0.23.1"
+version = "0.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c2e7d7703cc8ff7b266402a2a16f4816776b70bdbf7b8c293b650c45a54d883"
+checksum = "bb7798e15db131c94a7f4b028292e6bc79cc179282db9a94bd720f8f27801b4a"
 dependencies = [
  "derive-new",
  "log",
@@ -4627,9 +4627,9 @@ dependencies = [
 
 [[package]]
 name = "tract-linalg"
-version = "0.23.1"
+version = "0.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88758ddb596602d3bdef0a3598d93716b4ef8169776f87ba2d4ab00d6305365b"
+checksum = "0ae79096246037bd70a2ae4e6296390573537e41e65af4cdd948fc9445f665ac"
 dependencies = [
  "byteorder",
  "cc",
@@ -4651,9 +4651,9 @@ dependencies = [
 
 [[package]]
 name = "tract-nnef"
-version = "0.23.1"
+version = "0.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd910aa2ff5b8129400d12e3127d77df94b1f26778467b0889aeaa836e166f44"
+checksum = "50f462e640678851fcf50b0ae2421e5a08a036c0abb3d06e0858262c46aab58f"
 dependencies = [
  "byteorder",
  "erased-serde",
@@ -4673,9 +4673,9 @@ dependencies = [
 
 [[package]]
 name = "tract-onnx"
-version = "0.23.1"
+version = "0.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8492cd812ed69cd1c18347c9ee6e930f086685f849a6a95c56a4f3f8b81503b5"
+checksum = "a021a92e720b596047a3772f18c5878c310629c251aa996be546531d6d338212"
 dependencies = [
  "bytes",
  "derive-new",
@@ -4694,9 +4694,9 @@ dependencies = [
 
 [[package]]
 name = "tract-onnx-opl"
-version = "0.23.1"
+version = "0.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f21fba6a0f1658210ab6e339657ea43234a9647dd5d859ee0147b3c67b4a962"
+checksum = "bd7ed40ba5ab96b512dbe3aecc50b156e8759ddba018a99d2bd1ed8c3c518f32"
 dependencies = [
  "dyn-eq",
  "getrandom 0.4.2",
@@ -4710,9 +4710,9 @@ dependencies = [
 
 [[package]]
 name = "tract-pulse"
-version = "0.23.1"
+version = "0.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "362fc52e40001fa7e35c88d71adae94fa40907629dd0be8a1a4ba1147528b551"
+checksum = "6e460dadde3d22f6726e18efac6b26ec661df9c7bca5766a1e76c4bd5dcd7022"
 dependencies = [
  "downcast-rs",
  "dyn-eq",
@@ -4726,9 +4726,9 @@ dependencies = [
 
 [[package]]
 name = "tract-pulse-opl"
-version = "0.23.1"
+version = "0.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2531976a7761f8eb159a03148c8be9400f028161ab407a95ead65026d8aace0"
+checksum = "c0414347d7b855b4476855150a4171529d5d3e28261b6de1d6ac6bb12fd70215"
 dependencies = [
  "downcast-rs",
  "dyn-eq",
@@ -4738,9 +4738,9 @@ dependencies = [
 
 [[package]]
 name = "tract-transformers"
-version = "0.23.1"
+version = "0.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1b961afd943bfc593d36870bae6601d2f3e427ed2868370f97a2969708ff602"
+checksum = "563374b490441196bdc7b4e33f16b2827a92aed6e5be0067ab9a2da56e7ead5f"
 dependencies = [
  "float-ord",
  "rayon",
