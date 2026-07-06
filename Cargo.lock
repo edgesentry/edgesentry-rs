@@ -1407,7 +1407,7 @@ dependencies = [
  "hyper-util",
  "postcard",
  "postgres",
- "rand 0.10.1",
+ "rand 0.10.2",
  "rand_core 0.6.4",
  "rcgen",
  "reqwest",
@@ -1429,7 +1429,7 @@ dependencies = [
  "cbindgen",
  "ed25519-dalek",
  "edgesentry-audit",
- "rand 0.10.1",
+ "rand 0.10.2",
  "rand_core 0.6.4",
 ]
 
@@ -1936,9 +1936,9 @@ dependencies = [
 
 [[package]]
 name = "glam"
-version = "0.33.1"
+version = "0.33.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "898f5a568a84989b6c0f8caa50a93074b97dbdc58fc6d9543157bb4562758933"
+checksum = "7f22fb22f065b308be0d8724e3706c7fa3fc2a6c7d6899df4cad7860e7a75436"
 dependencies = [
  "serde_core",
 ]
@@ -3111,7 +3111,7 @@ dependencies = [
  "hmac 0.13.0",
  "md-5",
  "memchr",
- "rand 0.10.1",
+ "rand 0.10.2",
  "sha2 0.11.0",
  "stringprep",
 ]
@@ -3342,9 +3342,9 @@ dependencies = [
 
 [[package]]
 name = "rand"
-version = "0.10.1"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2e8e8bcc7961af1fdac401278c6a831614941f6164ee3bf4ce61b7edb162207"
+checksum = "c7f5fa3a058cd35567ef9bfa5e75732bee0f9e4c55fa90477bef2dfcdbc4be80"
 dependencies = [
  "chacha20",
  "getrandom 0.4.2",
@@ -3392,7 +3392,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4d431c2703ccf129de4d45253c03f49ebb22b97d6ad79ee3ecfc7e3f4862c1d8"
 dependencies = [
  "num-traits",
- "rand 0.10.1",
+ "rand 0.10.2",
 ]
 
 [[package]]
@@ -4358,7 +4358,7 @@ dependencies = [
  "pin-project-lite",
  "postgres-protocol",
  "postgres-types",
- "rand 0.10.1",
+ "rand 0.10.2",
  "socket2 0.6.3",
  "tokio",
  "tokio-util",
@@ -4704,7 +4704,7 @@ dependencies = [
  "dyn-eq",
  "getrandom 0.4.2",
  "log",
- "rand 0.10.1",
+ "rand 0.10.2",
  "rand_distr",
  "rustfft",
  "tract-extra",
