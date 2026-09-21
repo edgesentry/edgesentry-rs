@@ -60,10 +60,51 @@ This produces:
 The header `crates/edgesentry-bridge/include/edgesentry_bridge.h` is
 regenerated automatically by `build.rs` using `cbindgen`.
 
+On newer macOS, if `ctypes.CDLL` / `dlopen` fails with a mis-aligned
+LINKEDIT error on the rustc-produced `.dylib`, re-link from the staticlib:
+
+```bash
+cc -dynamiclib -o target/release/libedgesentry_bridge.dylib \
+  -Wl,-force_load,target/release/libedgesentry_bridge.a \
+  -framework Security -framework CoreFoundation \
+  -lSystem -liconv \
+  -install_name libedgesentry_bridge.dylib
+```
+
+### Prebuilt release assets
+
+GitHub Releases ship sibling archives alongside `eds` for the same
+Unix targets used by the CLI matrix:
+
+| Target | Archive |
+|--------|---------|
+| `x86_64-unknown-linux-gnu` | `libedgesentry_bridge-{tag}-{target}.tar.gz` (`.so` + header) |
+| `aarch64-apple-darwin` | `libedgesentry_bridge-{tag}-{target}.tar.gz` (`.dylib` + header) |
+
+Each archive contains the shared library and `edgesentry_bridge.h` at the
+top level. On macOS, release builds re-link the cdylib with Apple `ld` from
+the staticlib so `dlopen` succeeds on newer macOS (rustc-produced dylibs can
+fail with a mis-aligned LINKEDIT string pool).
+
+Example (Linux CI):
+
+```bash
+TAG=vX.Y.Z
+TARGET=x86_64-unknown-linux-gnu
+curl -fsSL \
+  "https://github.com/edgesentry/edgesentry-rs/releases/download/${TAG}/libedgesentry_bridge-${TAG}-${TARGET}.tar.gz" \
+  | tar -xz
+python3 -c "import ctypes; ctypes.CDLL('./libedgesentry_bridge.so'); print('ok')"
+```
+
+Point consumers at the extracted library with `EDS_BRIDGE_LIB` (or pass the
+path to `ctypes.CDLL` directly). Windows DLL assets are not published.
+
 ### Cross-compiling for aarch64 (Linux)
 
 For edge hosts (e.g. Raspberry Pi) that need `libedgesentry_bridge.so` and
-the `eds` CLI on `aarch64-unknown-linux-gnu`:
+the `eds` CLI on `aarch64-unknown-linux-gnu` — this target is **not**
+shipped as a GitHub Release asset; build locally or in CI:
 
 ```bash
 # Install the target once (rustup)
@@ -79,9 +120,8 @@ cargo build -p edgesentry-bridge --release --target aarch64-unknown-linux-gnu
 ```
 
 A linker for the target (for example `aarch64-linux-gnu-gcc` via
-`cross` or a distro cross-toolchain) must be available.  CI currently
-cross-builds the `eds` binary only; shipping bridge `.so` release artifacts
-is deferred until an edge deployment needs them.
+`cross` or a distro cross-toolchain) must be available. CI currently
+cross-builds the `eds` binary only for this target.
 
 ---
 

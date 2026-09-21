@@ -177,6 +177,37 @@ jobs:
       - name: Build eds release binary
         run: cargo build --release --locked -p eds --target ${{ matrix.target }}
 
+      - name: Build edgesentry-bridge shared library
+        if: runner.os != 'Windows'
+        run: cargo build --release --locked -p edgesentry-bridge --target ${{ matrix.target }}
+
+      # rustc cdylibs can fail dlopen on newer macOS with "mis-aligned LINKEDIT";
+      # re-link from the staticlib with Apple ld so the shipped .dylib loads.
+      - name: Relink bridge dylib with Apple ld
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          TARGET="${{ matrix.target }}"
+          A="target/${TARGET}/release/libedgesentry_bridge.a"
+          OUT="target/${TARGET}/release/libedgesentry_bridge.dylib"
+          cc -dynamiclib -o "$OUT" \
+            -Wl,-force_load,"$A" \
+            -framework Security -framework CoreFoundation \
+            -lSystem -liconv \
+            -install_name libedgesentry_bridge.dylib
+
+      - name: Smoke-test bridge dlopen (ctypes)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            LIB_NAME="libedgesentry_bridge.dylib"
+          else
+            LIB_NAME="libedgesentry_bridge.so"
+          fi
+          LIB_PATH="target/${{ matrix.target }}/release/${LIB_NAME}"
+          python3 -c "import ctypes; ctypes.CDLL('${LIB_PATH}'); print('ok')"
+
       - name: Package binary (unix)
         if: runner.os != 'Windows'
         shell: bash
@@ -188,6 +219,18 @@ jobs:
           cp "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" ./dist/
           tar -C dist -czf "$ASSET_NAME" "${{ matrix.binary_name }}"
           echo "ASSET_NAME=$ASSET_NAME" >> "$GITHUB_ENV"
+
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            LIB_NAME="libedgesentry_bridge.dylib"
+          else
+            LIB_NAME="libedgesentry_bridge.so"
+          fi
+          BRIDGE_ASSET_NAME="libedgesentry_bridge-${TAG_NAME}-${{ matrix.target }}.tar.gz"
+          mkdir -p bridge-dist
+          cp "target/${{ matrix.target }}/release/${LIB_NAME}" ./bridge-dist/
+          cp crates/edgesentry-bridge/include/edgesentry_bridge.h ./bridge-dist/
+          tar -C bridge-dist -czf "$BRIDGE_ASSET_NAME" "${LIB_NAME}" edgesentry_bridge.h
+          echo "BRIDGE_ASSET_NAME=$BRIDGE_ASSET_NAME" >> "$GITHUB_ENV"
 
       - name: Package binary (windows)
         if: runner.os == 'Windows'
@@ -207,11 +250,24 @@ jobs:
         with:
           subject-path: ${{ env.ASSET_NAME }}
 
-      - name: Upload packaged asset
+      - name: Attest bridge build provenance (SLSA)
+        if: runner.os != 'Windows'
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373  # v4.1.1
+        with:
+          subject-path: ${{ env.BRIDGE_ASSET_NAME }}
+
+      - name: Upload packaged eds asset
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: ${{ matrix.target }}-asset
           path: ${{ env.ASSET_NAME }}
+
+      - name: Upload packaged bridge asset
+        if: runner.os != 'Windows'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: ${{ matrix.target }}-bridge-asset
+          path: ${{ env.BRIDGE_ASSET_NAME }}
 
   generate_sbom:
     name: Generate SBOM (CycloneDX)
