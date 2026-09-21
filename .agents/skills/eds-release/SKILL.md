@@ -20,6 +20,7 @@ cargo deny check licenses
 
 ```bash
 cargo publish --dry-run -p edgesentry-types
+cargo publish --dry-run -p edgesentry-zkp
 cargo publish --dry-run -p edgesentry-audit
 # repeat for each crate in dependency order
 ```
@@ -28,6 +29,7 @@ cargo publish --dry-run -p edgesentry-audit
 
 ```bash
 cargo publish -p edgesentry-types
+cargo publish -p edgesentry-zkp
 cargo publish -p edgesentry-ingest
 cargo publish -p edgesentry-compute
 cargo publish -p edgesentry-profile
