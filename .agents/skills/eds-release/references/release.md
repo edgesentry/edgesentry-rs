@@ -43,10 +43,11 @@ cargo publish -p edgesentry-rs
 
 This repository includes `.github/workflows/release.yml`.
 
-- Trigger: push a tag like `v0.1.0`
+- Trigger: `workflow_dispatch` (creates a version tag, then runs the pipeline)
 - Quality gate: build, unit tests, license check, clippy
-- Publish `edgesentry-rs` to crates.io
-- Build `eds` binaries for Linux, macOS (x64 + arm64), and Windows
+- Publish selected crates to crates.io
+- Build `eds` binaries for Linux (`x86_64-unknown-linux-gnu`), macOS (`aarch64-apple-darwin`), and Windows
+- Build `libedgesentry_bridge` shared libraries for Linux and macOS (same Unix targets); package as sibling assets `libedgesentry_bridge-{tag}-{target}.tar.gz` (shared lib + `edgesentry_bridge.h`)
 - Upload packaged binaries to GitHub Release assets
 
 Note: `.github/workflows/ci.yml` runs `cargo publish --dry-run` for `edgesentry-rs`.
