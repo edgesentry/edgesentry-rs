@@ -27,6 +27,11 @@ ignore = [
   # until printpdf adopts lopdf >= 0.42. edgesentry-report only generates PDFs from
   # trusted pipeline output and does not parse untrusted PDF files.
   { id = "RUSTSEC-2026-0187", reason = "lopdf pinned by printpdf v0.7; no upgrade path. PDF output is generated only, never parsed from untrusted input." },
+
+  # RUSTSEC-2026-0192: ttf-parser is unmaintained. Pulled in by printpdf v0.7 →
+  # owned_ttf_parser. No safe upgrade; printpdf must migrate to skrifa/fontations.
+  # Used only when generating PDF reports from trusted pipeline output.
+  { id = "RUSTSEC-2026-0192", reason = "ttf-parser unmaintained; transitive via printpdf v0.7. No upgrade path until printpdf adopts skrifa. PDF generation only from trusted output." },
 ]
 
 [bans]
