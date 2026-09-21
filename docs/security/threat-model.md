@@ -204,6 +204,8 @@ cargo audit
 |----------|-------|---------|--------|--------|
 | RUSTSEC-2026-0049 | `rustls-webpki` | 0.101.7 | Ignored ([#125](https://github.com/edgesentry/edgesentry-rs/issues/125)) | Pinned by `aws-smithy-http-client` legacy `hyper-rustls 0.24` → `rustls 0.21` chain; no 0.101.x patch exists. The `0.103.x` instance in the tree is updated to 0.103.10. |
 | RUSTSEC-2026-0049 | `rustls-webpki` | 0.102.8 | Ignored ([#166](https://github.com/edgesentry/edgesentry-rs/issues/166)) | Pinned by `rumqttc 0.25` → `rustls 0.22` chain; fix requires rumqttc to adopt rustls 0.23+. No CRL revocation calls in the codebase; unexploitable as-is. |
+| RUSTSEC-2026-0192 | `ttf-parser` | 0.19.2 | Ignored | Unmaintained; transitive via `printpdf` v0.7. No upgrade until printpdf adopts `skrifa`. |
+| RUSTSEC-2026-0258 | `h2` | 0.3.27 | Ignored (`cargo audit` only) | DoS via empty DATA frames; patched only in `h2 >= 0.4.16`. Workspace `h2` 0.4 upgraded; 0.3.27 remains via AWS SDK → `hyper 0.14`. |
 
 All remaining scanned crate dependencies: **no known CVEs**.
 

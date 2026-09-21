@@ -137,6 +137,9 @@ jobs:
         # 0.101.7/0.102.8 pinned by upstream (AWS SDK → rustls 0.21;
         # rumqttc → rustls ^0.102); no patch in those series; CRL/URI/wildcard
         # SAN code paths not used in edgesentry-rs.
+        # RUSTSEC-2026-0258: cargo-audit treats h2 0.3.27 as affected (patched
+        # only >=0.4.16); cargo-deny does not match 0.3.x so ignore lives here
+        # only. Workspace h2 0.4 is upgraded to >=0.4.16.
         run: >
           cargo audit
           --ignore RUSTSEC-2026-0049
@@ -144,6 +147,7 @@ jobs:
           --ignore RUSTSEC-2026-0099
           --ignore RUSTSEC-2026-0104
           --ignore RUSTSEC-2026-0187
+          --ignore RUSTSEC-2026-0258
 
   sast:
     name: SAST (Clippy + cargo-deny advisories)
