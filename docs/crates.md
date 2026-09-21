@@ -144,6 +144,9 @@ Consumer: [documaris](https://documaris.pages.dev)
 
 C/C++ FFI bridge for `edgesentry-audit`. Header generated via `cbindgen`.
 
+Canonicalization (`blake3(postcard(record))`), write/verify process split, and
+a minimal Python `ctypes` example: [C/C++ FFI Bridge](ffi-bridge.md).
+
 # edgesentry-image-utils
 
 Shared image-processing utilities behind feature flags (`onnx`, `opencv`). No functionality without at least one enabled.

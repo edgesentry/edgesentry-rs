@@ -3,7 +3,44 @@
 `edgesentry-bridge` is a separate Rust crate that exposes Ed25519 signing and
 BLAKE3 hash-chain verification as a stable C ABI.  C and C++ firmware or
 gateways can call the same security logic as the Rust library without a full
-rewrite.
+rewrite.  Downstream languages (including Python) must reach the same ABI or
+the `eds audit` CLI — see [Canonicalization contract](#canonicalization-contract).
+
+---
+
+## Canonicalization contract
+
+`AuditRecord::hash()` is defined as:
+
+```text
+blake3(postcard(record))
+```
+
+(see `crates/edgesentry-audit/src/record.rs`).  postcard is schema-driven and
+**not** self-describing: field order, varint integer encoding, fixed-size
+arrays without length prefixes, and `serialize_bytes` length prefixes must
+match byte-for-byte.
+
+**Downstream implementations MUST NOT reimplement postcard** (or otherwise
+recompute the record hash outside Rust).  A subtly wrong reimplementation
+still succeeds on write and only fails at verification — the worst failure
+mode for an audit chain.
+
+Canonical hashing, signing, and verification must go through one of:
+
+| Path | Mechanism | Typical use |
+|------|-----------|-------------|
+| **Write (in-process)** | C ABI: `eds_sign_record`, `eds_record_hash`, … | Hot path from C/C++ or `ctypes` |
+| **Verify (out-of-process)** | `eds audit verify-chain --records-file <path>` | Independent re-check; verifier is a **separate binary** from the writer |
+
+Keeping write and verify in different binaries is intentional: the same Rust
+implementation is exercised on two process boundaries, so chain validity is
+not a self-check inside a single address space.
+
+**Fallback:** if the shared library cannot be loaded, both write and verify
+may use the CLI (`eds audit sign-record` / `eds audit verify-chain`).  See
+`tools/seal_events.py` for a subprocess write example.  Prefer the FFI write
+path when available.
 
 ---
 
@@ -22,6 +59,29 @@ This produces:
 
 The header `crates/edgesentry-bridge/include/edgesentry_bridge.h` is
 regenerated automatically by `build.rs` using `cbindgen`.
+
+### Cross-compiling for aarch64 (Linux)
+
+For edge hosts (e.g. Raspberry Pi) that need `libedgesentry_bridge.so` and
+the `eds` CLI on `aarch64-unknown-linux-gnu`:
+
+```bash
+# Install the target once (rustup)
+rustup target add aarch64-unknown-linux-gnu
+
+# eds CLI
+cargo build -p eds --release --target aarch64-unknown-linux-gnu
+
+# bridge shared library
+cargo build -p edgesentry-bridge --release --target aarch64-unknown-linux-gnu
+# → target/aarch64-unknown-linux-gnu/release/libedgesentry_bridge.so
+# → target/aarch64-unknown-linux-gnu/release/eds
+```
+
+A linker for the target (for example `aarch64-linux-gnu-gcc` via
+`cross` or a distro cross-toolchain) must be available.  CI currently
+cross-builds the `eds` binary only; shipping bridge `.so` release artifacts
+is deferred until an edge deployment needs them.
 
 ---
 
@@ -173,6 +233,140 @@ int main(void) {
 
 See the full example in
 `crates/edgesentry-bridge/examples/c_integration/main.c`.
+
+---
+
+## Minimal Python (`ctypes`) example
+
+Build the library first (`cargo build -p edgesentry-bridge --release`).
+Do **not** hash or sign records in pure Python — load the shared library.
+
+```python
+#!/usr/bin/env python3
+"""Minimal ctypes consumer of libedgesentry_bridge (canonical write path)."""
+
+from __future__ import annotations
+
+import ctypes
+import sys
+from pathlib import Path
+
+EDS_OK = 0
+
+
+class EdsAuditRecord(ctypes.Structure):
+    _fields_ = [
+        ("sequence", ctypes.c_uint64),
+        ("timestamp_ms", ctypes.c_uint64),
+        ("payload_hash", ctypes.c_uint8 * 32),
+        ("signature", ctypes.c_uint8 * 64),
+        ("prev_record_hash", ctypes.c_uint8 * 32),
+        ("device_id", ctypes.c_uint8 * 256),
+        ("object_ref", ctypes.c_uint8 * 512),
+    ]
+
+
+def load_bridge(release_dir: Path) -> ctypes.CDLL:
+    if sys.platform == "darwin":
+        name = "libedgesentry_bridge.dylib"
+    else:
+        name = "libedgesentry_bridge.so"
+    lib = ctypes.CDLL(str(release_dir / name))
+
+    lib.eds_last_error_message.restype = ctypes.c_char_p
+    lib.eds_last_error_message.argtypes = []
+
+    lib.eds_keygen.restype = ctypes.c_int32
+    lib.eds_keygen.argtypes = [
+        ctypes.POINTER(ctypes.c_uint8),
+        ctypes.POINTER(ctypes.c_uint8),
+    ]
+
+    lib.eds_sign_record.restype = ctypes.c_int32
+    lib.eds_sign_record.argtypes = [
+        ctypes.c_char_p,
+        ctypes.c_uint64,
+        ctypes.c_uint64,
+        ctypes.POINTER(ctypes.c_uint8),
+        ctypes.c_size_t,
+        ctypes.POINTER(ctypes.c_uint8),
+        ctypes.c_char_p,
+        ctypes.POINTER(ctypes.c_uint8),
+        ctypes.POINTER(EdsAuditRecord),
+    ]
+
+    lib.eds_record_hash.restype = ctypes.c_int32
+    lib.eds_record_hash.argtypes = [
+        ctypes.POINTER(EdsAuditRecord),
+        ctypes.POINTER(ctypes.c_uint8),
+    ]
+
+    lib.eds_verify_chain.restype = ctypes.c_int32
+    lib.eds_verify_chain.argtypes = [
+        ctypes.POINTER(EdsAuditRecord),
+        ctypes.c_size_t,
+    ]
+    return lib
+
+
+def check(lib: ctypes.CDLL, rc: int, what: str) -> None:
+    if rc < 0:
+        msg = lib.eds_last_error_message() or b""
+        raise RuntimeError(f"{what} failed ({rc}): {msg.decode()}")
+
+
+def main() -> int:
+    release = Path("target/release")  # adjust if needed
+    lib = load_bridge(release)
+
+    priv = (ctypes.c_uint8 * 32)()
+    pub = (ctypes.c_uint8 * 32)()
+    check(lib, lib.eds_keygen(priv, pub), "eds_keygen")
+
+    payload = b"check=door,status=ok"
+    rec = EdsAuditRecord()
+    check(
+        lib,
+        lib.eds_sign_record(
+            b"lift-01",
+            1,
+            1_700_000_000_000,
+            (ctypes.c_uint8 * len(payload)).from_buffer_copy(payload),
+            len(payload),
+            None,  # first record → zero prev hash
+            b"lift-01/1.bin",
+            priv,
+            ctypes.byref(rec),
+        ),
+        "eds_sign_record",
+    )
+
+    nxt = (ctypes.c_uint8 * 32)()
+    check(lib, lib.eds_record_hash(ctypes.byref(rec), nxt), "eds_record_hash")
+
+    records = (EdsAuditRecord * 1)(rec)
+    check(lib, lib.eds_verify_chain(records, 1), "eds_verify_chain")
+    print("FFI chain OK; next prev_record_hash =", bytes(nxt).hex())
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+```
+
+**Recommended independent verification:** persist an `AuditRecord` JSON array
+(for example via `eds audit sign-record` / `sign-document`, or by exporting
+records your app already wrote through the Rust types) and re-check
+out-of-process:
+
+```bash
+eds audit verify-chain --records-file /path/to/records.json
+# prints CHAIN_VALID on success
+```
+
+In-process `eds_verify_chain` is fine for unit tests; production demos that
+claim independent re-verification should use the CLI against a separate
+`eds` binary.
 
 ---
 

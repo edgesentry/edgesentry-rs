@@ -53,6 +53,7 @@ Conventional Commits:
 ## Docs
 
 - Crate I/O contracts and constraints: `docs/crates.md`
+- C/C++ FFI bridge (canonicalization contract, ctypes): `docs/ffi-bridge.md`
 - Roadmaps (valuable — do not delete): `docs/roadmap/core-pipeline.md`, `docs/roadmap/feature-inspect.md`, `docs/roadmap/strategy-compliance.md`
 - Security artifacts (valuable — do not delete): `docs/security/` — threat-model, compliance-matrix, sbom-lifecycle, key-management
 - CV adapter contract: `docs/pipeline/ingest-cv-adapter.md`
