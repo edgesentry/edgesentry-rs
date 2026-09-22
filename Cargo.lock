@@ -1541,7 +1541,7 @@ dependencies = [
 
 [[package]]
 name = "edgesentry-assess"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "edgesentry-evaluate",
  "edgesentry-ingest",
@@ -1552,7 +1552,7 @@ dependencies = [
 
 [[package]]
 name = "edgesentry-audit"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "aws-config",
  "aws-credential-types",
@@ -1583,7 +1583,7 @@ dependencies = [
 
 [[package]]
 name = "edgesentry-bridge"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "cbindgen",
  "ed25519-dalek",
@@ -1594,7 +1594,7 @@ dependencies = [
 
 [[package]]
 name = "edgesentry-compute"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "edgesentry-types",
  "serde",
@@ -1603,7 +1603,7 @@ dependencies = [
 
 [[package]]
 name = "edgesentry-document"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "edgesentry-evaluate",
  "edgesentry-parse",
@@ -1614,7 +1614,7 @@ dependencies = [
 
 [[package]]
 name = "edgesentry-evaluate"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "edgesentry-compute",
  "edgesentry-ingest",
@@ -1626,7 +1626,7 @@ dependencies = [
 
 [[package]]
 name = "edgesentry-explain"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "edgesentry-evaluate",
  "edgesentry-ingest",
@@ -1637,14 +1637,14 @@ dependencies = [
 
 [[package]]
 name = "edgesentry-image-utils"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "edgesentry-ingest"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "edgesentry-compute",
  "edgesentry-types",
@@ -1655,7 +1655,7 @@ dependencies = [
 
 [[package]]
 name = "edgesentry-inspect"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "clap",
  "glam",
@@ -1675,7 +1675,7 @@ dependencies = [
 
 [[package]]
 name = "edgesentry-parse"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "edgesentry-ingest",
  "edgesentry-types",
@@ -1686,7 +1686,7 @@ dependencies = [
 
 [[package]]
 name = "edgesentry-profile"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "edgesentry-evaluate",
  "serde",
@@ -1696,7 +1696,7 @@ dependencies = [
 
 [[package]]
 name = "edgesentry-report"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "edgesentry-assess",
  "edgesentry-evaluate",
@@ -1707,7 +1707,7 @@ dependencies = [
 
 [[package]]
 name = "edgesentry-scenario"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "edgesentry-ingest",
  "serde",
@@ -1716,7 +1716,7 @@ dependencies = [
 
 [[package]]
 name = "edgesentry-store"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "edgesentry-evaluate",
  "serde",
@@ -1724,7 +1724,7 @@ dependencies = [
 
 [[package]]
 name = "edgesentry-types"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "serde",
  "serde_json",
@@ -1732,7 +1732,7 @@ dependencies = [
 
 [[package]]
 name = "edgesentry-wasm"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "edgesentry-audit",
  "edgesentry-document",
@@ -1748,7 +1748,7 @@ dependencies = [
 
 [[package]]
 name = "edgesentry-zkp"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "base64 0.23.1",
  "hex",
@@ -1759,7 +1759,7 @@ dependencies = [
 
 [[package]]
 name = "eds"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "blake3",
  "clap",
@@ -4521,7 +4521,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
