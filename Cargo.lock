@@ -1613,7 +1613,7 @@ dependencies = [
 name = "edgesentry-zkp"
 version = "0.2.2"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "hex",
  "serde",
  "serde_json",
