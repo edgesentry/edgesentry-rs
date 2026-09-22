@@ -95,13 +95,21 @@ else
   git push -u origin "${BRANCH}"
 fi
 
-# Open or reuse PR.
+# Open or reuse PR. If the app token cannot create PRs, the branch is still
+# pushed — print the compare URL so a human/admin can open it.
 if gh pr list --repo edgesentry/homebrew-tap --head "${BRANCH}" --state open --json number --jq 'length' | grep -qx '0'; then
-  gh pr create --repo edgesentry/homebrew-tap \
+  if gh pr create --repo edgesentry/homebrew-tap \
     --base main \
     --head "${BRANCH}" \
     --title "eds ${TAG_NAME}" \
-    --body "Update \`Formula/eds.rb\` for edgesentry-rs ${TAG_NAME}."
+    --body "Update \`Formula/eds.rb\` for edgesentry-rs ${TAG_NAME}."; then
+    :
+  else
+    echo "WARN: could not open PR automatically (app may lack pull_requests:write)."
+    echo "Branch pushed: ${BRANCH}"
+    echo "Open: https://github.com/edgesentry/homebrew-tap/compare/main...${BRANCH}?expand=1"
+    exit 1
+  fi
 else
   echo "PR for ${BRANCH} already open."
   gh pr list --repo edgesentry/homebrew-tap --head "${BRANCH}" --state open
