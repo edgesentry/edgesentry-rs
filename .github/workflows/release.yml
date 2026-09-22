@@ -349,11 +349,27 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG_NAME: ${{ needs.create_tag.outputs.tag_name }}
         run: |
-          gh release create "${TAG_NAME}" \
-            --repo "${{ github.repository }}" \
-            --title "${TAG_NAME}" \
-            --generate-notes \
-            dist/**/*.tar.gz dist/**/*.zip dist/sbom/*.cdx.json
+          set -euo pipefail
+          shopt -s nullglob
+          assets=(dist/**/*.tar.gz dist/**/*.zip dist/sbom/*.cdx.json)
+          if [ "${#assets[@]}" -eq 0 ]; then
+            echo "No release assets found under dist/"
+            exit 1
+          fi
+
+          if gh release view "${TAG_NAME}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "Release ${TAG_NAME} already exists; uploading any missing assets."
+            # --clobber overwrites same-named assets so retries are safe.
+            gh release upload "${TAG_NAME}" "${assets[@]}" \
+              --repo "${{ github.repository }}" \
+              --clobber
+          else
+            gh release create "${TAG_NAME}" \
+              --repo "${{ github.repository }}" \
+              --title "${TAG_NAME}" \
+              --generate-notes \
+              "${assets[@]}"
+          fi
 
   update_homebrew_tap:
     name: Update Homebrew tap formula
