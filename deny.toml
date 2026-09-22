@@ -79,4 +79,6 @@ name = "dyn-eq"
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-allow-git = ["https://github.com/edgesentry/trilink-core"]
+# No git crates currently required; keep empty allow-list so accidental
+# git deps fail cargo-deny until explicitly reviewed.
+allow-git = []

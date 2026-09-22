@@ -1959,9 +1959,9 @@ dependencies = [
 
 [[package]]
 name = "glam"
-version = "0.33.8"
+version = "0.32.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0990707078259d76f65619a692e87c82645be66cbee224173cd1af151e54ba2"
+checksum = "f70749695b063ecbf6b62949ccccde2e733ec3ecbbd71d467dca4e5c6c97cca0"
 dependencies = [
  "serde_core",
 ]
@@ -4782,7 +4782,8 @@ dependencies = [
 [[package]]
 name = "trilink-core"
 version = "0.1.1"
-source = "git+https://github.com/edgesentry/trilink-core.git?rev=b8dada7ee696315d0b93f462c9ff27f001483dfd#b8dada7ee696315d0b93f462c9ff27f001483dfd"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe6f76f5a12a8b1c6f125c337378bd99679e277a3710476ab359d4c82f1f4890"
 dependencies = [
  "glam",
  "serde",
