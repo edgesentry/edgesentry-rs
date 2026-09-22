@@ -30,7 +30,7 @@ rstar = "0.13"
 glam = "0.32"
 image = { version = "0.25", default-features = false, features = ["png"] }
 toml = "1"
-ureq = "2"
+ureq = { workspace = true }
 tempfile = "3"
 tract-onnx = "0.23"
 

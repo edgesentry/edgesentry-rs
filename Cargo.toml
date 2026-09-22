@@ -29,9 +29,9 @@ version = "0.2.2"
 repository = "https://github.com/edgesentry/edgesentry-rs"
 
 [workspace.dependencies]
-base64 = "0.22"
+base64 = "0.23"
 blake3 = "1.8"
-ed25519-dalek = { version = "2.1", features = ["rand_core"] }
+ed25519-dalek = { version = "3", features = ["rand_core"] }
 postcard = { version = "1.1", default-features = false, features = ["alloc"] }
 serde = { version = "1", features = ["derive"] }
 thiserror = "2"
@@ -41,5 +41,5 @@ hex = "0.4"
 rand = "0.10"
 tracing = "0.1"
 tempfile = "3"
-ureq = { version = "2", features = ["json"] }
+ureq = { version = "3", features = ["json"] }
 proptest = "1"

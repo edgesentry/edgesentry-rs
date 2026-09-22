@@ -14,24 +14,6 @@ ignore = [
   # available via upstream; upgrading requires rustls to drop the dep.
   # No direct call-site exposure in our code.
   { id = "RUSTSEC-2025-0134", reason = "rustls-pemfile pulled in transitively by rustls 0.23 chain; no patch available. Functionality superseded by rustls-pki-types but not yet adopted by rustls." },
-
-  # RUSTSEC-2024-0436: `paste` macro crate is unmaintained (archived by dtolnay).
-  # Pulled in transitively by parquet v55 → paste v1.0.15.
-  # No safe upgrade available; parquet upstream must migrate to an alternative.
-  # paste is a proc-macro used only at compile time and ships no runtime code,
-  # so the unmaintained status carries no security risk at runtime.
-  { id = "RUSTSEC-2024-0436", reason = "paste is a compile-time proc-macro pulled in by parquet v55; no runtime exposure. parquet upstream must adopt an alternative before this can be resolved." },
-
-  # RUSTSEC-2026-0187: lopdf stack overflow on deeply nested PDF objects when parsing
-  # untrusted input. printpdf v0.7 pins lopdf 0.31.0 exactly; no patched release exists
-  # until printpdf adopts lopdf >= 0.42. edgesentry-report only generates PDFs from
-  # trusted pipeline output and does not parse untrusted PDF files.
-  { id = "RUSTSEC-2026-0187", reason = "lopdf pinned by printpdf v0.7; no upgrade path. PDF output is generated only, never parsed from untrusted input." },
-
-  # RUSTSEC-2026-0192: ttf-parser is unmaintained. Pulled in by printpdf v0.7 →
-  # owned_ttf_parser. No safe upgrade; printpdf must migrate to skrifa/fontations.
-  # Used only when generating PDF reports from trusted pipeline output.
-  { id = "RUSTSEC-2026-0192", reason = "ttf-parser unmaintained; transitive via printpdf v0.7. No upgrade path until printpdf adopts skrifa. PDF generation only from trusted output." },
 ]
 
 [bans]

@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::io::BufWriter;
 
 use edgesentry_assess::{Assessment, EntityCorrelation, RiskTrend};
 use edgesentry_evaluate::{EvidenceQuality, RiskEvent, Severity};
@@ -314,152 +313,307 @@ pub fn render_markdown(report: &Report) -> String {
     out
 }
 
+/// Append one absolutely-positioned text line (x/y in mm, size in pt).
+fn pdf_text_line(
+    ops: &mut Vec<printpdf::Op>,
+    font: printpdf::PdfFontHandle,
+    size_pt: f32,
+    x_mm: f32,
+    y_mm: f32,
+    text: impl Into<String>,
+) {
+    use printpdf::{Mm, Op, Point, Pt, TextItem};
+    ops.push(Op::SetTextCursor {
+        pos: Point::new(Mm(x_mm), Mm(y_mm)),
+    });
+    ops.push(Op::SetFont {
+        font,
+        size: Pt(size_pt),
+    });
+    ops.push(Op::ShowText {
+        items: vec![TextItem::Text(text.into())],
+    });
+}
+
 /// Render `report` as a minimal A4 PDF and return the raw bytes.
 pub fn render_pdf(report: &Report) -> Vec<u8> {
-    use printpdf::{BuiltinFont, Mm, PdfDocument};
+    use printpdf::{
+        BuiltinFont, Mm, Op, PdfDocument, PdfFontHandle, PdfPage, PdfSaveOptions,
+    };
 
-    let (doc, page1, layer1) =
-        PdfDocument::new("EdgeSentry Safety Report", Mm(210.0_f32), Mm(297.0_f32), "Layer 1");
-    let current_layer = doc.get_page(page1).get_layer(layer1);
+    let mut doc = PdfDocument::new("EdgeSentry Safety Report");
+    let font = PdfFontHandle::Builtin(BuiltinFont::Helvetica);
+    let font_bold = PdfFontHandle::Builtin(BuiltinFont::HelveticaBold);
 
-    let font = doc.add_builtin_font(BuiltinFont::Helvetica).unwrap();
-    let font_bold = doc.add_builtin_font(BuiltinFont::HelveticaBold).unwrap();
+    let mut ops: Vec<Op> = Vec::new();
+    ops.push(Op::StartTextSection);
 
     // Cursor starts near top of page; y decreases as we add lines.
     let mut y = 277.0_f32;
     let left = 15.0_f32;
 
-    // Helper: write one text line (font, size, x, y in mm).
-    macro_rules! line {
-        ($fnt:expr, $size:expr, $x:expr, $y:expr, $text:expr) => {
-            current_layer.use_text($text, $size as f32, Mm($x), Mm($y), &$fnt);
-        };
-    }
-
     // Title
-    line!(font_bold, 18.0_f32, left, y, "EdgeSentry Safety Report");
+    pdf_text_line(&mut ops, font_bold.clone(), 18.0, left, y, "EdgeSentry Safety Report");
     y -= 10.0;
 
     // Metadata
-    let site   = report.site_name.clone().unwrap_or_else(|| "-".to_string());
+    let site = report.site_name.clone().unwrap_or_else(|| "-".to_string());
     let period = report.report_period.clone().unwrap_or_else(|| "-".to_string());
-    line!(font, 10.0_f32, left, y, format!("Site: {site}"));
+    pdf_text_line(&mut ops, font.clone(), 10.0, left, y, format!("Site: {site}"));
     y -= 6.0;
-    line!(font, 10.0_f32, left, y, format!("Period: {period}"));
+    pdf_text_line(&mut ops, font.clone(), 10.0, left, y, format!("Period: {period}"));
     y -= 6.0;
-    line!(font, 10.0_f32, left, y, format!("Generated: {}", fmt_timestamp_ms(report.generated_at_ms)));
+    pdf_text_line(
+        &mut ops,
+        font.clone(),
+        10.0,
+        left,
+        y,
+        format!("Generated: {}", fmt_timestamp_ms(report.generated_at_ms)),
+    );
     y -= 6.0;
-    line!(font, 9.0_f32, left, y,
-        "All events are tamper-evident and cannot be altered after recording.");
+    pdf_text_line(
+        &mut ops,
+        font.clone(),
+        9.0,
+        left,
+        y,
+        "All events are tamper-evident and cannot be altered after recording.",
+    );
     y -= 10.0;
 
     // Executive Summary
     if let Some(ref summary) = report.executive_summary {
-        line!(font_bold, 13.0_f32, left, y, "Executive Summary");
+        pdf_text_line(&mut ops, font_bold.clone(), 13.0, left, y, "Executive Summary");
         y -= 7.0;
         let words: Vec<&str> = summary.split_whitespace().collect();
         let mut line_buf = String::new();
         for word in &words {
             if line_buf.len() + word.len() + 1 > 95 {
-                line!(font, 9.5_f32, left, y, line_buf.as_str());
+                pdf_text_line(&mut ops, font.clone(), 9.5, left, y, line_buf.as_str());
                 y -= 5.5;
                 line_buf = word.to_string();
-                if y < 25.0 { break; }
+                if y < 25.0 {
+                    break;
+                }
             } else {
-                if !line_buf.is_empty() { line_buf.push(' '); }
+                if !line_buf.is_empty() {
+                    line_buf.push(' ');
+                }
                 line_buf.push_str(word);
             }
         }
         if !line_buf.is_empty() && y >= 25.0 {
-            line!(font, 9.5_f32, left, y, line_buf.as_str());
+            pdf_text_line(&mut ops, font.clone(), 9.5, left, y, line_buf.as_str());
             y -= 5.5;
         }
         y -= 6.0;
     }
 
     // Summary
-    line!(font_bold, 14.0_f32, left, y, "Summary of Rule Violations");
+    pdf_text_line(
+        &mut ops,
+        font_bold.clone(),
+        14.0,
+        left,
+        y,
+        "Summary of Rule Violations",
+    );
     y -= 8.0;
-    line!(font, 9.0_f32, left, y,
-        "Number of times a monitored entity crossed a regulatory safety threshold:");
+    pdf_text_line(
+        &mut ops,
+        font.clone(),
+        9.0,
+        left,
+        y,
+        "Number of times a monitored entity crossed a regulatory safety threshold:",
+    );
     y -= 7.0;
-    line!(font, 10.0_f32, left, y,
-        format!("Critical (immediate stop-work required):  {}", report.event_summary.critical));
+    pdf_text_line(
+        &mut ops,
+        font.clone(),
+        10.0,
+        left,
+        y,
+        format!(
+            "Critical (immediate stop-work required):  {}",
+            report.event_summary.critical
+        ),
+    );
     y -= 6.0;
-    line!(font, 10.0_f32, left, y,
-        format!("High     (corrective action required):     {}", report.event_summary.high));
+    pdf_text_line(
+        &mut ops,
+        font.clone(),
+        10.0,
+        left,
+        y,
+        format!(
+            "High     (corrective action required):     {}",
+            report.event_summary.high
+        ),
+    );
     y -= 6.0;
-    line!(font, 10.0_f32, left, y,
-        format!("Medium   (monitor and review):             {}", report.event_summary.medium));
+    pdf_text_line(
+        &mut ops,
+        font.clone(),
+        10.0,
+        left,
+        y,
+        format!(
+            "Medium   (monitor and review):             {}",
+            report.event_summary.medium
+        ),
+    );
     y -= 6.0;
-    line!(font, 10.0_f32, left, y,
-        format!("Low      (logged for trend analysis):      {}", report.event_summary.low));
+    pdf_text_line(
+        &mut ops,
+        font.clone(),
+        10.0,
+        left,
+        y,
+        format!(
+            "Low      (logged for trend analysis):      {}",
+            report.event_summary.low
+        ),
+    );
     y -= 6.0;
-    line!(font_bold, 10.0_f32, left, y,
-        format!("Total:                                     {}", report.event_summary.total));
+    pdf_text_line(
+        &mut ops,
+        font_bold.clone(),
+        10.0,
+        left,
+        y,
+        format!(
+            "Total:                                     {}",
+            report.event_summary.total
+        ),
+    );
     y -= 10.0;
 
     // Evidence Quality
     if report.event_summary.total > 0 {
         let eq = &report.event_summary.evidence_quality;
-        line!(font_bold, 14.0_f32, left, y, "Evidence Quality");
+        pdf_text_line(&mut ops, font_bold.clone(), 14.0, left, y, "Evidence Quality");
         y -= 7.0;
-        line!(font, 9.0_f32, left, y,
-            "CV model confidence per event: Certified (>=0.8) / Degraded (0.5-0.8) / Rejected (<0.5).");
+        pdf_text_line(
+            &mut ops,
+            font.clone(),
+            9.0,
+            left,
+            y,
+            "CV model confidence per event: Certified (>=0.8) / Degraded (0.5-0.8) / Rejected (<0.5).",
+        );
         y -= 7.0;
-        line!(font, 10.0_f32, left, y, format!("Certified  (full actuarial weight):  {}", eq.certified));
+        pdf_text_line(
+            &mut ops,
+            font.clone(),
+            10.0,
+            left,
+            y,
+            format!("Certified  (full actuarial weight):  {}", eq.certified),
+        );
         y -= 6.0;
-        line!(font, 10.0_f32, left, y, format!("Degraded   (reduced weight):          {}", eq.degraded));
+        pdf_text_line(
+            &mut ops,
+            font.clone(),
+            10.0,
+            left,
+            y,
+            format!("Degraded   (reduced weight):          {}", eq.degraded),
+        );
         y -= 6.0;
-        line!(font, 10.0_f32, left, y, format!("Rejected   (recorded, not admissible):{}", eq.rejected));
+        pdf_text_line(
+            &mut ops,
+            font.clone(),
+            10.0,
+            left,
+            y,
+            format!("Rejected   (recorded, not admissible):{}", eq.rejected),
+        );
         y -= 10.0;
     }
 
     // Risk Events by Rule
-    line!(font_bold, 14.0_f32, left, y, "Violations by Safety Rule");
+    pdf_text_line(
+        &mut ops,
+        font_bold.clone(),
+        14.0,
+        left,
+        y,
+        "Violations by Safety Rule",
+    );
     y -= 7.0;
-    line!(font, 9.0_f32, left, y,
-        "Regulation column cites the exact clause that defines the threshold.");
+    pdf_text_line(
+        &mut ops,
+        font.clone(),
+        9.0,
+        left,
+        y,
+        "Regulation column cites the exact clause that defines the threshold.",
+    );
     y -= 8.0;
     for row in &report.rule_frequencies {
-        line!(font_bold, 10.0_f32, left, y,
-            format!("{} — {} violation(s) — {}", row.rule_id, row.count, row.severity_str));
+        pdf_text_line(
+            &mut ops,
+            font_bold.clone(),
+            10.0,
+            left,
+            y,
+            format!(
+                "{} — {} violation(s) — {}",
+                row.rule_id, row.count, row.severity_str
+            ),
+        );
         y -= 5.5;
         // Wrap regulation text at ~90 chars
         let reg = &row.regulation;
         if reg.len() > 90 {
-            line!(font, 9.0_f32, left + 4.0, y, &reg[..90]);
+            pdf_text_line(&mut ops, font.clone(), 9.0, left + 4.0, y, &reg[..90]);
             y -= 5.0;
-            line!(font, 9.0_f32, left + 4.0, y, &reg[90..]);
+            pdf_text_line(&mut ops, font.clone(), 9.0, left + 4.0, y, &reg[90..]);
         } else {
-            line!(font, 9.0_f32, left + 4.0, y, reg.as_str());
+            pdf_text_line(&mut ops, font.clone(), 9.0, left + 4.0, y, reg.as_str());
         }
         y -= 7.0;
-        if y < 25.0 { break; }
+        if y < 25.0 {
+            break;
+        }
     }
     y -= 3.0;
 
     // Trend
     if y > 25.0 {
-        line!(font_bold, 14.0_f32, left, y, "Risk Trend");
+        pdf_text_line(&mut ops, font_bold.clone(), 14.0, left, y, "Risk Trend");
         y -= 8.0;
         let (trend_label, trend_desc) = match report.trend {
-            RiskTrend::Stable  => ("Stable",  "Violation rate is consistent — no escalation detected."),
-            RiskTrend::Rising  => ("Rising",  "Violation rate is increasing — escalating risk, action required."),
-            RiskTrend::Falling => ("Falling", "Violation rate is decreasing — safety conditions improving."),
+            RiskTrend::Stable => ("Stable", "Violation rate is consistent — no escalation detected."),
+            RiskTrend::Rising => (
+                "Rising",
+                "Violation rate is increasing — escalating risk, action required.",
+            ),
+            RiskTrend::Falling => (
+                "Falling",
+                "Violation rate is decreasing — safety conditions improving.",
+            ),
         };
-        line!(font_bold, 10.0_f32, left, y, trend_label);
+        pdf_text_line(&mut ops, font_bold.clone(), 10.0, left, y, trend_label);
         y -= 6.0;
-        line!(font, 9.0_f32, left, y, trend_desc);
+        pdf_text_line(&mut ops, font.clone(), 9.0, left, y, trend_desc);
         y -= 10.0;
     }
 
     // Entity Involvement
     if !report.entity_correlations.is_empty() && y > 25.0 {
-        line!(font_bold, 14.0_f32, left, y, "Entity Involvement");
+        pdf_text_line(&mut ops, font_bold.clone(), 14.0, left, y, "Entity Involvement");
         y -= 7.0;
-        line!(font, 9.0_f32, left, y,
-            "Entities or pairs with highest violation counts — may indicate systemic workflow issues.");
+        pdf_text_line(
+            &mut ops,
+            font.clone(),
+            9.0,
+            left,
+            y,
+            "Entities or pairs with highest violation counts — may indicate systemic workflow issues.",
+        );
         y -= 8.0;
         for row in &report.entity_correlations {
             let label = if row.entity_ids.len() > 1 {
@@ -472,60 +626,106 @@ pub fn render_pdf(report: &Report) -> Vec<u8> {
             } else {
                 format!("{} events", row.event_count)
             };
-            line!(font, 10.0_f32, left, y, format!("{label}: {desc}"));
+            pdf_text_line(&mut ops, font.clone(), 10.0, left, y, format!("{label}: {desc}"));
             y -= 6.0;
-            if y < 25.0 { break; }
+            if y < 25.0 {
+                break;
+            }
         }
     }
 
+    ops.push(Op::EndTextSection);
+    let mut pages = vec![PdfPage::new(Mm(210.0), Mm(297.0), ops)];
+
     // Explanations — new page if any
     if !report.explanations.is_empty() {
-        let (page2, layer2) = doc.add_page(Mm(210.0_f32), Mm(297.0_f32), "Explanations");
-        let exp_layer = doc.get_page(page2).get_layer(layer2);
+        let mut exp_ops: Vec<Op> = Vec::new();
+        exp_ops.push(Op::StartTextSection);
         let mut ey = 277.0_f32;
 
-        macro_rules! eline {
-            ($fnt:expr, $size:expr, $x:expr, $ey:expr, $text:expr) => {
-                exp_layer.use_text($text, $size as f32, Mm($x), Mm($ey), &$fnt);
-            };
-        }
-
-        eline!(font_bold, 16.0_f32, left, ey, "Event Explanations (LLM)");
+        pdf_text_line(
+            &mut exp_ops,
+            font_bold.clone(),
+            16.0,
+            left,
+            ey,
+            "Event Explanations (LLM)",
+        );
         ey -= 7.0;
-        eline!(font, 9.0_f32, left, ey,
-            "Generated by local LLM at event time. Interprets physics measurements against cited regulation.");
+        pdf_text_line(
+            &mut exp_ops,
+            font.clone(),
+            9.0,
+            left,
+            ey,
+            "Generated by local LLM at event time. Interprets physics measurements against cited regulation.",
+        );
         ey -= 10.0;
 
         for (i, entry) in report.explanations.iter().enumerate() {
-            if ey < 30.0 { break; }
-            eline!(font_bold, 11.0_f32, left, ey,
-                format!("{}. {} — {}", i + 1, entry.rule_id, fmt_timestamp_ms(entry.timestamp_ms)));
+            if ey < 30.0 {
+                break;
+            }
+            pdf_text_line(
+                &mut exp_ops,
+                font_bold.clone(),
+                11.0,
+                left,
+                ey,
+                format!(
+                    "{}. {} — {}",
+                    i + 1,
+                    entry.rule_id,
+                    fmt_timestamp_ms(entry.timestamp_ms)
+                ),
+            );
             ey -= 6.0;
             // Word-wrap at ~95 chars per line
             let words: Vec<&str> = entry.text.split_whitespace().collect();
             let mut line_buf = String::new();
             for word in &words {
                 if line_buf.len() + word.len() + 1 > 95 {
-                    eline!(font, 9.5_f32, left + 3.0, ey, line_buf.as_str());
+                    pdf_text_line(
+                        &mut exp_ops,
+                        font.clone(),
+                        9.5,
+                        left + 3.0,
+                        ey,
+                        line_buf.as_str(),
+                    );
                     ey -= 5.5;
                     line_buf = word.to_string();
-                    if ey < 30.0 { break; }
+                    if ey < 30.0 {
+                        break;
+                    }
                 } else {
-                    if !line_buf.is_empty() { line_buf.push(' '); }
+                    if !line_buf.is_empty() {
+                        line_buf.push(' ');
+                    }
                     line_buf.push_str(word);
                 }
             }
             if !line_buf.is_empty() && ey >= 30.0 {
-                eline!(font, 9.5_f32, left + 3.0, ey, line_buf.as_str());
+                pdf_text_line(
+                    &mut exp_ops,
+                    font.clone(),
+                    9.5,
+                    left + 3.0,
+                    ey,
+                    line_buf.as_str(),
+                );
                 ey -= 5.5;
             }
             ey -= 5.0;
         }
+
+        exp_ops.push(Op::EndTextSection);
+        pages.push(PdfPage::new(Mm(210.0), Mm(297.0), exp_ops));
     }
 
-    let mut buf = BufWriter::new(Vec::new());
-    doc.save(&mut buf).expect("PDF save failed");
-    buf.into_inner().expect("BufWriter flush failed")
+    let mut warnings = Vec::new();
+    doc.with_pages(pages)
+        .save(&PdfSaveOptions::default(), &mut warnings)
 }
 
 pub fn validate(events: &[RiskEvent], assessment: &Assessment) -> Result<(), String> {

@@ -234,13 +234,14 @@ pub fn onnx_infer(model_path: &Path, depth_map: &DepthMap) -> Result<Vec<BBox2D>
 /// The server must accept `Content-Type: image/png` and respond with a JSON
 /// array of objects with `u0`, `v0`, `u1`, `v1` fields (pixel coordinates).
 pub fn http_infer(endpoint: &str, png_bytes: &[u8]) -> Result<Vec<BBox2D>, InferenceError> {
-    let response = ureq::post(endpoint)
-        .set("Content-Type", "image/png")
-        .send_bytes(png_bytes)
+    let mut response = ureq::post(endpoint)
+        .header("Content-Type", "image/png")
+        .send(png_bytes)
         .map_err(|e| InferenceError::Http(e.to_string()))?;
 
     let body = response
-        .into_string()
+        .body_mut()
+        .read_to_string()
         .map_err(|e| InferenceError::Http(e.to_string()))?;
 
     let detections: Vec<DetectionJson> = serde_json::from_str(&body)?;
