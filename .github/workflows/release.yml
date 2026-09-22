@@ -143,9 +143,9 @@ jobs:
           wait_for_crate edgesentry-zkp
           publish_if_missing edgesentry-audit
 
-          # edgesentry-inspect requires trilink-core to be published on
-          # crates.io first, and edgesentry-inspect/Cargo.toml must reference
-          # it as a crates.io dep (not a git dep) before this step can succeed.
+          # edgesentry-inspect depends on trilink-core from crates.io (see
+          # crates/edgesentry-inspect/Cargo.toml). Keep trilink-core published
+          # before this step.
           publish_if_missing edgesentry-inspect
 
   build_cli_binaries:

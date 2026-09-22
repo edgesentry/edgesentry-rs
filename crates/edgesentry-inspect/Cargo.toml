@@ -19,12 +19,15 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { workspace = true }
-trilink-core = { git = "https://github.com/edgesentry/trilink-core.git", rev = "b8dada7ee696315d0b93f462c9ff27f001483dfd" }
+# crates.io required for `cargo publish` (git-only deps are rejected).
+# Keep in sync with the trilink-core release published on crates.io.
+trilink-core = "0.1.1"
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 rstar = "0.13"
-glam = "0.33.0"
+# Must match trilink-core 0.1.1's glam (0.32.x); mismatch causes Mat4/Vec3 type errors.
+glam = "0.32"
 image = { version = "0.25", default-features = false, features = ["png"] }
 toml = "1"
 ureq = "2"

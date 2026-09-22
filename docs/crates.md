@@ -114,7 +114,10 @@ Current implementations: `GreenMarkProgram` (BCA Green Mark EUI/COP/LPD attestat
 
 Point cloud (LiDAR/ToF) → deviation report against a reference geometry.
 
-Depends on `trilink-core` for 3D↔2D projection and unprojection. Do not reimplement those primitives here — they live in `edgesentry/trilink-core`.
+Depends on `trilink-core` (crates.io) for 3D↔2D projection and unprojection.
+Do not reimplement those primitives here — they live in `edgesentry/trilink-core`.
+Keep the version pin aligned with the published `trilink-core` release (and its
+`glam` major) so `cargo publish -p edgesentry-inspect` succeeds.
 
 See `docs/roadmap/feature-inspect.md`.
 
