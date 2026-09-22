@@ -24,4 +24,6 @@ hex                 = { workspace = true }
 getrandom           = { version = "0.2", features = ["js"] }
 # getrandom 0.3 (pulled by rand 0.9 / rand_core 0.9) also needs wasm_js under wasm32
 getrandom03         = { package = "getrandom", version = "0.3", features = ["wasm_js"] }
+# getrandom 0.4 (pulled by ed25519-dalek 3 / rand_core 0.10)
+getrandom04         = { package = "getrandom", version = "0.4", features = ["wasm_js"] }
 

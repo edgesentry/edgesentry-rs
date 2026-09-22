@@ -137,10 +137,10 @@ pub fn run(cmd: InspectCommand) -> Result<(), Box<dyn std::error::Error>> {
                 print!("  Downloading {} … ", SAMPLE_FILENAME);
                 std::io::stdout().flush().ok();
 
-                let resp = ureq::get(SAMPLE_URL)
+                let mut resp = ureq::get(SAMPLE_URL)
                     .call()
                     .map_err(|e| format!("download failed: {e}"))?;
-                let mut reader = resp.into_reader();
+                let mut reader = resp.body_mut().as_reader();
                 let mut file = std::fs::File::create(&dest)?;
                 let bytes = std::io::copy(&mut reader, &mut file)?;
                 println!("done ({bytes} bytes)");

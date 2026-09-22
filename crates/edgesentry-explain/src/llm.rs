@@ -70,7 +70,8 @@ impl LlmClient {
         let resp: ModelsResponse = ureq::get(&url)
             .call()
             .map_err(|e| format!("GET /v1/models failed: {e}"))?
-            .into_json()
+            .body_mut()
+            .read_json()
             .map_err(|e| format!("/v1/models parse error: {e}"))?;
         resp.data
             .into_iter()
@@ -95,13 +96,13 @@ impl LlmClient {
         let resp: ChatResponse = ureq::post(&url)
             .send_json(&body)
             .map_err(|e| match e {
-                ureq::Error::Status(code, response) => {
-                    let body = response.into_string().unwrap_or_default();
-                    format!("LLM request failed (HTTP {code}): {body}")
+                ureq::Error::StatusCode(code) => {
+                    format!("LLM request failed (HTTP {code})")
                 }
                 other => format!("LLM request failed: {other}"),
             })?
-            .into_json()
+            .body_mut()
+            .read_json()
             .map_err(|e| format!("LLM response parse error: {e}"))?;
         resp.choices
             .into_iter()

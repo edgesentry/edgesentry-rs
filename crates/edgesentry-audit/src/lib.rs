@@ -39,7 +39,7 @@ pub use record::{AuditRecord, Hash32, Signature64};
 use std::{fs, path::Path};
 
 use ed25519_dalek::{SigningKey, VerifyingKey};
-use rand_core::OsRng;
+use getrandom::{rand_core::UnwrapErr, SysRng};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -206,7 +206,7 @@ pub struct KeyPair {
 
 /// Generate a fresh Ed25519 keypair using the OS CSPRNG.
 pub fn generate_keypair() -> KeyPair {
-    let signing_key = SigningKey::generate(&mut OsRng);
+    let signing_key = SigningKey::generate(&mut UnwrapErr(SysRng));
     KeyPair {
         private_key_hex: hex::encode(signing_key.to_bytes()),
         public_key_hex: hex::encode(signing_key.verifying_key().to_bytes()),

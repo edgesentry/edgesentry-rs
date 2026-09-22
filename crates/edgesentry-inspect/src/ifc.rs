@@ -34,10 +34,10 @@ pub enum IfcError {
 /// Pass `token` to send `Authorization: Bearer <token>`.  Leave `None` for
 /// unauthenticated or self-authenticating pre-signed S3 URLs.
 pub fn fetch_ifc_url(url: &str, token: Option<&str>) -> Result<tempfile::NamedTempFile, IfcError> {
-    let resp = {
+    let mut resp = {
         let req = ureq::get(url);
         if let Some(t) = token {
-            req.set("Authorization", &format!("Bearer {t}"))
+            req.header("Authorization", &format!("Bearer {t}"))
         } else {
             req
         }
@@ -51,7 +51,7 @@ pub fn fetch_ifc_url(url: &str, token: Option<&str>) -> Result<tempfile::NamedTe
         .tempfile()
         .map_err(IfcError::Io)?;
 
-    std::io::copy(&mut resp.into_reader(), tmp.as_file_mut()).map_err(IfcError::Io)?;
+    std::io::copy(&mut resp.body_mut().as_reader(), tmp.as_file_mut()).map_err(IfcError::Io)?;
     tmp.flush().map_err(IfcError::Io)?;
 
     Ok(tmp)

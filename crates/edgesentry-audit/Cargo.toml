@@ -56,7 +56,7 @@ ed25519-dalek.workspace = true
 hex.workspace = true
 postcard.workspace = true
 rand.workspace = true
-rand_core = { version = "0.6", features = ["getrandom"] }
+getrandom = "0.4"
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

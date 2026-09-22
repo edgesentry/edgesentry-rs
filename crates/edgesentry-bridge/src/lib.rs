@@ -27,7 +27,7 @@ use ed25519_dalek::{SigningKey, VerifyingKey};
 use edgesentry_audit::{
     compute_payload_hash, sign_payload_hash, verify_chain, verify_payload_signature, AuditRecord,
 };
-use rand_core::OsRng;
+use getrandom::{rand_core::UnwrapErr, SysRng};
 
 // ── Thread-local error storage ────────────────────────────────────────────────
 
@@ -158,7 +158,7 @@ pub unsafe extern "C" fn eds_keygen(
             set_last_error("eds_keygen: private_key_out or public_key_out is NULL");
             return EDS_ERR_NULL_PTR;
         }
-        let signing_key = SigningKey::generate(&mut OsRng);
+        let signing_key = SigningKey::generate(&mut UnwrapErr(SysRng));
         std::slice::from_raw_parts_mut(private_key_out, 32)
             .copy_from_slice(&signing_key.to_bytes());
         std::slice::from_raw_parts_mut(public_key_out, 32)
