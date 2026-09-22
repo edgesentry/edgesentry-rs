@@ -51,7 +51,8 @@ jobs:
             pkg:cargo/rumqttc,
             pkg:cargo/mqttbytes,
             pkg:cargo/tokio-rustls,
-            pkg:cargo/webpki-roots
+            pkg:cargo/webpki-roots,
+            pkg:cargo/brotli-decompressor
           # GHSA-82j2-j2ch-gfr8 = RUSTSEC-2026-0104: rustls-webpki panic on malformed CRL BIT STRING.
           # Affects rustls-webpki 0.101.7 (AWS SDK chain) and 0.102.8 (rumqttc / parquet transitive).
           # CRL checking is opt-in via RevocationOptions and is not used anywhere in this codebase.
