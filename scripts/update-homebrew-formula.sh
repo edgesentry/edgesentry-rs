@@ -1,21 +1,23 @@
 #!/usr/bin/env bash
 # update-homebrew-formula.sh — regenerate Formula/eds.rb for a given release tag
-# and push it to edgesentry/homebrew-tap.
+# and open a PR against edgesentry/homebrew-tap (direct pushes to main are blocked).
 #
 # Usage:
 #   HOMEBREW_TAP_TOKEN=<pat> ./scripts/update-homebrew-formula.sh v1.2.3
 #
 # Requirements:
-#   - curl, sha256sum (or shasum on macOS), git
+#   - curl, sha256sum (or shasum on macOS), git, gh
 #   - HOMEBREW_TAP_TOKEN env var with write access to edgesentry/homebrew-tap
 set -euo pipefail
 
 TAG_NAME="${1:?Usage: $0 <tag> (e.g. v1.2.3)}"
 GH_TOKEN="${HOMEBREW_TAP_TOKEN:?HOMEBREW_TAP_TOKEN must be set}"
+export GH_TOKEN
 
 BASE_URL="https://github.com/edgesentry/edgesentry-rs/releases/download/${TAG_NAME}"
 MACOS_ASSET="eds-${TAG_NAME}-aarch64-apple-darwin.tar.gz"
 LINUX_ASSET="eds-${TAG_NAME}-x86_64-unknown-linux-gnu.tar.gz"
+BRANCH="eds-${TAG_NAME}"
 
 WORK_DIR="$(mktemp -d)"
 trap 'rm -rf "${WORK_DIR}"' EXIT
@@ -76,8 +78,31 @@ cp eds.rb tap/Formula/eds.rb
 cd tap
 git config user.email "github-actions[bot]@users.noreply.github.com"
 git config user.name "github-actions[bot]"
-git add Formula/eds.rb
-git commit -m "eds ${TAG_NAME}"
-git push
 
-echo "Formula/eds.rb updated in edgesentry/homebrew-tap for ${TAG_NAME}."
+# Idempotent: reuse branch if a previous attempt left one.
+if git ls-remote --exit-code --heads origin "${BRANCH}" >/dev/null 2>&1; then
+  git fetch origin "${BRANCH}"
+  git checkout -B "${BRANCH}" "origin/${BRANCH}"
+else
+  git checkout -B "${BRANCH}"
+fi
+
+git add Formula/eds.rb
+if git diff --cached --quiet; then
+  echo "Formula/eds.rb already up to date for ${TAG_NAME}."
+else
+  git commit -m "eds ${TAG_NAME}"
+  git push -u origin "${BRANCH}"
+fi
+
+# Open or reuse PR.
+if gh pr list --repo edgesentry/homebrew-tap --head "${BRANCH}" --state open --json number --jq 'length' | grep -qx '0'; then
+  gh pr create --repo edgesentry/homebrew-tap \
+    --base main \
+    --head "${BRANCH}" \
+    --title "eds ${TAG_NAME}" \
+    --body "Update \`Formula/eds.rb\` for edgesentry-rs ${TAG_NAME}."
+else
+  echo "PR for ${BRANCH} already open."
+  gh pr list --repo edgesentry/homebrew-tap --head "${BRANCH}" --state open
+fi
