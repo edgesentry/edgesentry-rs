@@ -27,7 +27,7 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 rstar = "0.13"
 # Must match trilink-core 0.1.1's glam (0.32.x); mismatch causes Mat4/Vec3 type errors.
-glam = "0.32"
+glam = "0.34"
 image = { version = "0.25", default-features = false, features = ["png"] }
 toml = "1"
 ureq = { workspace = true }
