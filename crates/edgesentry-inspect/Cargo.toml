@@ -21,13 +21,13 @@ path = "src/main.rs"
 clap = { workspace = true }
 # crates.io required for `cargo publish` (git-only deps are rejected).
 # Keep in sync with the trilink-core release published on crates.io.
-trilink-core = "0.1.1"
+trilink-core = "0.2"
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 rstar = "0.13"
-# Must match trilink-core 0.1.1's glam (0.32.x); mismatch causes Mat4/Vec3 type errors.
-glam = "0.32"
+# Must match trilink-core 0.2's glam (0.34.x); mismatch causes Mat4/Vec3 type errors.
+glam = "0.34"
 image = { version = "0.25", default-features = false, features = ["png"] }
 toml = "1"
 ureq = { workspace = true }
