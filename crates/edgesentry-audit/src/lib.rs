@@ -16,10 +16,10 @@ pub use buffer::sqlite::SqliteBufferStore;
 pub use identity::{sign_payload_hash, verify_payload_signature};
 pub use integrity::{compute_payload_hash, verify_chain, ChainError};
 pub use ingest::{
-    AllowedSource, AuditLedger, InMemoryAuditLedger, InMemoryOperationLog, InMemoryRawDataStore,
-    IngestDecision, IngestError, IngestService, IngestServiceError, IngestState,
-    IntegrityPolicyGate, NetworkPolicy, NetworkPolicyError, OperationLogEntry, OperationLogStore,
-    RawDataStore,
+    object_ref_key, validate_object_ref_for_device, AllowedSource, AuditLedger,
+    InMemoryAuditLedger, InMemoryOperationLog, InMemoryRawDataStore, IngestDecision, IngestError,
+    IngestService, IngestServiceError, IngestState, IntegrityPolicyGate, NetworkPolicy,
+    NetworkPolicyError, ObjectRefError, OperationLogEntry, OperationLogStore, RawDataStore,
 };
 #[cfg(feature = "s3")]
 pub use ingest::{S3Backend, S3CompatibleRawDataStore, S3ObjectStoreConfig, S3StoreError};

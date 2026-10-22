@@ -128,6 +128,69 @@ fn inspect_key_roundtrips_with_keygen() {
     assert!(ik.status.success(), "{}", stderr(&ik));
     let ij: serde_json::Value = serde_json::from_str(&stdout(&ik)).unwrap();
     assert_eq!(ij["public_key_hex"].as_str().unwrap(), expected_pub);
+    assert!(
+        stderr(&ik).contains("deprecated"),
+        "argv private key must emit a deprecation warning"
+    );
+}
+
+#[test]
+fn inspect_key_accepts_private_key_file() {
+    let key_file = TmpFile::new("inspect_key.json");
+    let kg = eds()
+        .args(["audit", "keygen", "--out"])
+        .arg(key_file.path())
+        .output()
+        .expect("keygen");
+    assert!(kg.status.success(), "{}", stderr(&kg));
+    let expected: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(key_file.path()).unwrap()).unwrap();
+
+    let ik = eds()
+        .args(["audit", "inspect-key", "--private-key-file"])
+        .arg(key_file.path())
+        .output()
+        .expect("inspect-key --private-key-file");
+    assert!(ik.status.success(), "{}", stderr(&ik));
+    assert!(
+        !stderr(&ik).contains("deprecated"),
+        "file-based key must not warn"
+    );
+    let ij: serde_json::Value = serde_json::from_str(&stdout(&ik)).unwrap();
+    assert_eq!(
+        ij["public_key_hex"].as_str().unwrap(),
+        expected["public_key_hex"].as_str().unwrap()
+    );
+}
+
+#[test]
+fn inspect_key_accepts_env_private_key() {
+    let out = eds()
+        .args(["audit", "inspect-key"])
+        .env("EDS_PRIVATE_KEY_HEX", PRIV_HEX)
+        .output()
+        .expect("inspect-key via env");
+    assert!(out.status.success(), "{}", stderr(&out));
+    let json: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
+    assert_eq!(json["private_key_hex"].as_str().unwrap(), PRIV_HEX);
+}
+
+#[test]
+fn inspect_key_help_hides_private_key_hex() {
+    let out = eds()
+        .args(["audit", "inspect-key", "--help"])
+        .output()
+        .expect("inspect-key --help");
+    assert!(out.status.success(), "{}", stderr(&out));
+    let help = stdout(&out);
+    assert!(
+        help.contains("--private-key-file"),
+        "help must list --private-key-file"
+    );
+    assert!(
+        !help.contains("--private-key-hex"),
+        "deprecated --private-key-hex must be hidden from help"
+    );
 }
 
 // ── sign-record ──────────────────────────────────────────────────────────────

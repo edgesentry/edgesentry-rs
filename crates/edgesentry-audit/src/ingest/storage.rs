@@ -40,12 +40,88 @@ pub trait OperationLogStore {
     fn write(&mut self, entry: OperationLogEntry) -> Result<(), Self::Error>;
 }
 
+#[derive(Debug, Error, PartialEq, Eq)]
+pub enum ObjectRefError {
+    #[error("object_ref is empty")]
+    Empty,
+    #[error("object_ref contains path traversal or unsafe characters")]
+    UnsafePath,
+    #[error("object_ref is not scoped to device_id={device_id}: {object_ref}")]
+    NotScoped { device_id: String, object_ref: String },
+}
+
+/// Extract the storage key from an `object_ref` that may be a full `s3://bucket/key`
+/// URI or a plain key path.
+///
+/// Examples:
+/// - `s3://bucket/lift-01/1.bin` → `lift-01/1.bin`
+/// - `lift-01/1.bin` → `lift-01/1.bin`
+pub fn object_ref_key(object_ref: &str) -> &str {
+    if let Some(rest) = object_ref.strip_prefix("s3://") {
+        if let Some(slash) = rest.find('/') {
+            return &rest[slash + 1..];
+        }
+    }
+    object_ref
+}
+
+/// Validate that `object_ref` is safe and namespaced under `device_id`.
+///
+/// The storage key (after an optional `s3://bucket/` prefix) must equal `device_id`
+/// or start with `{device_id}/`. Rejects empty refs, NUL, backslashes, absolute
+/// paths, empty path segments, `.`, and `..`.
+///
+/// **Migration:** callers must issue `object_ref` values whose key path is already
+/// under the authenticating device (the historical convention
+/// `s3://bucket/<device_id>/...`). Legacy keys outside that namespace are rejected
+/// on put; existing objects remain readable under their original keys.
+pub fn validate_object_ref_for_device(
+    device_id: &str,
+    object_ref: &str,
+) -> Result<(), ObjectRefError> {
+    if device_id.is_empty() || object_ref.is_empty() {
+        return Err(ObjectRefError::Empty);
+    }
+    if device_id.contains('/')
+        || device_id.contains('\\')
+        || device_id.contains('\0')
+        || device_id == "."
+        || device_id == ".."
+    {
+        return Err(ObjectRefError::UnsafePath);
+    }
+    if object_ref.contains('\0') || object_ref.contains('\\') {
+        return Err(ObjectRefError::UnsafePath);
+    }
+
+    let key = object_ref_key(object_ref);
+    if key.is_empty() || key.starts_with('/') {
+        return Err(ObjectRefError::UnsafePath);
+    }
+    for component in key.split('/') {
+        if component.is_empty() || component == "." || component == ".." {
+            return Err(ObjectRefError::UnsafePath);
+        }
+    }
+
+    if key == device_id || key.starts_with(&format!("{device_id}/")) {
+        Ok(())
+    } else {
+        Err(ObjectRefError::NotScoped {
+            device_id: device_id.to_string(),
+            object_ref: object_ref.to_string(),
+        })
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum IngestServiceError {
     #[error("ingest verification failed: {0}")]
     Verify(#[from] IngestError),
     #[error("payload hash mismatch for device={device_id} sequence={sequence}")]
     PayloadHashMismatch { device_id: String, sequence: u64 },
+    #[error("invalid object_ref: {0}")]
+    ObjectRef(#[from] ObjectRefError),
     #[error("raw data store error: {0}")]
     RawDataStore(String),
     #[error("audit ledger error: {0}")]
@@ -107,6 +183,12 @@ where
             warn!(reason = %error, "integrity policy rejected record");
             self.log_rejection(&record, &error.to_string());
             return Err(IngestServiceError::Verify(error));
+        }
+
+        if let Err(error) = validate_object_ref_for_device(&record.device_id, &record.object_ref) {
+            warn!(reason = %error, "object_ref rejected");
+            self.log_rejection(&record, &error.to_string());
+            return Err(IngestServiceError::ObjectRef(error));
         }
 
         self.raw_data_store
@@ -438,17 +520,8 @@ impl S3CompatibleRawDataStore {
 
 #[cfg(feature = "s3")]
 impl S3CompatibleRawDataStore {
-    /// Extract the object key from an `object_ref` that may be a full `s3://bucket/key` URI
-    /// or a plain key path.  For example:
-    ///   `s3://bucket/lift-01/1.bin`  →  `lift-01/1.bin`
-    ///   `lift-01/1.bin`              →  `lift-01/1.bin`
     fn object_key<'a>(&self, object_ref: &'a str) -> &'a str {
-        if let Some(rest) = object_ref.strip_prefix("s3://") {
-            if let Some(slash) = rest.find('/') {
-                return &rest[slash + 1..];
-            }
-        }
-        object_ref
+        object_ref_key(object_ref)
     }
 }
 
@@ -717,6 +790,20 @@ where
                 })
                 .await;
             return Err(IngestServiceError::Verify(error));
+        }
+
+        if let Err(error) = validate_object_ref_for_device(&record.device_id, &record.object_ref) {
+            warn!(reason = %error, "object_ref rejected");
+            let _ = self
+                .operation_log
+                .write(OperationLogEntry {
+                    decision: IngestDecision::Rejected,
+                    device_id: record.device_id.clone(),
+                    sequence: record.sequence,
+                    message: error.to_string(),
+                })
+                .await;
+            return Err(IngestServiceError::ObjectRef(error));
         }
 
         self.raw_data_store

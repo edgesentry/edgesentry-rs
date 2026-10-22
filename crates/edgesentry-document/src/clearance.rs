@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 
-use crate::{FieldSource, FieldValue, FilledDocument};
+use crate::{escape_html, FieldSource, FieldValue, FilledDocument};
 
 /// indago `write_evaluation_artifacts` facts payload.
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -81,13 +81,6 @@ fn direct(value: impl Into<String>) -> FieldValue {
         source: FieldSource::Direct,
         flagged: false,
     }
-}
-
-fn escape_html(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
 }
 
 fn rules_table_rows(rules: &[ClearanceRuleHit]) -> String {

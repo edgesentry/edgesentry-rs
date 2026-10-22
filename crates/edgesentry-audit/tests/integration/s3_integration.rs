@@ -107,7 +107,7 @@ use ed25519_dalek::{SigningKey, VerifyingKey};
         service.register_device("lift-s3-test-01", verifying_key);
 
         let payload = b"s3-integration-test-accepted-payload";
-        let key = "test/s3-integration-accepted.bin";
+        let key = "lift-s3-test-01/s3-integration-accepted.bin";
         let record = build_signed_record(
             "lift-s3-test-01",
             1,
@@ -161,7 +161,7 @@ use ed25519_dalek::{SigningKey, VerifyingKey};
         service.register_device("lift-s3-test-02", verifying_key);
 
         // Build a valid record but present a tampered payload — hash mismatch triggers rejection.
-        let key = "test/s3-integration-rejected.bin";
+        let key = "lift-s3-test-02/s3-integration-rejected.bin";
         let record = build_signed_record(
             "lift-s3-test-02",
             1,
@@ -220,7 +220,7 @@ use ed25519_dalek::{SigningKey, VerifyingKey};
         service.register_device("lift-s3-test-03", verifying_key);
 
         let payload = b"key-match-test-payload";
-        let object_ref = "test/s3-integration-key-match.bin";
+        let object_ref = "lift-s3-test-03/s3-integration-key-match.bin";
         let record = build_signed_record(
             "lift-s3-test-03",
             1,

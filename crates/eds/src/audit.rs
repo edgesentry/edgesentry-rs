@@ -1,6 +1,7 @@
 //! `eds audit` subcommands — tamper-evident audit trail operations.
 
-use std::path::PathBuf;
+use std::io::Read;
+use std::path::{Path, PathBuf};
 
 use clap::Subcommand;
 use edgesentry_audit::{
@@ -13,6 +14,69 @@ use edgesentry_document::{build_audit_payload, FilledDocument};
 use edgesentry_evaluate::RiskEvent;
 use edgesentry_ingest::jsonl::JsonlReader;
 use serde::Serialize;
+
+/// Preferred env var for supplying an Ed25519 private key hex without argv exposure.
+pub const EDS_PRIVATE_KEY_HEX_ENV: &str = "EDS_PRIVATE_KEY_HEX";
+
+fn read_private_key_material(path: &Path) -> Result<String, Box<dyn std::error::Error>> {
+    let raw = if path.as_os_str() == "-" {
+        let mut buf = String::new();
+        std::io::stdin().read_to_string(&mut buf)?;
+        buf
+    } else {
+        std::fs::read_to_string(path)?
+    };
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Err("private key file/stdin is empty".into());
+    }
+    // Accept `eds audit keygen` JSON or a raw 64-char hex string.
+    if trimmed.starts_with('{') {
+        let value: serde_json::Value = serde_json::from_str(trimmed)?;
+        if let Some(hex) = value.get("private_key_hex").and_then(|v| v.as_str()) {
+            return Ok(hex.trim().to_string());
+        }
+        return Err("JSON key file missing private_key_hex".into());
+    }
+    Ok(trimmed.to_string())
+}
+
+/// Resolve a private key hex from file/stdin, deprecated argv flag, or env.
+///
+/// Precedence: `--*-file` (including `-` for stdin) → deprecated argv hex →
+/// `EDS_PRIVATE_KEY_HEX`. The argv form prints a deprecation warning to stderr.
+fn resolve_private_key_hex(
+    argv_hex: Option<String>,
+    key_file: Option<PathBuf>,
+    deprecated_flag: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    if let Some(path) = key_file {
+        return read_private_key_material(&path);
+    }
+    if let Some(hex) = argv_hex {
+        eprintln!(
+            "warning: {deprecated_flag} is deprecated — the private key is visible via process              argv (`ps`) and shell history; prefer --private-key-file / --key-file,              {EDS_PRIVATE_KEY_HEX_ENV}, or stdin (`--private-key-file -`)"
+        );
+        return Ok(hex.trim().to_string());
+    }
+    match std::env::var(EDS_PRIVATE_KEY_HEX_ENV) {
+        Ok(hex) => {
+            let hex = hex.trim().to_string();
+            if hex.is_empty() {
+                Err(format!(
+                    "private key required: pass --private-key-file <path> (or `-` for stdin),                      set {EDS_PRIVATE_KEY_HEX_ENV}, or (deprecated) {deprecated_flag}"
+                )
+                .into())
+            } else {
+                Ok(hex)
+            }
+        }
+        Err(_) => Err(format!(
+            "private key required: pass --private-key-file <path> (or `-` for stdin),              set {EDS_PRIVATE_KEY_HEX_ENV}, or (deprecated) {deprecated_flag}"
+        )
+        .into()),
+    }
+}
 
 #[derive(Debug, Subcommand)]
 pub enum AuditCommand {
@@ -30,8 +94,12 @@ pub enum AuditCommand {
         prev_hash_hex: String,
         #[arg(long)]
         object_ref: String,
-        #[arg(long)]
-        private_key_hex: String,
+        /// Deprecated: private key on argv is visible via `ps` / shell history.
+        #[arg(long, hide = true)]
+        private_key_hex: Option<String>,
+        /// Ed25519 private key file (raw hex or keygen JSON). Use `-` to read from stdin.
+        #[arg(long, value_name = "PATH")]
+        private_key_file: Option<PathBuf>,
         #[arg(long)]
         out: Option<PathBuf>,
     },
@@ -55,8 +123,12 @@ pub enum AuditCommand {
     },
     /// Derive the public key from an existing private key hex
     InspectKey {
-        #[arg(long)]
-        private_key_hex: String,
+        /// Deprecated: private key on argv is visible via `ps` / shell history.
+        #[arg(long, hide = true)]
+        private_key_hex: Option<String>,
+        /// Ed25519 private key file (raw hex or keygen JSON). Use `-` to read from stdin.
+        #[arg(long, value_name = "PATH")]
+        private_key_file: Option<PathBuf>,
         /// Write output to this file instead of stdout
         #[arg(long)]
         out: Option<PathBuf>,
@@ -154,9 +226,12 @@ pub enum AuditCommand {
         /// FilledDocument JSONL produced by `eds document fill`.
         #[arg(long)]
         payload: PathBuf,
-        /// Ed25519 private key hex (32 bytes = 64 hex chars).
-        #[arg(long)]
-        key: String,
+        /// Deprecated: private key on argv is visible via `ps` / shell history.
+        #[arg(long, hide = true)]
+        key: Option<String>,
+        /// Ed25519 private key file (raw hex or keygen JSON). Use `-` to read from stdin.
+        #[arg(long, value_name = "PATH")]
+        key_file: Option<PathBuf>,
         /// Device / signer identifier written into the AuditRecord.
         #[arg(long, default_value = "eds-document")]
         device_id: String,
@@ -189,9 +264,12 @@ pub enum AuditCommand {
         /// Evaluation manifest JSON (indago `write_evaluation_artifacts` output).
         #[arg(long)]
         manifest: PathBuf,
-        /// Ed25519 private key hex (32 bytes).
-        #[arg(long)]
-        key: String,
+        /// Deprecated: private key on argv is visible via `ps` / shell history.
+        #[arg(long, hide = true)]
+        key: Option<String>,
+        /// Ed25519 private key file (raw hex or keygen JSON). Use `-` to read from stdin.
+        #[arg(long, value_name = "PATH")]
+        key_file: Option<PathBuf>,
         #[arg(long, default_value = "port-clearance")]
         device_id: String,
         #[arg(long)]
@@ -247,8 +325,11 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
             prev_hash_hex,
             object_ref,
             private_key_hex,
+            private_key_file,
             out,
         } => {
+            let private_key_hex =
+                resolve_private_key_hex(private_key_hex, private_key_file, "--private-key-hex")?;
             let prev_hash = parse_fixed_hex::<32>(&prev_hash_hex)?;
             let record = sign_record(
                 device_id,
@@ -287,7 +368,13 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        AuditCommand::InspectKey { private_key_hex, out } => {
+        AuditCommand::InspectKey {
+            private_key_hex,
+            private_key_file,
+            out,
+        } => {
+            let private_key_hex =
+                resolve_private_key_hex(private_key_hex, private_key_file, "--private-key-hex")?;
             let keypair = inspect_key(&private_key_hex)?;
             let json = serde_json::to_string_pretty(&keypair)?;
             match out {
@@ -571,7 +658,15 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
             println!("INGEST_COMPLETE: accepted={accepted} rejected={rejected}");
         }
 
-        AuditCommand::SignDocument { payload, key, device_id, chain, out } => {
+        AuditCommand::SignDocument {
+            payload,
+            key,
+            key_file,
+            device_id,
+            chain,
+            out,
+        } => {
+            let key = resolve_private_key_hex(key, key_file, "--key")?;
             // Read existing chain to determine starting sequence and prev_hash.
             let (mut sequence, mut prev_hash) = if let Some(ref chain_path) = chain {
                 let existing: Vec<AuditRecord> =
@@ -620,7 +715,15 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
             println!("SIGNED: {} document record(s) written to {}", records.len(), out.display());
         }
 
-        AuditCommand::SignClearance { manifest, key, device_id, chain, out } => {
+        AuditCommand::SignClearance {
+            manifest,
+            key,
+            key_file,
+            device_id,
+            chain,
+            out,
+        } => {
+            let key = resolve_private_key_hex(key, key_file, "--key")?;
             let manifest_body = parse_clearance_manifest_json(&std::fs::read_to_string(&manifest)?)?;
             let payload_bytes = build_clearance_payload_bytes(&manifest_body)?;
             let object_ref = format!(

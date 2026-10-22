@@ -5,7 +5,7 @@
 //! ```
 //! eds inspect scan --config config.toml
 //! eds audit keygen
-//! eds audit sign-record --device-id dev-01 ...
+//! eds audit sign-record --device-id dev-01 --private-key-file key.json ...
 //! eds audit verify-chain --records-file records.json
 //! eds ingest replay --source FILE --out FILE
 //! eds ingest stream --source udp://HOST:PORT --profile DIR --out FILE

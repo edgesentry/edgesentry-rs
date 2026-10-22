@@ -71,7 +71,7 @@ fn audit_ledger_persists_accepted_record() {
         1_700_000_001_000,
         payload,
         AuditRecord::zero_hash(),
-        "pg/device-01/1.bin",
+        "pg-device-01/1.bin",
         &signing_key,
     );
 
@@ -108,7 +108,7 @@ fn audit_ledger_binary_fields_round_trip_exactly() {
         1_700_000_002_000,
         payload,
         AuditRecord::zero_hash(),
-        "pg/device-rt/1.bin",
+        "pg-device-rt/1.bin",
         &signing_key,
     );
 
@@ -159,7 +159,7 @@ fn audit_ledger_rejects_duplicate_sequence() {
         1_700_000_003_000,
         payload,
         AuditRecord::zero_hash(),
-        "pg/device-dup/1.bin",
+        "pg-device-dup/1.bin",
         &signing_key,
     );
 
@@ -172,7 +172,7 @@ fn audit_ledger_rejects_duplicate_sequence() {
         1_700_000_003_001,
         b"duplicate-payload",
         AuditRecord::zero_hash(),
-        "pg/device-dup/1b.bin",
+        "pg-device-dup/1b.bin",
         &signing_key,
     );
 
@@ -217,7 +217,7 @@ fn audit_ledger_persists_sequential_records_in_order() {
             1_700_000_004_000 + seq,
             payload,
             prev_hash,
-            format!("pg/device-seq/{seq}.bin"),
+            format!("pg-device-seq/{seq}.bin"),
             &signing_key,
         );
         prev_hash = record.hash();
@@ -278,7 +278,7 @@ fn operation_log_persists_accepted_entry() {
         1_700_000_005_000,
         payload,
         AuditRecord::zero_hash(),
-        "pg/oplog-01/1.bin",
+        "pg-oplog-01/1.bin",
         &signing_key,
     );
 
@@ -329,7 +329,7 @@ fn operation_log_persists_rejected_entry_on_hash_mismatch() {
         1_700_000_006_000,
         b"original",
         AuditRecord::zero_hash(),
-        "pg/oplog-02/1.bin",
+        "pg-oplog-02/1.bin",
         &signing_key,
     );
 
@@ -376,14 +376,14 @@ fn operation_log_records_both_accepted_and_rejected_entries() {
     let payload = b"valid-payload";
     let r1 = build_signed_record(
         "pg-oplog-03", 1, 1_700_000_007_000, payload,
-        AuditRecord::zero_hash(), "pg/oplog-03/1.bin", &signing_key,
+        AuditRecord::zero_hash(), "pg-oplog-03/1.bin", &signing_key,
     );
     service.ingest(r1, payload, None).expect("first ingest should succeed");
 
     // Second ingest: rejected (tampered payload).
     let r2 = build_signed_record(
         "pg-oplog-03", 2, 1_700_000_007_001, b"original",
-        AuditRecord::zero_hash(), "pg/oplog-03/2.bin", &signing_key,
+        AuditRecord::zero_hash(), "pg-oplog-03/2.bin", &signing_key,
     );
     let _ = service.ingest(r2, b"tampered", None);
 
