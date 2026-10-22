@@ -288,7 +288,7 @@ mod minio_async {
         svc.register_device("lift-async-test-01", verifying_key).await;
 
         let payload = b"async-s3-integration-accepted";
-        let key = "test/async-s3-integration-accepted.bin";
+        let key = "lift-async-test-01/async-s3-integration-accepted.bin";
         let record = build_signed_record(
             "lift-async-test-01",
             1,
@@ -339,7 +339,7 @@ mod minio_async {
         );
         svc.register_device("lift-async-test-02", verifying_key).await;
 
-        let key = "test/async-s3-integration-rejected.bin";
+        let key = "lift-async-test-02/async-s3-integration-rejected.bin";
         let record = build_signed_record(
             "lift-async-test-02",
             1,

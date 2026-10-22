@@ -36,17 +36,30 @@ Each device must have a **unique** keypair. Never reuse keys across devices.
 
 ## 2. Deriving the Public Key from an Existing Private Key
 
-If you already have a `private_key_hex` and need to confirm the matching public key:
+If you already have a private key and need to confirm the matching public key, prefer a
+file or environment variable so the secret never appears on the process argv:
 
 ```bash
-eds audit inspect-key --private-key-hex <64-hex-char-private-key>
+# From a keygen JSON file (or a file containing raw 64-char hex):
+eds audit inspect-key --private-key-file device-lift-01.key.json
+
+# From stdin:
+eds audit keygen | eds audit inspect-key --private-key-file -
+
+# From the environment:
+export EDS_PRIVATE_KEY_HEX=<64-hex-char-private-key>
+eds audit inspect-key
 ```
 
-Example:
+`--private-key-hex` still works for compatibility but is **deprecated**: the key is
+visible via `ps` and shell history, and a warning is printed to stderr. The flag is
+hidden from `--help`.
+
+Example (file):
 
 ```bash
-eds audit inspect-key \
-  --private-key-hex 0101010101010101010101010101010101010101010101010101010101010101
+eds audit keygen --out /tmp/demo.key.json
+eds audit inspect-key --private-key-file /tmp/demo.key.json
 ```
 
 Output:
@@ -58,6 +71,9 @@ Output:
 }
 ```
 
+The same resolution order applies to `eds audit sign-record` (`--private-key-file`)
+and to `sign-document` / `sign-clearance` (`--key-file`).
+
 ---
 
 ## 3. Secure Private Key Storage
@@ -66,7 +82,7 @@ The private key must be kept secret on the device. Recommended practices:
 
 | Environment | Recommended storage |
 |-------------|---------------------|
-| Development / CI | Environment variable (`DEVICE_PRIVATE_KEY_HEX`) — never commit to version control |
+| Development / CI | Environment variable (`EDS_PRIVATE_KEY_HEX`) or `--private-key-file` — never pass the key on argv; never commit to version control |
 | Production (software) | Encrypted secrets store (e.g., HashiCorp Vault, AWS Secrets Manager, Azure Key Vault) |
 | Production (hardware) | Hardware Security Module (HSM) or Trusted Execution Environment (TEE) — see [#54](https://github.com/edgesentry/edgesentry-rs/issues/54) for the planned HSM path |
 
@@ -74,9 +90,10 @@ File-based storage (development only):
 
 ```bash
 chmod 600 device-lift-01.key.json
+eds audit sign-record --private-key-file device-lift-01.key.json ...
 ```
 
-Never expose `private_key_hex` in logs, HTTP responses, or error messages.
+Never expose `private_key_hex` in logs, HTTP responses, error messages, process argv, or shell history.
 
 ---
 

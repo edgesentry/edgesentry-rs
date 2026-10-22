@@ -4,11 +4,13 @@ use edgesentry_parse::DocumentEntity;
 use serde::{Deserialize, Serialize};
 
 pub mod clearance;
+pub mod html;
 
 pub use clearance::{
     fill_clearance, parse_clearance_facts_json, ClearanceFacts, ClearancePath, ClearanceRuleHit,
     TEMPLATE_HTML as PORT_CYBER_CLEARANCE_HTML, TEMPLATE_ID as PORT_CYBER_CLEARANCE_TEMPLATE,
 };
+pub use html::escape_html;
 
 /// Payload sealed into the audit chain for a generated compliance document.
 ///
@@ -316,11 +318,27 @@ pub fn check(doc: &FilledDocument, rules_json: &str) -> Result<Vec<ComplianceAle
     Ok(alerts)
 }
 
+/// Field keys that already contain trusted HTML markup (caller must escape
+/// untrusted substrings before inserting). All other fields are escaped by
+/// [`render_html`].
+const RAW_HTML_FIELD_KEYS: &[&str] = &[
+    "SUMMARY_HTML",
+    "OPERATOR_EXPLANATION_SECTION",
+    "RULES_TABLE_ROWS",
+    "PATHS_TABLE_ROWS",
+    "AUDIT_EVIDENCE_HTML",
+];
+
 pub fn render_html(doc: &FilledDocument, template_html: &str) -> String {
     let mut out = template_html.to_string();
     for (key, fv) in &doc.fields {
         let placeholder = format!("{{{{{}}}}}", key);
-        out = out.replace(&placeholder, &fv.value);
+        let value = if RAW_HTML_FIELD_KEYS.contains(&key.as_str()) {
+            fv.value.clone()
+        } else {
+            escape_html(&fv.value)
+        };
+        out = out.replace(&placeholder, &value);
     }
     out
 }
@@ -397,6 +415,48 @@ mod tests {
         assert!(rendered.contains("MV Test"));
         assert!(rendered.contains("23"));
         assert!(!rendered.contains("{{VESSEL_NAME}}"));
+    }
+
+    #[test]
+    fn render_html_escapes_untrusted_field_values() {
+        // Demonstrates XSS if fields were interpolated raw into HTML/attributes.
+        let mut doc = fill(
+            &make_entity("V001", Some("2027-03-01"), Some(23)),
+            "fal-form-1",
+            None,
+            0.5,
+        )
+        .unwrap();
+        doc.fields.insert(
+            "VESSEL_NAME".to_string(),
+            FieldValue {
+                value: r#"<script>alert(1)</script>"#.to_string(),
+                confidence: 1.0,
+                source: FieldSource::Direct,
+                flagged: false,
+            },
+        );
+        doc.fields.insert(
+            "VESSEL_IMO".to_string(),
+            FieldValue {
+                value: r#"" onclick="alert(2)" x=""#.to_string(),
+                confidence: 1.0,
+                source: FieldSource::Direct,
+                flagged: false,
+            },
+        );
+        let tmpl = r#"<p>{{VESSEL_NAME}}</p><a href="{{VESSEL_IMO}}">link</a>"#;
+        let rendered = render_html(&doc, tmpl);
+        assert!(
+            !rendered.contains("<script>"),
+            "script tags must be escaped: {rendered}"
+        );
+        assert!(rendered.contains("&lt;script&gt;alert(1)&lt;/script&gt;"));
+        assert!(
+            !rendered.contains(r#"onclick="alert(2)""#),
+            "attribute breakout must be escaped: {rendered}"
+        );
+        assert!(rendered.contains("&quot; onclick=&quot;alert(2)&quot; x=&quot;"));
     }
 
     #[test]
