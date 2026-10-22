@@ -14,6 +14,10 @@ ignore = [
   # available via upstream; upgrading requires rustls to drop the dep.
   # No direct call-site exposure in our code.
   { id = "RUSTSEC-2025-0134", reason = "rustls-pemfile pulled in transitively by rustls 0.23 chain; no patch available. Functionality superseded by rustls-pki-types but not yet adopted by rustls." },
+  # Note: rustls-webpki 0.102.8 advisories (RUSTSEC-2026-0049/0098/0099/0104/0382)
+  # from rumqttc are ignored in CI `cargo audit` only. cargo-deny’s default
+  # resolve does not activate optional transport-mqtt-tls, so those IDs are
+  # not listed here (would warn advisory-not-detected).
 ]
 
 [bans]
