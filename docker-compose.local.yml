@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:deb28ee471183cb0c303113dac9b2433c51eeeeb678def7af9a9ec5820367815
     container_name: edgesentry-rs-postgres
     environment:
       POSTGRES_USER: trace
@@ -17,9 +17,11 @@ services:
       timeout: 5s
       retries: 20
 
-  # Docker Hub minio/minio and minio/mc were removed (Sep 2026); use Quay.
+  # Docker Hub minio/minio and minio/mc were removed (Sep 2026).
+  # quay.io/minio/* now requires authentication for anonymous pulls.
+  # Use the publicly pullable pgsty Silo fork (MinIO-compatible) instead.
   minio:
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    image: docker.io/pgsty/silo:RELEASE.2026-10-18T00-00-00Z@sha256:2636fc4155d9a7e41ff58cdb65ddd13ba9304e67184e13c25bc5cb34016269d7
     container_name: edgesentry-rs-minio
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -30,18 +32,38 @@ services:
       - "9001:9001"
     volumes:
       - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
+  # pgsty/mc is scratch-based (no shell), so bucket bootstrap uses the Silo
+  # image which ships /bin/sh and an `mc` symlink to mcli.
+  # Share MinIO's network namespace so setup talks to 127.0.0.1 (avoids
+  # depending on cross-container bridge routing during bootstrap).
   minio-setup:
-    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
+    image: docker.io/pgsty/silo:RELEASE.2026-10-18T00-00-00Z@sha256:2636fc4155d9a7e41ff58cdb65ddd13ba9304e67184e13c25bc5cb34016269d7
     container_name: edgesentry-rs-minio-setup
+    network_mode: "service:minio"
     depends_on:
-      - minio
-    entrypoint: >
-      /bin/sh -c "
-      until mc alias set local http://minio:9000 minioadmin minioadmin; do sleep 1; done;
-      mc mb -p local/bucket || true;
-      mc anonymous set none local/bucket || true;
-      "
+      minio:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        i=0
+        until mc alias set local http://127.0.0.1:9000 minioadmin minioadmin; do
+          i=$$((i + 1))
+          if [ "$$i" -ge 30 ]; then
+            echo "MinIO alias setup failed after retries" >&2
+            exit 1
+          fi
+          sleep 1
+        done
+        mc mb -p local/bucket
+        mc anonymous set none local/bucket
 
 volumes:
   pgdata:
