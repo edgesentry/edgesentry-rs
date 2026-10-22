@@ -38,7 +38,7 @@ scripts/
   run_unit_and_license_check.sh     # Unit tests + cargo-deny license check
   run_local_demo.sh                     # Interactive local demo (requires Docker)
 deny.toml                           # cargo-deny license policy
-docker-compose.local.yml            # PostgreSQL + MinIO for local demo
+docker-compose.local.yml            # PostgreSQL + S3-compatible Silo (pgsty/silo) for local demo
 ```
 
 ## Architecture
