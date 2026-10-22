@@ -1,0 +1,34 @@
+name: OSV-Scanner
+
+on:
+  schedule:
+    # Wednesday 00:00 UTC = 08:00 SGT
+    - cron: "0 0 * * 3"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # Required to upload SARIF to code scanning.
+  # See: https://github.com/github/codeql-action/issues/2117
+  actions: read
+  security-events: write
+
+jobs:
+  scan-scheduled:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    # google/osv-scanner-action@v2.7.0
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@b1d267aea5211fa648d9d442fa64b90dbdcbdd36
+
+  scan-pr:
+    if: github.event_name == 'pull_request'
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    # google/osv-scanner-action@v2.7.0
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@b1d267aea5211fa648d9d442fa64b90dbdcbdd36
