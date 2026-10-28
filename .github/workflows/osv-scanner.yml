@@ -7,6 +7,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Advisories with no compatible upgrade are listed in /osv-scanner.toml
+# (next to Cargo.lock). fail-on-vuln stays on; that file only suppresses
+# the documented exceptions.
 permissions:
   contents: read
   # Required to upload SARIF to code scanning.
