@@ -1,0 +1,39 @@
+# Exceptions for OSV-Scanner (fail-on-vuln). Each entry is an advisory that
+# cannot be cleared by a semver-compatible bump. The rustls 0.23 stack in
+# this lockfile already uses rustls-webpki 0.103.16, which is the fixed
+# release for the webpki IDs below.
+
+[[IgnoredVulns]]
+id = "GHSA-qwgh-2vcv-g2f7"
+reason = "block-buffer 0.10.4 has no 0.10.x patch (fixed in 0.12.1, already present via digest 0.11). The 0.10.4 copy is pinned by digest 0.10.7 from aws-config -> sha1 0.10.7 and crc-fast 1.10.0, both already latest. Trigger requires a caught panic inside the hash buffer, which this codebase does not do."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0134"
+reason = "rustls-pemfile 2.2.0 is unmaintained with no patched release. Pulled by rumqttc 0.25.1 and the optional transport-mqtt-tls / transport-tls features. Same exception as deny.toml."
+
+# rumqttc 0.25.1 (latest) requires rustls-webpki ^0.102.8. There is no
+# 0.102 patch; fixed versions start at 0.103.10 / 0.103.16. rumqttc only
+# names webpki::Error — certificate verification goes through tokio-rustls
+# 0.26 and rustls 0.23, which use rustls-webpki 0.103.16. Upstream bump:
+# bytebeamio/rumqtt#1037 (unmerged). Replacing rumqttc is not a compatible
+# upgrade. CRL checking is not used in this repo.
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0049"
+reason = "rustls-webpki 0.102.8 pinned by rumqttc 0.25.1; no 0.102 patch. Live TLS path uses 0.103.16. Same ignore as cargo audit."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0098"
+reason = "rustls-webpki 0.102.8 pinned by rumqttc 0.25.1; no 0.102 patch. Live TLS path uses 0.103.16. Same ignore as cargo audit."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0099"
+reason = "rustls-webpki 0.102.8 pinned by rumqttc 0.25.1; no 0.102 patch. Live TLS path uses 0.103.16. Same ignore as cargo audit."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0104"
+reason = "rustls-webpki 0.102.8 pinned by rumqttc 0.25.1; no 0.102 patch. High CRL panic is opt-in and unused. Live TLS path uses 0.103.16. Same ignore as cargo audit."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0382"
+reason = "rustls-webpki 0.102.8 pinned by rumqttc 0.25.1; fix is 0.103.16, already used by rustls 0.23. rumqttc does not call 0.102 path building. Same ignore as cargo audit."

@@ -139,14 +139,10 @@ jobs:
         # scans the full lockfile (including optional transport-mqtt-tls);
         # cargo-deny’s default resolve does not activate that feature.
         # RUSTSEC-2026-0187: lopdf (printpdf) — no fix available upstream.
-        # RUSTSEC-2026-0387: remaining hit is crypto-bigint 0.5.5, pulled by
-        # aws-sigv4's optional sigv4a feature (`crypto-bigint = "^0.5.4"`).
-        # The advisory's patched range is >=0.7.6 only — no 0.5.x/0.6.x fix —
-        # and 0.5 is semver-incompatible with 0.7. Latest aws-sigv4 (1.6.3)
-        # still requires ^0.5.4. The 0.7 copy in this lockfile is 0.7.10.
-        # cargo-deny’s default resolve does not activate optional s3/sigv4a,
-        # so this ID is not listed in deny.toml (would warn advisory-not-detected).
-        # Follow-up: drop this ignore when aws-sigv4 moves off crypto-bigint 0.5.
+        # The same rustls-webpki 0.102.8 IDs, plus unfixed block-buffer /
+        # rustls-pemfile hits, are ignored for OSV-Scanner in osv-scanner.toml.
+        # crypto-bigint 0.5.5 (RUSTSEC-2026-0387) is gone: aws-sigv4 1.6.4
+        # depends on crypto-bigint ^0.7.10, and this lockfile has 0.7.10.
         run: >
           cargo audit
           --ignore RUSTSEC-2026-0049
@@ -155,7 +151,6 @@ jobs:
           --ignore RUSTSEC-2026-0104
           --ignore RUSTSEC-2026-0187
           --ignore RUSTSEC-2026-0382
-          --ignore RUSTSEC-2026-0387
 
   sast:
     name: SAST (Clippy + cargo-deny advisories)
