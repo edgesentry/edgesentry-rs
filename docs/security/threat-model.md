@@ -60,7 +60,7 @@ This document is a formal threat-modelling artifact produced for Singapore CLS L
 |----|-----------|---------------|
 | M-S-1 | Device public keys are pre-registered on the cloud side; any signature that does not verify against the registered key is rejected with `IngestError::UnknownDevice` | `ingest/policy.rs` `IntegrityPolicyGate::enforce()` |
 | M-S-2 | Monotonic sequence numbers and `prev_record_hash` chain continuity are enforced; replayed records are detected as duplicate sequences | `ingest/verify.rs` `check_sequence()` |
-| M-S-3 | Ed25519 signatures bind the payload hash to the private key; a forged `device_id` with the wrong key fails signature verification | `identity.rs` `verify_payload_signature()` |
+| M-S-3 | Ed25519 signatures bind `device_id`, `sequence`, `timestamp_ms`, `prev_record_hash`, `object_ref`, and `payload_hash`; a forged `device_id` fails signature verification | `identity.rs` `verify_audit_record()` |
 
 **Residual risk:** If a device's private key is physically extracted, records can be forged with valid signatures.  Hardware-backed key storage (TPM/SE) is a device-layer control outside the scope of this library; it is noted in the [Compliance Roadmap](../roadmap/strategy-compliance.md).
 
@@ -84,7 +84,7 @@ This document is a formal threat-modelling artifact produced for Singapore CLS L
 | ID | Mitigation | Code location |
 |----|-----------|---------------|
 | M-T-1 | On every ingest the cloud recomputes `BLAKE3(raw_payload)` and compares it to `record.payload_hash`; mismatch → `PayloadHashMismatch` rejection | `ingest/storage.rs` `IngestService::ingest()` |
-| M-T-2 | `payload_hash` is covered by the Ed25519 signature; if the hash is changed the signature no longer verifies | `identity.rs` `verify_payload_signature()` |
+| M-T-2 | `payload_hash`, timestamp, sequence, previous-link, and `object_ref` are covered by the Ed25519 signature; changing any of them makes the signature fail | `identity.rs` `verify_audit_record()` |
 | M-T-3 | Post-ingest tampering of stored objects is detectable by re-verifying the hash from the ledger against the object content; this is an operational control described in the Operations Runbook (see `/eds-ops` skill) |
 | M-T-4 | `prev_record_hash` is validated against the previous accepted record's `hash()`; a break in continuity rejects all subsequent records | `ingest/verify.rs` `check_chain_link()` |
 
@@ -157,7 +157,7 @@ This document is a formal threat-modelling artifact produced for Singapore CLS L
 | ID | Mitigation | Code location |
 |----|-----------|---------------|
 | M-D-1 | `NetworkPolicy` deny-by-default: all IPs and CIDR ranges are blocked unless explicitly allowlisted; unapproved source IPs receive `403 Forbidden` before any cryptographic work is performed | `ingest/network_policy.rs` `NetworkPolicy::check()`; `transport/http.rs` handler |
-| M-D-2 | Axum's default request body size limit (2 MB) caps payload size; the `raw_payload_hex` field is bounded by the HTTP body limit | `transport/http.rs` — axum default body limit |
+| M-D-2 | Axum's default request body size limit (2 MiB) caps HTTP payload size. MQTT ingest keeps rumqttc 0.25's 10 KiB incoming packet cap (`MqttOptions::new`), enforced before a publish is delivered | `transport/http.rs`; `transport/mqtt.rs` |
 | M-D-3 | JSON deserialization errors return `400 Bad Request` immediately; no downstream processing occurs | `transport/http.rs` — axum `Json` extractor |
 
 **Residual risk:** Rate limiting per source IP and per device is not yet implemented in the library layer; it should be added at the reverse proxy or API gateway layer in production deployments.  Issue #73 (TLS, P2) is the planned follow-up milestone.
@@ -181,7 +181,7 @@ This document is a formal threat-modelling artifact produced for Singapore CLS L
 | ID | Mitigation | Code location |
 |----|-----------|---------------|
 | M-E-1 | `IntegrityPolicyGate::enforce()` is called unconditionally before any storage write; unknown devices fail with `IngestError::UnknownDevice` | `ingest/policy.rs` |
-| M-E-2 | Signature verification uses the registered public key for `device_id`; a valid chain cannot be forged without the device's private key | `identity.rs` `verify_payload_signature()` |
+| M-E-2 | Signature verification uses the registered public key for `device_id` and covers the audit context; a valid chain cannot be forged without the device's private key | `identity.rs` `verify_audit_record()` |
 | M-E-3 | `register_device` is a privileged operation called only by the application layer at startup; the HTTP ingest handler does not expose device registration over the network | `transport/http.rs` — no registration endpoint; `ingest/storage.rs` `AsyncIngestService::register_device()` |
 
 **Residual risk:** If the application layer that calls `register_device` is compromised, arbitrary devices can be registered.  This is an operational security control: registration should be gated behind a separate privileged API with strong authentication.

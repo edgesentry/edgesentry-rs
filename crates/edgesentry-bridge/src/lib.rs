@@ -25,7 +25,8 @@ use std::os::raw::c_char;
 
 use ed25519_dalek::{SigningKey, VerifyingKey};
 use edgesentry_audit::{
-    compute_payload_hash, sign_payload_hash, verify_chain, verify_payload_signature, AuditRecord,
+    compute_payload_hash, sign_audit_context, verify_audit_record, verify_chain,
+    verify_update_signature, AuditRecord, AuditSigContext,
 };
 use getrandom::{rand_core::UnwrapErr, SysRng};
 
@@ -45,10 +46,12 @@ thread_local! {
 fn set_last_error(msg: &str) {
     LAST_ERROR.with(|cell| {
         // Replace NUL bytes with '?' so CString::new never fails.
-        let sanitized: String = msg.chars().map(|c| if c == '\0' { '?' } else { c }).collect();
-        *cell.borrow_mut() = CString::new(sanitized).unwrap_or_else(|_| {
-            CString::new("(error message contained interior NUL)").unwrap()
-        });
+        let sanitized: String = msg
+            .chars()
+            .map(|c| if c == '\0' { '?' } else { c })
+            .collect();
+        *cell.borrow_mut() = CString::new(sanitized)
+            .unwrap_or_else(|_| CString::new("(error message contained interior NUL)").unwrap());
     });
 }
 
@@ -64,7 +67,7 @@ pub const EDS_ERR_INVALID_UTF8: i32 = -2;
 pub const EDS_ERR_INVALID_KEY: i32 = -3;
 /// A string argument is longer than the fixed output buffer allows.
 pub const EDS_ERR_STRING_TOO_LONG: i32 = -4;
-/// Hash-chain verification failed (tampered, reordered, or truncated chain).
+/// Hash-chain or signature verification failed.
 pub const EDS_ERR_CHAIN_INVALID: i32 = -5;
 /// An unexpected Rust panic was caught at the FFI boundary.
 pub const EDS_ERR_PANIC: i32 = -6;
@@ -87,7 +90,7 @@ pub struct EdsAuditRecord {
     pub timestamp_ms: u64,
     /// BLAKE3 hash of the raw payload (32 bytes).
     pub payload_hash: [u8; 32],
-    /// Ed25519 signature over `payload_hash` (64 bytes).
+    /// Ed25519 signature over the canonical audit context (64 bytes).
     pub signature: [u8; 64],
     /// Hash of the preceding record, or all-zeros for the first record (32 bytes).
     pub prev_record_hash: [u8; 32],
@@ -149,10 +152,7 @@ fn to_audit_record(r: &EdsAuditRecord) -> AuditRecord {
 /// # Returns
 /// `EDS_OK` on success, or a negative error code.
 #[no_mangle]
-pub unsafe extern "C" fn eds_keygen(
-    private_key_out: *mut u8,
-    public_key_out: *mut u8,
-) -> i32 {
+pub unsafe extern "C" fn eds_keygen(private_key_out: *mut u8, public_key_out: *mut u8) -> i32 {
     std::panic::catch_unwind(|| {
         if private_key_out.is_null() || public_key_out.is_null() {
             set_last_error("eds_keygen: private_key_out or public_key_out is NULL");
@@ -173,8 +173,10 @@ pub unsafe extern "C" fn eds_keygen(
 
 /// Create a signed audit record.
 ///
-/// Computes `BLAKE3(payload)`, signs the hash with the device private key, and
-/// writes the resulting `EdsAuditRecord` to `out`.
+/// Computes `BLAKE3(payload)`, signs the canonical audit context
+/// (`device_id`, `sequence`, `timestamp_ms`, `prev_record_hash`, `object_ref`,
+/// `payload_hash`) with the device private key, and writes the resulting
+/// `EdsAuditRecord` to `out`.
 ///
 /// # Safety
 ///
@@ -259,7 +261,17 @@ pub unsafe extern "C" fn eds_sign_record(
 
         let signing_key = SigningKey::from_bytes(&key_bytes);
         let payload_hash = compute_payload_hash(payload_slice);
-        let signature = sign_payload_hash(&signing_key, &payload_hash);
+        let signature = sign_audit_context(
+            &signing_key,
+            &AuditSigContext {
+                device_id: device_id_str,
+                sequence,
+                timestamp_ms,
+                prev_record_hash: &prev_hash,
+                object_ref: object_ref_str,
+                payload_hash: &payload_hash,
+            },
+        );
 
         let out_ref = &mut *out;
         out_ref.sequence = sequence;
@@ -275,9 +287,7 @@ pub unsafe extern "C" fn eds_sign_record(
         }
         let rc = copy_str_to_buf(object_ref_str, &mut out_ref.object_ref);
         if rc != EDS_OK {
-            set_last_error(
-                "eds_sign_record: object_ref exceeds maximum length of 511 characters",
-            );
+            set_last_error("eds_sign_record: object_ref exceeds maximum length of 511 characters");
         }
         rc
     })
@@ -303,10 +313,7 @@ pub unsafe extern "C" fn eds_sign_record(
 /// # Returns
 /// `EDS_OK` on success, or a negative error code.
 #[no_mangle]
-pub unsafe extern "C" fn eds_record_hash(
-    record: *const EdsAuditRecord,
-    hash_out: *mut u8,
-) -> i32 {
+pub unsafe extern "C" fn eds_record_hash(record: *const EdsAuditRecord, hash_out: *mut u8) -> i32 {
     std::panic::catch_unwind(|| {
         if record.is_null() || hash_out.is_null() {
             set_last_error("eds_record_hash: record or hash_out is NULL");
@@ -360,8 +367,8 @@ pub unsafe extern "C" fn eds_verify_record(
                 return EDS_ERR_INVALID_KEY;
             }
         };
-        let rec = &*record;
-        if verify_payload_signature(&verifying_key, &rec.payload_hash, &rec.signature) {
+        let rec = to_audit_record(&*record);
+        if verify_audit_record(&verifying_key, &rec) {
             1
         } else {
             0
@@ -377,7 +384,8 @@ pub unsafe extern "C" fn eds_verify_record(
 ///
 /// Performs two checks in order:
 /// 1. `BLAKE3(payload) == payload_hash` — payload integrity.
-/// 2. Ed25519 signature over `payload_hash` is valid for `publisher_key` — authenticity.
+/// 2. Ed25519 signature over `package_id`, `version`, and `payload_hash` is
+///    valid for `publisher_key` — authenticity.
 ///
 /// This is a stateless one-shot function. The caller is responsible for
 /// supplying the trusted `publisher_key` (e.g. baked into the firmware image
@@ -386,6 +394,7 @@ pub unsafe extern "C" fn eds_verify_record(
 /// # Safety
 ///
 /// - `payload` must be non-null and valid for `payload_len` bytes.
+/// - `package_id` and `version` must be non-null, null-terminated UTF-8 strings.
 /// - `payload_hash` must be non-null and point to exactly 32 bytes.
 /// - `signature` must be non-null and point to exactly 64 bytes.
 /// - `publisher_key` must be non-null and point to exactly 32 bytes.
@@ -393,8 +402,10 @@ pub unsafe extern "C" fn eds_verify_record(
 /// # Parameters
 /// - `payload`:       raw firmware / update bytes.
 /// - `payload_len`:   length of `payload` in bytes.
+/// - `package_id`:    null-terminated package identifier covered by the signature.
+/// - `version`:       null-terminated version string covered by the signature.
 /// - `payload_hash`:  expected BLAKE3 hash (32 bytes).
-/// - `signature`:     Ed25519 signature over `payload_hash` (64 bytes).
+/// - `signature`:     Ed25519 signature over package id, version, and payload hash (64 bytes).
 /// - `publisher_key`: trusted Ed25519 public key (32 bytes).
 ///
 /// # Returns
@@ -408,18 +419,36 @@ pub unsafe extern "C" fn eds_verify_record(
 pub unsafe extern "C" fn eds_verify_update(
     payload: *const u8,
     payload_len: usize,
+    package_id: *const c_char,
+    version: *const c_char,
     payload_hash: *const u8,
     signature: *const u8,
     publisher_key: *const u8,
 ) -> i32 {
     std::panic::catch_unwind(|| {
-        if payload.is_null() || payload_hash.is_null() || signature.is_null() || publisher_key.is_null() {
+        if payload.is_null()
+            || package_id.is_null()
+            || version.is_null()
+            || payload_hash.is_null()
+            || signature.is_null()
+            || publisher_key.is_null()
+        {
             return EDS_ERR_NULL_PTR;
         }
 
+        let package_id = match CStr::from_ptr(package_id).to_str() {
+            Ok(s) => s,
+            Err(_) => return EDS_ERR_INVALID_UTF8,
+        };
+        let version = match CStr::from_ptr(version).to_str() {
+            Ok(s) => s,
+            Err(_) => return EDS_ERR_INVALID_UTF8,
+        };
+
         let payload_slice = std::slice::from_raw_parts(payload, payload_len);
 
-        let expected_hash: [u8; 32] = match std::slice::from_raw_parts(payload_hash, 32).try_into() {
+        let expected_hash: [u8; 32] = match std::slice::from_raw_parts(payload_hash, 32).try_into()
+        {
             Ok(b) => b,
             Err(_) => return EDS_ERR_NULL_PTR,
         };
@@ -442,7 +471,13 @@ pub unsafe extern "C" fn eds_verify_update(
             return EDS_ERR_HASH_MISMATCH;
         }
 
-        if !verify_payload_signature(&verifying_key, &actual_hash, &sig_bytes) {
+        if !verify_update_signature(
+            &verifying_key,
+            package_id,
+            version,
+            &actual_hash,
+            &sig_bytes,
+        ) {
             return EDS_ERR_BAD_SIGNATURE;
         }
 
@@ -451,21 +486,24 @@ pub unsafe extern "C" fn eds_verify_update(
     .unwrap_or(EDS_ERR_PANIC)
 }
 
-/// Verify that an array of records forms a valid BLAKE3 hash chain.
+/// Verify that an array of records forms a valid BLAKE3 hash chain and that
+/// every signature verifies under `public_key`.
 ///
-/// Checks that each record's `prev_record_hash` matches the hash of the
-/// preceding record and that sequence numbers are strictly monotonically
-/// increasing.
+/// Checks predecessor hashes, monotonic sequences, and the Ed25519 signature
+/// on each record.
 ///
 /// # Safety
 ///
 /// - `records` must be non-null and point to `count` consecutive, valid
-///   `EdsAuditRecord` values.  Passing NULL with `count == 0` is safe and
-///   returns `EDS_OK`.
+///   `EdsAuditRecord` values when `count` is non-zero. Passing NULL with
+///   `count == 0` is safe and returns `EDS_OK`.
+/// - `public_key` must be non-null and point to exactly 32 bytes when `count`
+///   is non-zero.
 ///
 /// # Parameters
-/// - `records`: pointer to an array of `count` consecutive `EdsAuditRecord`s.
-/// - `count`:   number of records in the array.
+/// - `records`:    pointer to an array of `count` consecutive `EdsAuditRecord`s.
+/// - `count`:      number of records in the array.
+/// - `public_key`: 32-byte Ed25519 public key that must verify every record.
 ///
 /// # Returns
 /// `EDS_OK` if the chain is valid, `EDS_ERR_CHAIN_INVALID` if not, or a
@@ -474,6 +512,7 @@ pub unsafe extern "C" fn eds_verify_update(
 pub unsafe extern "C" fn eds_verify_chain(
     records: *const EdsAuditRecord,
     count: usize,
+    public_key: *const u8,
 ) -> i32 {
     std::panic::catch_unwind(|| {
         if count == 0 {
@@ -483,9 +522,27 @@ pub unsafe extern "C" fn eds_verify_chain(
             set_last_error("eds_verify_chain: records is NULL but count is non-zero");
             return EDS_ERR_NULL_PTR;
         }
+        if public_key.is_null() {
+            set_last_error("eds_verify_chain: public_key is NULL");
+            return EDS_ERR_NULL_PTR;
+        }
+        let key_bytes: [u8; 32] = match std::slice::from_raw_parts(public_key, 32).try_into() {
+            Ok(b) => b,
+            Err(_) => {
+                set_last_error("eds_verify_chain: public_key must point to exactly 32 bytes");
+                return EDS_ERR_INVALID_KEY;
+            }
+        };
+        let verifying_key = match VerifyingKey::from_bytes(&key_bytes) {
+            Ok(k) => k,
+            Err(_) => {
+                set_last_error("eds_verify_chain: public_key is not a valid Ed25519 point");
+                return EDS_ERR_INVALID_KEY;
+            }
+        };
         let slice = std::slice::from_raw_parts(records, count);
         let audit_records: Vec<AuditRecord> = slice.iter().map(to_audit_record).collect();
-        match verify_chain(&audit_records) {
+        match verify_chain(&audit_records, &verifying_key) {
             Ok(()) => EDS_OK,
             Err(e) => {
                 set_last_error(&format!("eds_verify_chain: chain verification failed: {e}"));

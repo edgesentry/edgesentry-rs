@@ -29,7 +29,9 @@ fn persists_raw_data_audit_ledger_and_operation_log() {
         &signing_key,
     );
 
-    service.ingest(record.clone(), payload, Some("lift-01")).expect("ingest should succeed");
+    service
+        .ingest(record.clone(), payload, Some("lift-01"))
+        .expect("ingest should succeed");
 
     let stored_raw = service
         .raw_data_store()
@@ -79,12 +81,10 @@ fn rejects_payload_hash_mismatch_and_logs_rejection() {
         IngestServiceError::PayloadHashMismatch { .. }
     ));
 
-    assert!(
-        service
-            .raw_data_store()
-            .get("s3://bucket/lift-01/1.bin")
-            .is_none()
-    );
+    assert!(service
+        .raw_data_store()
+        .get("s3://bucket/lift-01/1.bin")
+        .is_none());
     assert!(service.audit_ledger().records().is_empty());
 
     let logs = service.operation_log().entries();
@@ -133,12 +133,10 @@ fn rejects_cert_device_mismatch_and_logs_rejection() {
         "expected CertDeviceMismatch, got: {err}"
     );
 
-    assert!(
-        service
-            .raw_data_store()
-            .get("s3://bucket/lift-01/1.bin")
-            .is_none()
-    );
+    assert!(service
+        .raw_data_store()
+        .get("s3://bucket/lift-01/1.bin")
+        .is_none());
     assert!(service.audit_ledger().records().is_empty());
 
     let logs = service.operation_log().entries();
@@ -184,7 +182,10 @@ fn rejects_tampered_signature_via_ingest_service() {
         .ingest(record, payload, Some("lift-01"))
         .expect_err("tampered signature must be rejected");
     assert!(
-        matches!(err, IngestServiceError::Verify(IngestError::InvalidSignature(_))),
+        matches!(
+            err,
+            IngestServiceError::Verify(IngestError::InvalidSignature(_))
+        ),
         "expected InvalidSignature, got: {err}"
     );
 
@@ -218,7 +219,9 @@ fn rejects_replay_attempt_via_ingest_service() {
         &signing_key,
     );
 
-    service.ingest(record.clone(), payload, None).expect("first ingest must succeed");
+    service
+        .ingest(record.clone(), payload, None)
+        .expect("first ingest must succeed");
 
     // Replay: same sequence number again
     let replay = build_signed_record(
@@ -234,7 +237,10 @@ fn rejects_replay_attempt_via_ingest_service() {
         .ingest(replay, payload, None)
         .expect_err("replay must be rejected");
     assert!(
-        matches!(err, IngestServiceError::Verify(IngestError::Duplicate { .. })),
+        matches!(
+            err,
+            IngestServiceError::Verify(IngestError::Duplicate { .. })
+        ),
         "expected Duplicate, got: {err}"
     );
 
@@ -283,12 +289,10 @@ fn rejects_tampered_signature_and_logs_rejection() {
         "expected InvalidSignature, got: {err}"
     );
 
-    assert!(
-        service
-            .raw_data_store()
-            .get("s3://bucket/lift-01/1.bin")
-            .is_none()
-    );
+    assert!(service
+        .raw_data_store()
+        .get("s3://bucket/lift-01/1.bin")
+        .is_none());
     assert!(service.audit_ledger().records().is_empty());
 
     let logs = service.operation_log().entries();
@@ -326,9 +330,17 @@ fn rejects_replay_and_logs_rejection() {
         .ingest(record.clone(), payload, Some("lift-01"))
         .expect("first ingest should succeed");
 
-    // Replay with a distinct object_ref so we can assert the store was not written on rejection
-    let mut replay = record;
-    replay.object_ref = "s3://bucket/lift-01/1-replay.bin".to_string();
+    // Same sequence, a different object_ref, signed for that new context.
+    // The signature is valid; the sequence is still a replay and must not be stored.
+    let replay = build_signed_record(
+        "lift-01",
+        1,
+        1,
+        payload,
+        AuditRecord::zero_hash(),
+        "s3://bucket/lift-01/1-replay.bin",
+        &signing_key,
+    );
 
     let err = service
         .ingest(replay, payload, Some("lift-01"))
@@ -566,7 +578,9 @@ fn accepts_multi_record_sequential_ingest() {
             &signing_key,
         );
         prev_hash = record.hash();
-        service.ingest(record, payload, None).expect("sequential ingest must succeed");
+        service
+            .ingest(record, payload, None)
+            .expect("sequential ingest must succeed");
     }
 
     let records = service.audit_ledger().records();
@@ -624,7 +638,10 @@ fn rejects_cross_device_object_ref_overwrite() {
         .ingest(attack_record, attacker_payload, Some("device-a"))
         .expect_err("cross-device object_ref must be rejected");
     assert!(
-        matches!(err, IngestServiceError::ObjectRef(ObjectRefError::NotScoped { .. })),
+        matches!(
+            err,
+            IngestServiceError::ObjectRef(ObjectRefError::NotScoped { .. })
+        ),
         "expected NotScoped, got {err:?}"
     );
 
@@ -663,6 +680,149 @@ fn rejects_object_ref_path_traversal() {
         err,
         IngestServiceError::ObjectRef(ObjectRefError::UnsafePath)
     ));
+}
+
+#[test]
+fn rejected_object_ref_does_not_advance_chain_cursor() {
+    let signing_key = SigningKey::from_bytes(&[114u8; 32]);
+    let mut service = IngestService::new(
+        IntegrityPolicyGate::default(),
+        InMemoryRawDataStore::default(),
+        InMemoryAuditLedger::default(),
+        InMemoryOperationLog::default(),
+    );
+    service.register_device("lift-01", VerifyingKey::from(&signing_key));
+
+    let payload_1 = b"seq-1";
+    let record_1 = build_signed_record(
+        "lift-01",
+        1,
+        1,
+        payload_1,
+        AuditRecord::zero_hash(),
+        "s3://bucket/lift-01/1.bin",
+        &signing_key,
+    );
+    service
+        .ingest(record_1.clone(), payload_1, None)
+        .expect("sequence 1");
+
+    let payload_2 = b"seq-2";
+    let bad_ref = build_signed_record(
+        "lift-01",
+        2,
+        2,
+        payload_2,
+        record_1.hash(),
+        "other-device/x",
+        &signing_key,
+    );
+    let err = service
+        .ingest(bad_ref, payload_2, None)
+        .expect_err("unscoped object_ref");
+    assert!(matches!(
+        err,
+        IngestServiceError::ObjectRef(ObjectRefError::NotScoped { .. })
+    ));
+    assert_eq!(service.audit_ledger().records().len(), 1);
+
+    let honest = build_signed_record(
+        "lift-01",
+        2,
+        3,
+        payload_2,
+        record_1.hash(),
+        "s3://bucket/lift-01/2.bin",
+        &signing_key,
+    );
+    service
+        .ingest(honest, payload_2, None)
+        .expect("honest sequence 2 must still be accepted");
+    assert_eq!(service.audit_ledger().records().len(), 2);
+    assert_eq!(service.audit_ledger().records()[1].sequence, 2);
+}
+
+#[test]
+fn copied_signature_cannot_rebind_audit_context() {
+    let device_key = SigningKey::from_bytes(&[115u8; 32]);
+    let other_key = SigningKey::from_bytes(&[116u8; 32]);
+    let mut service = IngestService::new(
+        IntegrityPolicyGate::default(),
+        InMemoryRawDataStore::default(),
+        InMemoryAuditLedger::default(),
+        InMemoryOperationLog::default(),
+    );
+    service.register_device("device-a", VerifyingKey::from(&device_key));
+    service.register_device("device-b", VerifyingKey::from(&other_key));
+
+    let payload = b"same-payload";
+    let record_1 = build_signed_record(
+        "device-a",
+        1,
+        1_700,
+        payload,
+        AuditRecord::zero_hash(),
+        "device-a/1.bin",
+        &device_key,
+    );
+    service
+        .ingest(record_1.clone(), payload, None)
+        .expect("sequence 1");
+
+    let mut rebound = record_1.clone();
+    rebound.sequence = 2;
+    rebound.timestamp_ms = 1;
+    rebound.prev_record_hash = record_1.hash();
+    rebound.object_ref = "device-a/2.bin".to_string();
+    let err = service
+        .ingest(rebound, payload, None)
+        .expect_err("rebound context");
+    assert!(matches!(
+        err,
+        IngestServiceError::Verify(IngestError::InvalidSignature(_))
+    ));
+    assert_eq!(service.audit_ledger().records().len(), 1);
+
+    let honest = build_signed_record(
+        "device-a",
+        2,
+        1_701,
+        payload,
+        record_1.hash(),
+        "device-a/2.bin",
+        &device_key,
+    );
+    let mut flipped = payload.to_vec();
+    flipped[0] ^= 0xff;
+    let err = service
+        .ingest(honest.clone(), &flipped, None)
+        .expect_err("flipped payload");
+    assert!(matches!(
+        err,
+        IngestServiceError::PayloadHashMismatch { .. }
+    ));
+
+    let foreign = build_signed_record(
+        "device-b",
+        1,
+        1,
+        payload,
+        AuditRecord::zero_hash(),
+        "device-b/1.bin",
+        &device_key,
+    );
+    let err = service
+        .ingest(foreign, payload, None)
+        .expect_err("wrong device key");
+    assert!(matches!(
+        err,
+        IngestServiceError::Verify(IngestError::InvalidSignature(_))
+    ));
+
+    service
+        .ingest(honest, payload, None)
+        .expect("honest sequence 2");
+    assert_eq!(service.audit_ledger().records().len(), 2);
 }
 
 #[test]

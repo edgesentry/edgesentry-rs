@@ -29,7 +29,7 @@ fn clearance_sign_and_verify_chain() {
     )
     .expect("sign");
     let records = vec![record];
-    verify_chain_records(&records).expect("chain");
     let pub_hex = inspect_key(PRIV_HEX).expect("inspect").public_key_hex;
+    verify_chain_records(&records, &pub_hex).expect("chain");
     assert!(verify_record(&records[0], &pub_hex).expect("verify sig"));
 }

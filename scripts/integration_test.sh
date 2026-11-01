@@ -14,6 +14,7 @@ MINIO_BUCKET="bucket"
 MINIO_ACCESS_KEY="minioadmin"
 MINIO_SECRET_KEY="minioadmin"
 PRIVATE_KEY_HEX="0101010101010101010101010101010101010101010101010101010101010101"
+PUBLIC_KEY_HEX="8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c"
 
 cleanup() {
   echo "[cleanup] Stopping backend services..."
@@ -62,7 +63,7 @@ echo "[5/8] Generating and verifying chain..."
   --payloads-file "$PAYLOADS_FILE" \
   >/dev/null
 
-"$EDS" audit verify-chain --records-file "$RECORDS_FILE"
+"$EDS" audit verify-chain --records-file "$RECORDS_FILE" --public-key-hex "$PUBLIC_KEY_HEX"
 
 # Tamper and confirm detection
 python3 - <<'PY'
@@ -75,7 +76,7 @@ dst.write_text(json.dumps(records, indent=2), encoding='utf-8')
 PY
 
 set +e
-"$EDS" audit verify-chain --records-file "$TAMPERED_FILE"
+"$EDS" audit verify-chain --records-file "$TAMPERED_FILE" --public-key-hex "$PUBLIC_KEY_HEX"
 TAMPER_EXIT=$?
 set -e
 [[ "$TAMPER_EXIT" -ne 0 ]] || { echo "FAIL: tampered chain was accepted"; exit 1; }

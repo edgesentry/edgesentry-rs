@@ -28,9 +28,9 @@ An audit log that cannot be admitted as evidence is commercially worthless. This
 
 **edgesentry-rs implementation:**
 - `payload_hash` = BLAKE3 hash of canonical payload bytes
-- Ed25519 signature over `payload_hash`
+- Ed25519 signature over `device_id`, `sequence`, `timestamp_ms`, `prev_record_hash`, `object_ref`, and `payload_hash`
 - `prev_record_hash` links each record to its predecessor
-- `eds audit verify-chain` recomputes all hashes and verifies all signatures
+- `eds audit verify-chain --public-key-hex <key>` recomputes hash links and verifies every record signature with that key
 
 **Status: ✓ Met**
 

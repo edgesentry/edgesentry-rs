@@ -4,8 +4,8 @@
 //! package must be authenticated:
 //!
 //! 1. The raw payload is hashed with BLAKE3 and compared to [`SoftwareUpdate::payload_hash`].
-//! 2. The publisher's Ed25519 signature over `payload_hash` is verified against a
-//!    registered trusted key.
+//! 2. The publisher's Ed25519 signature over `package_id`, `version`, and
+//!    `payload_hash` is verified against a registered trusted key.
 //!
 //! A failed check returns [`UpdateVerifyError`] and is recorded in
 //! [`UpdateVerificationLog`] so the rejection appears in the audit trail.
@@ -16,14 +16,14 @@
 //! use ed25519_dalek::SigningKey;
 //! use edgesentry_audit::update::{SoftwareUpdate, UpdateVerifier};
 //! use edgesentry_audit::integrity::compute_payload_hash;
-//! use edgesentry_audit::identity::sign_payload_hash;
+//! use edgesentry_audit::identity::sign_update;
 //!
 //! let signing_key = SigningKey::from_bytes(&[7u8; 32]);
 //! let verifying_key = signing_key.verifying_key();
 //! let payload = b"firmware-v1.2.3-image";
 //!
 //! let payload_hash = compute_payload_hash(payload);
-//! let signature   = sign_payload_hash(&signing_key, &payload_hash);
+//! let signature   = sign_update(&signing_key, "firmware", "1.2.3", &payload_hash);
 //!
 //! let update = SoftwareUpdate {
 //!     package_id:   "firmware".to_string(),
@@ -44,7 +44,7 @@ use std::collections::HashMap;
 use ed25519_dalek::VerifyingKey;
 use thiserror::Error;
 
-use crate::identity::verify_payload_signature;
+use crate::identity::verify_update_signature;
 use crate::integrity::compute_payload_hash;
 use crate::record::{Hash32, Signature64};
 
@@ -59,7 +59,7 @@ pub struct SoftwareUpdate {
     pub version: String,
     /// BLAKE3 hash of the raw update payload.
     pub payload_hash: Hash32,
-    /// Ed25519 signature over `payload_hash` produced by the trusted publisher.
+    /// Ed25519 signature over `package_id`, `version`, and `payload_hash`.
     pub signature: Signature64,
 }
 
@@ -73,11 +73,11 @@ pub enum UpdateVerifyDecision {
 /// A single entry in the update verification audit trail.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UpdateVerificationEntry {
-    pub decision:     UpdateVerifyDecision,
-    pub package_id:   String,
-    pub version:      String,
+    pub decision: UpdateVerifyDecision,
+    pub package_id: String,
+    pub version: String,
     pub publisher_id: String,
-    pub message:      String,
+    pub message: String,
 }
 
 /// In-memory log of all update verification attempts.
@@ -170,8 +170,8 @@ impl UpdateVerifier {
 
         log.record(UpdateVerificationEntry {
             decision,
-            package_id:   update.package_id.clone(),
-            version:      update.version.clone(),
+            package_id: update.package_id.clone(),
+            version: update.version.clone(),
             publisher_id: publisher_id.to_string(),
             message,
         });
@@ -195,14 +195,20 @@ impl UpdateVerifier {
         if actual_hash != update.payload_hash {
             return Err(UpdateVerifyError::PayloadHashMismatch {
                 package_id: update.package_id.clone(),
-                version:    update.version.clone(),
+                version: update.version.clone(),
             });
         }
 
-        if !verify_payload_signature(key, &update.payload_hash, &update.signature) {
+        if !verify_update_signature(
+            key,
+            &update.package_id,
+            &update.version,
+            &update.payload_hash,
+            &update.signature,
+        ) {
             return Err(UpdateVerifyError::InvalidSignature {
                 package_id: update.package_id.clone(),
-                version:    update.version.clone(),
+                version: update.version.clone(),
             });
         }
 

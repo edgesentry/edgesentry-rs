@@ -52,7 +52,9 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tracing::{debug, error, info, warn};
 
-use crate::ingest::{AsyncAuditLedger, AsyncIngestService, AsyncOperationLogStore, AsyncRawDataStore};
+use crate::ingest::{
+    AsyncAuditLedger, AsyncIngestService, AsyncOperationLogStore, AsyncRawDataStore,
+};
 use crate::record::AuditRecord;
 
 // ---------------------------------------------------------------------------
@@ -99,7 +101,9 @@ pub struct MqttTlsConfig {
 impl MqttTlsConfig {
     /// Create an [`MqttTlsConfig`] from a CA certificate file path.
     pub fn from_ca_cert_file(path: impl Into<PathBuf>) -> Self {
-        Self { ca_cert_path: path.into() }
+        Self {
+            ca_cert_path: path.into(),
+        }
     }
 }
 
@@ -238,9 +242,11 @@ where
     L: AsyncAuditLedger + Send + Sync + 'static,
     O: AsyncOperationLogStore + Send + Sync + 'static,
 {
-    let mut opts =
-        MqttOptions::new(&config.client_id, &config.broker_host, config.broker_port);
+    let mut opts = MqttOptions::new(&config.client_id, &config.broker_host, config.broker_port);
     opts.set_keep_alive(Duration::from_secs(config.keep_alive_secs));
+    // rumqttc 0.25 `MqttOptions::new` sets `max_incoming_packet_size` to 10 KiB.
+    // `mqttbytes::check` rejects a larger remaining length before a Publish is
+    // delivered, which is below the HTTP ingest body limit (2 MiB). Do not raise it.
 
     // Configure MQTTS when a TLS config is present.
     #[cfg(feature = "transport-mqtt-tls")]
@@ -256,7 +262,9 @@ where
         let mut root_store = tokio_rustls::rustls::RootCertStore::empty();
         for cert in rustls_pemfile::certs(&mut BufReader::new(ca_pem.as_slice())) {
             let cert = cert.map_err(|e| MqttServeError::TlsConfig(e.to_string()))?;
-            root_store.add(cert).map_err(|e| MqttServeError::TlsConfig(e.to_string()))?;
+            root_store
+                .add(cert)
+                .map_err(|e| MqttServeError::TlsConfig(e.to_string()))?;
         }
 
         let rustls_config = tokio_rustls::rustls::ClientConfig::builder()
@@ -372,7 +380,10 @@ async fn handle_message<R, L, O>(
 
     if let Ok(json) = serde_json::to_vec(&response) {
         // Best-effort publish — if it fails, log and continue.
-        if let Err(e) = client.publish(response_topic, QoS::AtMostOnce, false, json).await {
+        if let Err(e) = client
+            .publish(response_topic, QoS::AtMostOnce, false, json)
+            .await
+        {
             warn!(error = %e, "failed to publish MQTT response");
         }
     }
@@ -470,6 +481,9 @@ mod tests {
         let (record, _) = make_record();
         let resp = MqttIngestResponse::accepted(&record);
         let json = serde_json::to_string(&resp).unwrap();
-        assert!(!json.contains("\"error\""), "accepted response must not include 'error' key");
+        assert!(
+            !json.contains("\"error\""),
+            "accepted response must not include 'error' key"
+        );
     }
 }

@@ -189,7 +189,7 @@ psql -U <DB_USER> -d <DB_NAME> \
 #### Recovery verification checklist
 
 - [ ] Last record sequence per device matches pre-incident snapshot
-- [ ] Hash chain continuity verified: `eds verify-chain <exported-records.json>`
+- [ ] Hash chain continuity verified: `eds audit verify-chain --records-file <exported-records.json> --public-key-hex <device-public-key>`
 - [ ] Operation log shows no unexpected gaps (check timestamps around recovery target)
 - [ ] Alert suppression lifted after verification completes
 

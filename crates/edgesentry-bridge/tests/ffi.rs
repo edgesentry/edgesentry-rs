@@ -1,5 +1,7 @@
 use std::ffi::CString;
 
+use ed25519_dalek::SigningKey;
+use edgesentry_audit::{compute_payload_hash, sign_update};
 use edgesentry_bridge::{
     eds_keygen, eds_last_error_message, eds_record_hash, eds_sign_record, eds_verify_chain,
     eds_verify_record, eds_verify_update, EdsAuditRecord, EDS_ERR_BAD_SIGNATURE,
@@ -30,7 +32,10 @@ fn zeroed_record() -> EdsAuditRecord {
 unsafe fn make_keypair() -> ([u8; 32], [u8; 32]) {
     let mut priv_key = [0u8; 32];
     let mut pub_key = [0u8; 32];
-    assert_eq!(eds_keygen(priv_key.as_mut_ptr(), pub_key.as_mut_ptr()), EDS_OK);
+    assert_eq!(
+        eds_keygen(priv_key.as_mut_ptr(), pub_key.as_mut_ptr()),
+        EDS_OK
+    );
     (priv_key, pub_key)
 }
 
@@ -348,8 +353,28 @@ fn record_hash_changes_when_record_changes() {
     let mut rec1 = zeroed_record();
     let mut rec2 = zeroed_record();
     unsafe {
-        eds_sign_record(dev.as_ptr(), 1, 0, b"aaa".as_ptr(), 3, std::ptr::null(), obj.as_ptr(), priv_key.as_ptr(), &mut rec1);
-        eds_sign_record(dev.as_ptr(), 2, 0, b"bbb".as_ptr(), 3, std::ptr::null(), obj.as_ptr(), priv_key.as_ptr(), &mut rec2);
+        eds_sign_record(
+            dev.as_ptr(),
+            1,
+            0,
+            b"aaa".as_ptr(),
+            3,
+            std::ptr::null(),
+            obj.as_ptr(),
+            priv_key.as_ptr(),
+            &mut rec1,
+        );
+        eds_sign_record(
+            dev.as_ptr(),
+            2,
+            0,
+            b"bbb".as_ptr(),
+            3,
+            std::ptr::null(),
+            obj.as_ptr(),
+            priv_key.as_ptr(),
+            &mut rec2,
+        );
     }
     let mut hash1 = [0u8; 32];
     let mut hash2 = [0u8; 32];
@@ -364,19 +389,19 @@ fn record_hash_changes_when_record_changes() {
 
 #[test]
 fn verify_chain_empty_returns_ok() {
-    let rc = unsafe { eds_verify_chain(std::ptr::null(), 0) };
+    let rc = unsafe { eds_verify_chain(std::ptr::null(), 0, std::ptr::null()) };
     assert_eq!(rc, EDS_OK);
 }
 
 #[test]
 fn verify_chain_null_ptr_with_nonzero_count_returns_error() {
-    let rc = unsafe { eds_verify_chain(std::ptr::null(), 1) };
+    let rc = unsafe { eds_verify_chain(std::ptr::null(), 1, std::ptr::null()) };
     assert_eq!(rc, EDS_ERR_NULL_PTR);
 }
 
 #[test]
 fn verify_chain_valid_three_records_returns_ok() {
-    let (priv_key, _) = unsafe { make_keypair() };
+    let (priv_key, pub_key) = unsafe { make_keypair() };
     let dev = CString::new("sensor-01").unwrap();
     let obj = CString::new("sensor-01/check.bin").unwrap();
     let payloads: &[&[u8]] = &[b"check=door", b"check=vibration", b"check=brake"];
@@ -385,7 +410,11 @@ fn verify_chain_valid_three_records_returns_ok() {
     let mut prev_hash = [0u8; 32];
 
     for (i, payload) in payloads.iter().enumerate() {
-        let prev_ptr = if i == 0 { std::ptr::null() } else { prev_hash.as_ptr() };
+        let prev_ptr = if i == 0 {
+            std::ptr::null()
+        } else {
+            prev_hash.as_ptr()
+        };
         let rc = unsafe {
             eds_sign_record(
                 dev.as_ptr(),
@@ -403,82 +432,163 @@ fn verify_chain_valid_three_records_returns_ok() {
         unsafe { eds_record_hash(&records[i], prev_hash.as_mut_ptr()) };
     }
 
-    let rc = unsafe { eds_verify_chain(records.as_ptr(), records.len()) };
+    let rc = unsafe { eds_verify_chain(records.as_ptr(), records.len(), pub_key.as_ptr()) };
     assert_eq!(rc, EDS_OK);
 }
 
 #[test]
+fn verify_chain_zero_signature_returns_chain_invalid() {
+    let (_, pub_key) = unsafe { make_keypair() };
+    let mut record = zeroed_record();
+    record.sequence = 1;
+    let dev = b"sensor-01";
+    let obj = b"sensor-01/x";
+    record.device_id[..dev.len()].copy_from_slice(dev);
+    record.object_ref[..obj.len()].copy_from_slice(obj);
+    let rc = unsafe { eds_verify_chain(&record, 1, pub_key.as_ptr()) };
+    assert_eq!(rc, EDS_ERR_CHAIN_INVALID);
+}
+
+#[test]
 fn verify_chain_tampered_record_returns_chain_invalid() {
-    let (priv_key, _) = unsafe { make_keypair() };
+    let (priv_key, pub_key) = unsafe { make_keypair() };
     let dev = CString::new("sensor-01").unwrap();
     let obj = CString::new("obj").unwrap();
     let mut records = [zeroed_record(), zeroed_record()];
     let mut prev_hash = [0u8; 32];
 
     unsafe {
-        eds_sign_record(dev.as_ptr(), 1, 0, b"aaa".as_ptr(), 3, std::ptr::null(), obj.as_ptr(), priv_key.as_ptr(), &mut records[0]);
+        eds_sign_record(
+            dev.as_ptr(),
+            1,
+            0,
+            b"aaa".as_ptr(),
+            3,
+            std::ptr::null(),
+            obj.as_ptr(),
+            priv_key.as_ptr(),
+            &mut records[0],
+        );
         eds_record_hash(&records[0], prev_hash.as_mut_ptr());
-        eds_sign_record(dev.as_ptr(), 2, 1, b"bbb".as_ptr(), 3, prev_hash.as_ptr(), obj.as_ptr(), priv_key.as_ptr(), &mut records[1]);
+        eds_sign_record(
+            dev.as_ptr(),
+            2,
+            1,
+            b"bbb".as_ptr(),
+            3,
+            prev_hash.as_ptr(),
+            obj.as_ptr(),
+            priv_key.as_ptr(),
+            &mut records[1],
+        );
     }
 
     // Tamper record[0] so record[1]'s prev_record_hash no longer matches
     records[0].payload_hash[0] ^= 0x01;
 
-    let rc = unsafe { eds_verify_chain(records.as_ptr(), 2) };
+    let rc = unsafe { eds_verify_chain(records.as_ptr(), 2, pub_key.as_ptr()) };
     assert_eq!(rc, EDS_ERR_CHAIN_INVALID);
 }
 
 #[test]
 fn verify_chain_wrong_prev_hash_returns_chain_invalid() {
-    let (priv_key, _) = unsafe { make_keypair() };
+    let (priv_key, pub_key) = unsafe { make_keypair() };
     let dev = CString::new("sensor-01").unwrap();
     let obj = CString::new("obj").unwrap();
     let mut records = [zeroed_record(), zeroed_record()];
     let mut prev_hash = [0u8; 32];
 
     unsafe {
-        eds_sign_record(dev.as_ptr(), 1, 0, b"aaa".as_ptr(), 3, std::ptr::null(), obj.as_ptr(), priv_key.as_ptr(), &mut records[0]);
+        eds_sign_record(
+            dev.as_ptr(),
+            1,
+            0,
+            b"aaa".as_ptr(),
+            3,
+            std::ptr::null(),
+            obj.as_ptr(),
+            priv_key.as_ptr(),
+            &mut records[0],
+        );
         eds_record_hash(&records[0], prev_hash.as_mut_ptr());
-        eds_sign_record(dev.as_ptr(), 2, 1, b"bbb".as_ptr(), 3, prev_hash.as_ptr(), obj.as_ptr(), priv_key.as_ptr(), &mut records[1]);
+        eds_sign_record(
+            dev.as_ptr(),
+            2,
+            1,
+            b"bbb".as_ptr(),
+            3,
+            prev_hash.as_ptr(),
+            obj.as_ptr(),
+            priv_key.as_ptr(),
+            &mut records[1],
+        );
     }
 
     // Directly corrupt prev_record_hash of record[1]
     records[1].prev_record_hash[0] ^= 0x01;
 
-    let rc = unsafe { eds_verify_chain(records.as_ptr(), 2) };
+    let rc = unsafe { eds_verify_chain(records.as_ptr(), 2, pub_key.as_ptr()) };
     assert_eq!(rc, EDS_ERR_CHAIN_INVALID);
 }
 
 // ── eds_verify_update ─────────────────────────────────────────────────────────
 
-/// Build a valid (hash, signature, pub_key) tuple for testing.
+const UPDATE_PACKAGE: &str = "firmware";
+const UPDATE_VERSION: &str = "2.0.0";
+
+/// Build a valid (hash, signature, pub_key) tuple for `UPDATE_PACKAGE` / `UPDATE_VERSION`.
 unsafe fn make_update_fixture(payload: &[u8]) -> ([u8; 32], [u8; 64], [u8; 32]) {
     let (priv_key, pub_key) = make_keypair();
-    let mut rec = zeroed_record();
-    let dev = std::ffi::CString::new("fw-device").unwrap();
-    let obj = std::ffi::CString::new("fw/v1.bin").unwrap();
-    eds_sign_record(
-        dev.as_ptr(), 1, 0,
-        payload.as_ptr(), payload.len(),
-        std::ptr::null(),
-        obj.as_ptr(),
-        priv_key.as_ptr(),
-        &mut rec,
-    );
-    (rec.payload_hash, rec.signature, pub_key)
+    let signing_key = SigningKey::from_bytes(&priv_key);
+    let payload_hash = compute_payload_hash(payload);
+    let signature = sign_update(&signing_key, UPDATE_PACKAGE, UPDATE_VERSION, &payload_hash);
+    (payload_hash, signature, pub_key)
+}
+
+fn update_labels() -> (CString, CString) {
+    (
+        CString::new(UPDATE_PACKAGE).unwrap(),
+        CString::new(UPDATE_VERSION).unwrap(),
+    )
 }
 
 #[test]
 fn verify_update_valid_returns_ok() {
     let payload = b"firmware-v2.0.0-image";
     let (hash, sig, pub_key) = unsafe { make_update_fixture(payload) };
+    let (pkg, ver) = update_labels();
     let rc = unsafe {
         eds_verify_update(
-            payload.as_ptr(), payload.len(),
-            hash.as_ptr(), sig.as_ptr(), pub_key.as_ptr(),
+            payload.as_ptr(),
+            payload.len(),
+            pkg.as_ptr(),
+            ver.as_ptr(),
+            hash.as_ptr(),
+            sig.as_ptr(),
+            pub_key.as_ptr(),
         )
     };
     assert_eq!(rc, EDS_OK);
+}
+
+#[test]
+fn verify_update_relabeled_version_returns_bad_signature() {
+    let payload = b"firmware-v2.0.0-image";
+    let (hash, sig, pub_key) = unsafe { make_update_fixture(payload) };
+    let pkg = CString::new(UPDATE_PACKAGE).unwrap();
+    let ver = CString::new("9.9.9").unwrap();
+    let rc = unsafe {
+        eds_verify_update(
+            payload.as_ptr(),
+            payload.len(),
+            pkg.as_ptr(),
+            ver.as_ptr(),
+            hash.as_ptr(),
+            sig.as_ptr(),
+            pub_key.as_ptr(),
+        )
+    };
+    assert_eq!(rc, EDS_ERR_BAD_SIGNATURE);
 }
 
 #[test]
@@ -486,8 +596,17 @@ fn verify_update_null_payload_returns_error() {
     let hash = [0u8; 32];
     let sig = [0u8; 64];
     let key = [0u8; 32];
+    let (pkg, ver) = update_labels();
     let rc = unsafe {
-        eds_verify_update(std::ptr::null(), 0, hash.as_ptr(), sig.as_ptr(), key.as_ptr())
+        eds_verify_update(
+            std::ptr::null(),
+            0,
+            pkg.as_ptr(),
+            ver.as_ptr(),
+            hash.as_ptr(),
+            sig.as_ptr(),
+            key.as_ptr(),
+        )
     };
     assert_eq!(rc, EDS_ERR_NULL_PTR);
 }
@@ -497,10 +616,16 @@ fn verify_update_null_hash_returns_error() {
     let payload = b"fw";
     let sig = [0u8; 64];
     let key = [0u8; 32];
+    let (pkg, ver) = update_labels();
     let rc = unsafe {
         eds_verify_update(
-            payload.as_ptr(), payload.len(),
-            std::ptr::null(), sig.as_ptr(), key.as_ptr(),
+            payload.as_ptr(),
+            payload.len(),
+            pkg.as_ptr(),
+            ver.as_ptr(),
+            std::ptr::null(),
+            sig.as_ptr(),
+            key.as_ptr(),
         )
     };
     assert_eq!(rc, EDS_ERR_NULL_PTR);
@@ -511,10 +636,16 @@ fn verify_update_null_signature_returns_error() {
     let payload = b"fw";
     let hash = [0u8; 32];
     let key = [0u8; 32];
+    let (pkg, ver) = update_labels();
     let rc = unsafe {
         eds_verify_update(
-            payload.as_ptr(), payload.len(),
-            hash.as_ptr(), std::ptr::null(), key.as_ptr(),
+            payload.as_ptr(),
+            payload.len(),
+            pkg.as_ptr(),
+            ver.as_ptr(),
+            hash.as_ptr(),
+            std::ptr::null(),
+            key.as_ptr(),
         )
     };
     assert_eq!(rc, EDS_ERR_NULL_PTR);
@@ -525,10 +656,16 @@ fn verify_update_null_publisher_key_returns_error() {
     let payload = b"fw";
     let hash = [0u8; 32];
     let sig = [0u8; 64];
+    let (pkg, ver) = update_labels();
     let rc = unsafe {
         eds_verify_update(
-            payload.as_ptr(), payload.len(),
-            hash.as_ptr(), sig.as_ptr(), std::ptr::null(),
+            payload.as_ptr(),
+            payload.len(),
+            pkg.as_ptr(),
+            ver.as_ptr(),
+            hash.as_ptr(),
+            sig.as_ptr(),
+            std::ptr::null(),
         )
     };
     assert_eq!(rc, EDS_ERR_NULL_PTR);
@@ -538,11 +675,17 @@ fn verify_update_null_publisher_key_returns_error() {
 fn verify_update_tampered_payload_returns_hash_mismatch() {
     let payload = b"firmware-v2.0.0-image";
     let (hash, sig, pub_key) = unsafe { make_update_fixture(payload) };
+    let (pkg, ver) = update_labels();
     let tampered = b"firmware-v2.0.0-image-TAMPERED";
     let rc = unsafe {
         eds_verify_update(
-            tampered.as_ptr(), tampered.len(),
-            hash.as_ptr(), sig.as_ptr(), pub_key.as_ptr(),
+            tampered.as_ptr(),
+            tampered.len(),
+            pkg.as_ptr(),
+            ver.as_ptr(),
+            hash.as_ptr(),
+            sig.as_ptr(),
+            pub_key.as_ptr(),
         )
     };
     assert_eq!(rc, EDS_ERR_HASH_MISMATCH);
@@ -552,11 +695,17 @@ fn verify_update_tampered_payload_returns_hash_mismatch() {
 fn verify_update_tampered_signature_returns_bad_signature() {
     let payload = b"firmware-v2.0.0-image";
     let (hash, mut sig, pub_key) = unsafe { make_update_fixture(payload) };
+    let (pkg, ver) = update_labels();
     sig[0] ^= 0x01;
     let rc = unsafe {
         eds_verify_update(
-            payload.as_ptr(), payload.len(),
-            hash.as_ptr(), sig.as_ptr(), pub_key.as_ptr(),
+            payload.as_ptr(),
+            payload.len(),
+            pkg.as_ptr(),
+            ver.as_ptr(),
+            hash.as_ptr(),
+            sig.as_ptr(),
+            pub_key.as_ptr(),
         )
     };
     assert_eq!(rc, EDS_ERR_BAD_SIGNATURE);
@@ -566,11 +715,17 @@ fn verify_update_tampered_signature_returns_bad_signature() {
 fn verify_update_wrong_publisher_key_returns_bad_signature() {
     let payload = b"firmware-v2.0.0-image";
     let (hash, sig, _) = unsafe { make_update_fixture(payload) };
+    let (pkg, ver) = update_labels();
     let (_, wrong_pub_key) = unsafe { make_keypair() };
     let rc = unsafe {
         eds_verify_update(
-            payload.as_ptr(), payload.len(),
-            hash.as_ptr(), sig.as_ptr(), wrong_pub_key.as_ptr(),
+            payload.as_ptr(),
+            payload.len(),
+            pkg.as_ptr(),
+            ver.as_ptr(),
+            hash.as_ptr(),
+            sig.as_ptr(),
+            wrong_pub_key.as_ptr(),
         )
     };
     assert_eq!(rc, EDS_ERR_BAD_SIGNATURE);
@@ -636,20 +791,40 @@ fn last_error_set_after_device_id_too_long() {
 
 #[test]
 fn last_error_set_after_chain_invalid() {
-    let (priv_key, _) = unsafe { make_keypair() };
+    let (priv_key, pub_key) = unsafe { make_keypair() };
     let dev = std::ffi::CString::new("sensor-01").unwrap();
     let obj = std::ffi::CString::new("obj").unwrap();
     let mut records = [zeroed_record(), zeroed_record()];
     let mut prev_hash = [0u8; 32];
 
     unsafe {
-        eds_sign_record(dev.as_ptr(), 1, 0, b"aaa".as_ptr(), 3, std::ptr::null(), obj.as_ptr(), priv_key.as_ptr(), &mut records[0]);
+        eds_sign_record(
+            dev.as_ptr(),
+            1,
+            0,
+            b"aaa".as_ptr(),
+            3,
+            std::ptr::null(),
+            obj.as_ptr(),
+            priv_key.as_ptr(),
+            &mut records[0],
+        );
         eds_record_hash(&records[0], prev_hash.as_mut_ptr());
-        eds_sign_record(dev.as_ptr(), 2, 1, b"bbb".as_ptr(), 3, prev_hash.as_ptr(), obj.as_ptr(), priv_key.as_ptr(), &mut records[1]);
+        eds_sign_record(
+            dev.as_ptr(),
+            2,
+            1,
+            b"bbb".as_ptr(),
+            3,
+            prev_hash.as_ptr(),
+            obj.as_ptr(),
+            priv_key.as_ptr(),
+            &mut records[1],
+        );
     }
     records[0].payload_hash[0] ^= 0x01;
 
-    let rc = unsafe { eds_verify_chain(records.as_ptr(), 2) };
+    let rc = unsafe { eds_verify_chain(records.as_ptr(), 2, pub_key.as_ptr()) };
     assert_eq!(rc, EDS_ERR_CHAIN_INVALID);
     let msg = last_error();
     assert!(!msg.is_empty());
@@ -685,6 +860,12 @@ fn ffi_boundary_panic_is_caught_and_returns_err_panic() {
     let rc = std::panic::catch_unwind(|| -> i32 { panic!("intentional test panic") })
         .unwrap_or(EDS_ERR_PANIC);
 
-    assert_eq!(rc, EDS_ERR_PANIC, "panic must be converted to EDS_ERR_PANIC");
-    assert_eq!(EDS_ERR_PANIC, -6, "EDS_ERR_PANIC must equal -6 per the public ABI contract");
+    assert_eq!(
+        rc, EDS_ERR_PANIC,
+        "panic must be converted to EDS_ERR_PANIC"
+    );
+    assert_eq!(
+        EDS_ERR_PANIC, -6,
+        "EDS_ERR_PANIC must equal -6 per the public ABI contract"
+    );
 }

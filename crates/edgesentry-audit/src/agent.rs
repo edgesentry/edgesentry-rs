@@ -1,7 +1,7 @@
 use ed25519_dalek::SigningKey;
 use tracing::debug;
 
-use crate::identity::sign_payload_hash;
+use crate::identity::{sign_audit_context, AuditSigContext};
 use crate::integrity::compute_payload_hash;
 use crate::record::{AuditRecord, Hash32};
 
@@ -17,10 +17,25 @@ pub fn build_signed_record(
     let device_id = device_id.into();
     let object_ref = object_ref.into();
 
-    debug!(device_id, sequence, payload_bytes = payload.len(), "signing record");
+    debug!(
+        device_id,
+        sequence,
+        payload_bytes = payload.len(),
+        "signing record"
+    );
 
     let payload_hash = compute_payload_hash(payload);
-    let signature = sign_payload_hash(signing_key, &payload_hash);
+    let signature = sign_audit_context(
+        signing_key,
+        &AuditSigContext {
+            device_id: &device_id,
+            sequence,
+            timestamp_ms,
+            prev_record_hash: &prev_record_hash,
+            object_ref: &object_ref,
+            payload_hash: &payload_hash,
+        },
+    );
 
     AuditRecord {
         device_id,

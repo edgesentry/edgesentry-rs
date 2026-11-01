@@ -3,10 +3,10 @@ use std::collections::HashMap;
 use thiserror::Error;
 use tracing::{debug, error, info, instrument, warn};
 
-use crate::integrity::compute_payload_hash;
-use crate::record::AuditRecord;
 use super::policy::IntegrityPolicyGate;
 use super::verify::IngestError;
+use crate::integrity::compute_payload_hash;
+use crate::record::AuditRecord;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IngestDecision {
@@ -47,7 +47,10 @@ pub enum ObjectRefError {
     #[error("object_ref contains path traversal or unsafe characters")]
     UnsafePath,
     #[error("object_ref is not scoped to device_id={device_id}: {object_ref}")]
-    NotScoped { device_id: String, object_ref: String },
+    NotScoped {
+        device_id: String,
+        object_ref: String,
+    },
 }
 
 /// Extract the storage key from an `object_ref` that may be a full `s3://bucket/key`
@@ -148,7 +151,12 @@ where
     L: AuditLedger,
     O: OperationLogStore,
 {
-    pub fn new(policy: IntegrityPolicyGate, raw_data_store: R, audit_ledger: L, operation_log: O) -> Self {
+    pub fn new(
+        policy: IntegrityPolicyGate,
+        raw_data_store: R,
+        audit_ledger: L,
+        operation_log: O,
+    ) -> Self {
         Self {
             policy,
             raw_data_store,
@@ -157,7 +165,11 @@ where
         }
     }
 
-    pub fn register_device(&mut self, device_id: impl Into<String>, key: ed25519_dalek::VerifyingKey) {
+    pub fn register_device(
+        &mut self,
+        device_id: impl Into<String>,
+        key: ed25519_dalek::VerifyingKey,
+    ) {
         self.policy.register_device(device_id, key);
     }
 
@@ -166,7 +178,12 @@ where
         sequence  = record.sequence,
         object_ref = %record.object_ref,
     ))]
-    pub fn ingest(&mut self, record: AuditRecord, raw_payload: &[u8], cert_identity: Option<&str>) -> Result<(), IngestServiceError> {
+    pub fn ingest(
+        &mut self,
+        record: AuditRecord,
+        raw_payload: &[u8],
+        cert_identity: Option<&str>,
+    ) -> Result<(), IngestServiceError> {
         debug!(payload_bytes = raw_payload.len(), "ingest started");
 
         let payload_hash = compute_payload_hash(raw_payload);
@@ -179,16 +196,17 @@ where
             });
         }
 
-        if let Err(error) = self.policy.enforce(&record, cert_identity) {
-            warn!(reason = %error, "integrity policy rejected record");
-            self.log_rejection(&record, &error.to_string());
-            return Err(IngestServiceError::Verify(error));
-        }
-
+        // Reject an unscoped object_ref before the policy gate commits the chain cursor.
         if let Err(error) = validate_object_ref_for_device(&record.device_id, &record.object_ref) {
             warn!(reason = %error, "object_ref rejected");
             self.log_rejection(&record, &error.to_string());
             return Err(IngestServiceError::ObjectRef(error));
+        }
+
+        if let Err(error) = self.policy.enforce(&record, cert_identity) {
+            warn!(reason = %error, "integrity policy rejected record");
+            self.log_rejection(&record, &error.to_string());
+            return Err(IngestServiceError::Verify(error));
         }
 
         self.raw_data_store
@@ -198,12 +216,10 @@ where
                 IngestServiceError::RawDataStore(e.to_string())
             })?;
 
-        self.audit_ledger
-            .append(record.clone())
-            .map_err(|e| {
-                error!(error = %e, "audit ledger append failed");
-                IngestServiceError::AuditLedger(e.to_string())
-            })?;
+        self.audit_ledger.append(record.clone()).map_err(|e| {
+            error!(error = %e, "audit ledger append failed");
+            IngestServiceError::AuditLedger(e.to_string())
+        })?;
 
         self.operation_log
             .write(OperationLogEntry {
@@ -264,7 +280,8 @@ impl RawDataStore for InMemoryRawDataStore {
     type Error = InMemoryStoreError;
 
     fn put(&mut self, object_ref: &str, payload: &[u8]) -> Result<(), Self::Error> {
-        self.objects.insert(object_ref.to_string(), payload.to_vec());
+        self.objects
+            .insert(object_ref.to_string(), payload.to_vec());
         Ok(())
     }
 }
@@ -365,9 +382,8 @@ impl PostgresOperationLog {
     }
 
     pub fn reset(&mut self) -> Result<(), ::postgres::Error> {
-        self.client.batch_execute(
-            "TRUNCATE TABLE operation_logs, audit_records RESTART IDENTITY;",
-        )
+        self.client
+            .batch_execute("TRUNCATE TABLE operation_logs, audit_records RESTART IDENTITY;")
     }
 }
 
@@ -468,27 +484,33 @@ impl S3CompatibleRawDataStore {
         use aws_config::Region;
         use aws_credential_types::Credentials;
 
-        let runtime = tokio::runtime::Runtime::new()
-            .map_err(|e| S3StoreError::Runtime(e.to_string()))?;
+        let runtime =
+            tokio::runtime::Runtime::new().map_err(|e| S3StoreError::Runtime(e.to_string()))?;
 
         let mut loader = aws_config::defaults(BehaviorVersion::latest())
             .region(Region::new(config.region.clone()));
 
         match config.backend {
             S3Backend::AwsS3 => {
-                if let (Some(access_key_id), Some(secret_access_key)) =
-                    (config.access_key_id.clone(), config.secret_access_key.clone())
-                {
-                    let creds = Credentials::new(access_key_id, secret_access_key, None, None, "static");
+                if let (Some(access_key_id), Some(secret_access_key)) = (
+                    config.access_key_id.clone(),
+                    config.secret_access_key.clone(),
+                ) {
+                    let creds =
+                        Credentials::new(access_key_id, secret_access_key, None, None, "static");
                     loader = loader.credentials_provider(creds);
                 }
             }
             S3Backend::Minio => {
                 let endpoint = config.endpoint.clone().ok_or_else(|| {
-                    S3StoreError::InvalidConfig("endpoint is required for MinIO backend".to_string())
+                    S3StoreError::InvalidConfig(
+                        "endpoint is required for MinIO backend".to_string(),
+                    )
                 })?;
                 let access_key_id = config.access_key_id.clone().ok_or_else(|| {
-                    S3StoreError::InvalidConfig("access_key_id is required for MinIO backend".to_string())
+                    S3StoreError::InvalidConfig(
+                        "access_key_id is required for MinIO backend".to_string(),
+                    )
                 })?;
                 let secret_access_key = config.secret_access_key.clone().ok_or_else(|| {
                     S3StoreError::InvalidConfig(
@@ -496,7 +518,8 @@ impl S3CompatibleRawDataStore {
                     )
                 })?;
 
-                let creds = Credentials::new(access_key_id, secret_access_key, None, None, "static");
+                let creds =
+                    Credentials::new(access_key_id, secret_access_key, None, None, "static");
                 loader = loader.endpoint_url(endpoint).credentials_provider(creds);
             }
         }
@@ -773,6 +796,22 @@ where
             });
         }
 
+        // Reject an unscoped object_ref before the policy gate commits the
+        // device chain cursor inside `enforce`.
+        if let Err(error) = validate_object_ref_for_device(&record.device_id, &record.object_ref) {
+            warn!(reason = %error, "object_ref rejected");
+            let _ = self
+                .operation_log
+                .write(OperationLogEntry {
+                    decision: IngestDecision::Rejected,
+                    device_id: record.device_id.clone(),
+                    sequence: record.sequence,
+                    message: error.to_string(),
+                })
+                .await;
+            return Err(IngestServiceError::ObjectRef(error));
+        }
+
         // Acquire the policy lock, run the check, then release before any I/O.
         let policy_result = {
             let mut policy = self.policy.lock().await;
@@ -790,20 +829,6 @@ where
                 })
                 .await;
             return Err(IngestServiceError::Verify(error));
-        }
-
-        if let Err(error) = validate_object_ref_for_device(&record.device_id, &record.object_ref) {
-            warn!(reason = %error, "object_ref rejected");
-            let _ = self
-                .operation_log
-                .write(OperationLogEntry {
-                    decision: IngestDecision::Rejected,
-                    device_id: record.device_id.clone(),
-                    sequence: record.sequence,
-                    message: error.to_string(),
-                })
-                .await;
-            return Err(IngestServiceError::ObjectRef(error));
         }
 
         self.raw_data_store

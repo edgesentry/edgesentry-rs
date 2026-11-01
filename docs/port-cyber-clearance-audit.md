@@ -29,7 +29,7 @@ eds audit sign-clearance \
 ### Chain integrity
 
 ```bash
-eds audit verify-chain --records-file /tmp/clearance-chain.json
+eds audit verify-chain --records-file /tmp/clearance-chain.json --public-key-hex "$PUB"
 # CHAIN_VALID
 ```
 
@@ -38,7 +38,8 @@ eds audit verify-chain --records-file /tmp/clearance-chain.json
 ```bash
 eds audit verify-clearance \
   --manifest data/processed/maritime_cyber/vessel-hold_port-call-demo-sgsin_evaluation_manifest.json \
-  --chain /tmp/clearance-chain.json
+  --chain /tmp/clearance-chain.json \
+  --public-key-hex "$PUB"
 # VERIFIED + CHAIN_VALID
 ```
 
@@ -53,8 +54,8 @@ uv run python pipelines/port_clearance_eval.py evaluate vessel-hold --write
 # edgesentry-rs repo
 cargo build --release -p eds
 eds audit sign-clearance --manifest .../vessel-hold_port-call-demo-sgsin_evaluation_manifest.json ...
-eds audit verify-chain --records-file /tmp/clearance-chain.json
-eds audit verify-clearance --manifest ... --chain /tmp/clearance-chain.json
+eds audit verify-chain --records-file /tmp/clearance-chain.json --public-key-hex "$PUB"
+eds audit verify-clearance --manifest ... --chain /tmp/clearance-chain.json --public-key-hex "$PUB"
 ```
 
 ## Honesty (portal)

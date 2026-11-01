@@ -85,7 +85,8 @@ fn direct(value: impl Into<String>) -> FieldValue {
 
 fn rules_table_rows(rules: &[ClearanceRuleHit]) -> String {
     if rules.is_empty() {
-        return "<tr><td colspan=\"4\" class=\"muted\">No rules fired — clearance pass</td></tr>".to_string();
+        return "<tr><td colspan=\"4\" class=\"muted\">No rules fired — clearance pass</td></tr>"
+            .to_string();
     }
     rules
         .iter()
@@ -116,24 +117,30 @@ fn audit_evidence_html(facts: &ClearanceFacts) -> String {
         .cloned()
         .unwrap_or_default();
 
-    let bom_sbom_sha = bom
-        .get("sbom_sha256")
-        .and_then(|v| v.as_str())
-        .unwrap_or("—");
-    let cve_sha = cve
-        .get("cve_snapshot_sha256")
-        .and_then(|v| v.as_str())
-        .unwrap_or("—");
-    let fingerprint = facts
-        .integrated_snapshot_fingerprint
-        .as_deref()
-        .unwrap_or("—");
+    let bom_sbom_sha = escape_html(
+        bom.get("sbom_sha256")
+            .and_then(|v| v.as_str())
+            .unwrap_or("—"),
+    );
+    let cve_sha = escape_html(
+        cve.get("cve_snapshot_sha256")
+            .and_then(|v| v.as_str())
+            .unwrap_or("—"),
+    );
+    let fingerprint = escape_html(
+        facts
+            .integrated_snapshot_fingerprint
+            .as_deref()
+            .unwrap_or("—"),
+    );
 
     let mut rows = String::from(
         "<table><thead><tr><th>Asset</th><th>Component</th><th>CVE</th><th>CVSS</th></tr></thead><tbody>",
     );
     if facts.impacted_paths.is_empty() {
-        rows.push_str("<tr><td colspan=\"4\" class=\"muted\">No impacted paths on evaluation</td></tr>");
+        rows.push_str(
+            "<tr><td colspan=\"4\" class=\"muted\">No impacted paths on evaluation</td></tr>",
+        );
     } else {
         for p in &facts.impacted_paths {
             rows.push_str(&format!(
@@ -145,7 +152,12 @@ fn audit_evidence_html(facts: &ClearanceFacts) -> String {
                         .or(p.component_name.as_deref())
                         .unwrap_or("—"),
                 ),
-                escape_html(p.cve_osv_id.as_deref().or(p.cve_id.as_deref()).unwrap_or("—")),
+                escape_html(
+                    p.cve_osv_id
+                        .as_deref()
+                        .or(p.cve_id.as_deref())
+                        .unwrap_or("—")
+                ),
                 p.cvss_score
                     .map(|s| format!("{s:.1}"))
                     .unwrap_or_else(|| "—".to_string()),
@@ -165,7 +177,8 @@ fn audit_evidence_html(facts: &ClearanceFacts) -> String {
 
 fn paths_table_rows(paths: &[ClearancePath]) -> String {
     if paths.is_empty() {
-        return "<tr><td colspan=\"3\" class=\"muted\">No cited vulnerability paths</td></tr>".to_string();
+        return "<tr><td colspan=\"3\" class=\"muted\">No cited vulnerability paths</td></tr>"
+            .to_string();
     }
     paths
         .iter()
@@ -204,11 +217,11 @@ fn operator_explanation_section(text: Option<&str>) -> String {
 }
 
 fn summary_paragraph(facts: &ClearanceFacts) -> String {
-    let outcome_upper = facts.outcome.to_uppercase();
+    let outcome_html = escape_html(&facts.outcome.to_uppercase());
     if facts.outcome == "hold" {
         format!(
             "Vessel <strong>{}</strong> on port call <strong>{}</strong> received clearance outcome \
-             <strong>{outcome_upper}</strong>. {} rule(s) fired across {} cited path(s). \
+             <strong>{outcome_html}</strong>. {} rule(s) fired across {} cited path(s). \
              Berth recommendation: review cyber exposure before port entry.",
             escape_html(&facts.vessel_key),
             escape_html(&facts.port_call_id),
@@ -218,7 +231,7 @@ fn summary_paragraph(facts: &ClearanceFacts) -> String {
     } else {
         format!(
             "Vessel <strong>{}</strong> on port call <strong>{}</strong> received clearance outcome \
-             <strong>{outcome_upper}</strong>. No blocking rules fired on the pinned CVE snapshot and SBOM fixtures.",
+             <strong>{outcome_html}</strong>. No blocking rules fired on the pinned CVE snapshot and SBOM fixtures.",
             escape_html(&facts.vessel_key),
             escape_html(&facts.port_call_id),
         )
@@ -259,8 +272,14 @@ pub fn fill_clearance(
         "OPERATOR_EXPLANATION_SECTION".to_string(),
         direct(operator_explanation_section(operator_explanation)),
     );
-    fields.insert("RULES_TABLE_ROWS".to_string(), direct(rules_table_rows(&facts.rules_fired)));
-    fields.insert("PATHS_TABLE_ROWS".to_string(), direct(paths_table_rows(&facts.paths)));
+    fields.insert(
+        "RULES_TABLE_ROWS".to_string(),
+        direct(rules_table_rows(&facts.rules_fired)),
+    );
+    fields.insert(
+        "PATHS_TABLE_ROWS".to_string(),
+        direct(paths_table_rows(&facts.paths)),
+    );
     fields.insert(
         "AUDIT_EVIDENCE_HTML".to_string(),
         direct(audit_evidence_html(facts)),
@@ -329,10 +348,21 @@ mod tests {
     fn audit_evidence_html_renders_g11_g12_hashes_and_impacted_path() {
         let facts = parse_clearance_facts_json(HOLD_FACTS).unwrap();
         let doc = fill_clearance(&facts, "https://verify.example/clearance/demo", None);
-        let section = doc.fields.get("AUDIT_EVIDENCE_HTML").expect("field").value.as_str();
-        assert!(section.contains("ad9e87da1c02487a746f5c086fb2d315719cbc48e2aa3bb5ed60c3e27ab27f06"));
-        assert!(section.contains("490d61991f404f6004d94657a81a0ce8b24724eade8e5ddf532d3bcb8c9cbe43"));
-        assert!(section.contains("e4a3bb87687d7686c16a26c785714660960abc9d9849d278919d9c0992c89ae5"));
+        let section = doc
+            .fields
+            .get("AUDIT_EVIDENCE_HTML")
+            .expect("field")
+            .value
+            .as_str();
+        assert!(
+            section.contains("ad9e87da1c02487a746f5c086fb2d315719cbc48e2aa3bb5ed60c3e27ab27f06")
+        );
+        assert!(
+            section.contains("490d61991f404f6004d94657a81a0ce8b24724eade8e5ddf532d3bcb8c9cbe43")
+        );
+        assert!(
+            section.contains("e4a3bb87687d7686c16a26c785714660960abc9d9849d278919d9c0992c89ae5")
+        );
         assert!(section.contains("log4j-core"));
         assert!(section.contains("GHSA-jfhr-c2vg-8q4j"));
         assert!(section.contains("10.0"));
@@ -342,7 +372,12 @@ mod tests {
     fn audit_evidence_html_pass_vessel_shows_no_impacted_paths() {
         let facts = parse_clearance_facts_json(CLEAN_FACTS).unwrap();
         let doc = fill_clearance(&facts, "https://verify.example/clearance/demo", None);
-        let section = doc.fields.get("AUDIT_EVIDENCE_HTML").expect("field").value.as_str();
+        let section = doc
+            .fields
+            .get("AUDIT_EVIDENCE_HTML")
+            .expect("field")
+            .value
+            .as_str();
         assert!(section.contains("No impacted paths on evaluation"));
         assert!(facts.impacted_paths.is_empty());
     }
@@ -366,12 +401,59 @@ mod tests {
     #[test]
     fn render_clearance_html_includes_operator_explanation_when_provided() {
         let facts = parse_clearance_facts_json(HOLD_FACTS).unwrap();
-        let narrative = "Operator context for vessel-hold. The rule engine recorded clearance outcome HOLD.";
-        let doc = fill_clearance(&facts, "https://verify.example/clearance/abc123", Some(narrative));
+        let narrative =
+            "Operator context for vessel-hold. The rule engine recorded clearance outcome HOLD.";
+        let doc = fill_clearance(
+            &facts,
+            "https://verify.example/clearance/abc123",
+            Some(narrative),
+        );
         let html = render_html(&doc, TEMPLATE_HTML);
         assert!(html.contains("Operator explanation (facts-derived, non-authoritative)"));
         assert!(html.contains("AI automates explanation, not compliance judgment"));
         assert!(html.contains("vessel-hold"));
+    }
+
+    #[test]
+    fn raw_html_facts_are_escaped_in_summary_and_audit_evidence() {
+        let mut facts = parse_clearance_facts_json(CLEAN_FACTS).unwrap();
+        facts.vessel_key = "ship<eds-marker>".to_string();
+        facts.outcome = "pass<eds-marker>".to_string();
+        facts.bom_baseline_ref = Some(serde_json::json!({
+            "sbom_sha256": "aa<eds-marker>"
+        }));
+        facts.cve_snapshot_ref = Some(serde_json::json!({
+            "cve_snapshot_sha256": "bb<eds-marker>"
+        }));
+        facts.integrated_snapshot_fingerprint = Some("cc<eds-marker>".to_string());
+
+        let doc = fill_clearance(&facts, "https://verify.example/clearance/demo", None);
+        let summary = doc
+            .fields
+            .get("SUMMARY_HTML")
+            .expect("summary")
+            .value
+            .as_str();
+        let evidence = doc
+            .fields
+            .get("AUDIT_EVIDENCE_HTML")
+            .expect("evidence")
+            .value
+            .as_str();
+        assert!(summary.contains("ship&lt;eds-marker&gt;"));
+        assert!(summary.contains("&lt;EDS-MARKER&gt;"));
+        assert!(!summary.contains("<eds-marker>"));
+        assert!(!summary.contains("<EDS-MARKER>"));
+        assert!(evidence.contains("aa&lt;eds-marker&gt;"));
+        assert!(evidence.contains("bb&lt;eds-marker&gt;"));
+        assert!(evidence.contains("cc&lt;eds-marker&gt;"));
+        assert!(!evidence.contains("<eds-marker>"));
+
+        let html = render_html(&doc, TEMPLATE_HTML);
+        assert!(!html.contains("<eds-marker>"));
+        assert!(!html.contains("<EDS-MARKER>"));
+        assert!(html.contains("ship&lt;eds-marker&gt;"));
+        assert!(html.contains("&lt;EDS-MARKER&gt;"));
     }
 
     #[test]

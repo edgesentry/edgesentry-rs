@@ -130,32 +130,56 @@ pub fn fill_bca(
 ) -> Result<FilledDocument, String> {
     let mut fields: HashMap<String, FieldValue> = HashMap::new();
 
-    fields.insert("OUTLET_ID".to_string(), FieldValue {
-        value: entity.outlet_id.clone(),
-        confidence: 0.95,
-        source: FieldSource::Direct,
-        flagged: false,
-    });
-    fields.insert("BUILDING_NAME".to_string(), FieldValue {
-        value: entity.building_name.clone(),
-        confidence: 0.95,
-        source: FieldSource::Direct,
-        flagged: false,
-    });
-    fields.insert("BUILDING_TYPE".to_string(), make_field(entity.building_type.clone(), confidence_threshold));
-    fields.insert("PERIOD_START".to_string(), make_field(entity.period_start.clone(), confidence_threshold));
-    fields.insert("PERIOD_END".to_string(), make_field(entity.period_end.clone(), confidence_threshold));
+    fields.insert(
+        "OUTLET_ID".to_string(),
+        FieldValue {
+            value: entity.outlet_id.clone(),
+            confidence: 0.95,
+            source: FieldSource::Direct,
+            flagged: false,
+        },
+    );
+    fields.insert(
+        "BUILDING_NAME".to_string(),
+        FieldValue {
+            value: entity.building_name.clone(),
+            confidence: 0.95,
+            source: FieldSource::Direct,
+            flagged: false,
+        },
+    );
+    fields.insert(
+        "BUILDING_TYPE".to_string(),
+        make_field(entity.building_type.clone(), confidence_threshold),
+    );
+    fields.insert(
+        "PERIOD_START".to_string(),
+        make_field(entity.period_start.clone(), confidence_threshold),
+    );
+    fields.insert(
+        "PERIOD_END".to_string(),
+        make_field(entity.period_end.clone(), confidence_threshold),
+    );
     fields.insert(
         "GROSS_FLOOR_AREA_M2".to_string(),
-        make_field(entity.gross_floor_area_m2.map(|v| v.to_string()), confidence_threshold),
+        make_field(
+            entity.gross_floor_area_m2.map(|v| v.to_string()),
+            confidence_threshold,
+        ),
     );
     fields.insert(
         "EUI_KWH_M2".to_string(),
-        make_field(entity.eui_kwh_m2.map(|v| v.to_string()), confidence_threshold),
+        make_field(
+            entity.eui_kwh_m2.map(|v| v.to_string()),
+            confidence_threshold,
+        ),
     );
     fields.insert(
         "CHILLER_COP".to_string(),
-        make_field(entity.chiller_cop.map(|v| v.to_string()), confidence_threshold),
+        make_field(
+            entity.chiller_cop.map(|v| v.to_string()),
+            confidence_threshold,
+        ),
     );
     fields.insert(
         "LPD_W_M2".to_string(),
@@ -163,10 +187,19 @@ pub fn fill_bca(
     );
     fields.insert(
         "WATER_L_M2".to_string(),
-        make_field(entity.water_l_m2.map(|v| v.to_string()), confidence_threshold),
+        make_field(
+            entity.water_l_m2.map(|v| v.to_string()),
+            confidence_threshold,
+        ),
     );
-    fields.insert("GREEN_MARK_TARGET".to_string(), make_field(entity.green_mark_target.clone(), confidence_threshold));
-    fields.insert("CERTIFYING_BODY".to_string(), make_field(entity.certifying_body.clone(), confidence_threshold));
+    fields.insert(
+        "GREEN_MARK_TARGET".to_string(),
+        make_field(entity.green_mark_target.clone(), confidence_threshold),
+    );
+    fields.insert(
+        "CERTIFYING_BODY".to_string(),
+        make_field(entity.certifying_body.clone(), confidence_threshold),
+    );
 
     let review_required = fields.values().any(|f| f.flagged);
 
@@ -188,32 +221,68 @@ pub fn fill(
 
     let mut fields: HashMap<String, FieldValue> = HashMap::new();
 
-    fields.insert("VESSEL_NAME".to_string(), FieldValue {
-        value: entity.vessel_name.clone(),
-        confidence: 0.95,
-        source: FieldSource::Direct,
-        flagged: false,
-    });
-    fields.insert("VESSEL_IMO".to_string(), make_field(entity.vessel_imo.clone(), confidence_threshold));
-    fields.insert("FLAG_STATE".to_string(), make_field(entity.flag_state.clone(), confidence_threshold));
-    fields.insert("PORT_OF_ARRIVAL".to_string(), make_field(entity.port_of_arrival.clone(), confidence_threshold));
-    fields.insert("ARRIVAL_DATE".to_string(), make_field(entity.arrival_date.clone(), confidence_threshold));
-    fields.insert("CARGO_DESCRIPTION".to_string(), make_field(entity.cargo_description.clone(), confidence_threshold));
-    fields.insert("CARGO_HS_CODE".to_string(), make_field(entity.cargo_hs_code.clone(), confidence_threshold));
+    fields.insert(
+        "VESSEL_NAME".to_string(),
+        FieldValue {
+            value: entity.vessel_name.clone(),
+            confidence: 0.95,
+            source: FieldSource::Direct,
+            flagged: false,
+        },
+    );
+    fields.insert(
+        "VESSEL_IMO".to_string(),
+        make_field(entity.vessel_imo.clone(), confidence_threshold),
+    );
+    fields.insert(
+        "FLAG_STATE".to_string(),
+        make_field(entity.flag_state.clone(), confidence_threshold),
+    );
+    fields.insert(
+        "PORT_OF_ARRIVAL".to_string(),
+        make_field(entity.port_of_arrival.clone(), confidence_threshold),
+    );
+    fields.insert(
+        "ARRIVAL_DATE".to_string(),
+        make_field(entity.arrival_date.clone(), confidence_threshold),
+    );
+    fields.insert(
+        "CARGO_DESCRIPTION".to_string(),
+        make_field(entity.cargo_description.clone(), confidence_threshold),
+    );
+    fields.insert(
+        "CARGO_HS_CODE".to_string(),
+        make_field(entity.cargo_hs_code.clone(), confidence_threshold),
+    );
     fields.insert(
         "CREW_COUNT".to_string(),
-        make_field(entity.crew_count.map(|c| c.to_string()), confidence_threshold),
+        make_field(
+            entity.crew_count.map(|c| c.to_string()),
+            confidence_threshold,
+        ),
     );
     fields.insert(
         "GROSS_TONNAGE".to_string(),
-        make_field(entity.gross_tonnage.map(|g| g.to_string()), confidence_threshold),
+        make_field(
+            entity.gross_tonnage.map(|g| g.to_string()),
+            confidence_threshold,
+        ),
     );
-    fields.insert("BWM_CERTIFICATE_EXPIRY".to_string(), make_field(entity.bwm_certificate_expiry.clone(), confidence_threshold));
+    fields.insert(
+        "BWM_CERTIFICATE_EXPIRY".to_string(),
+        make_field(entity.bwm_certificate_expiry.clone(), confidence_threshold),
+    );
     fields.insert(
         "DANGEROUS_GOODS".to_string(),
-        make_field(entity.dangerous_goods.map(|b| b.to_string()), confidence_threshold),
+        make_field(
+            entity.dangerous_goods.map(|b| b.to_string()),
+            confidence_threshold,
+        ),
     );
-    fields.insert("QUARANTINE_STATUS".to_string(), make_field(entity.quarantine_status.clone(), confidence_threshold));
+    fields.insert(
+        "QUARANTINE_STATUS".to_string(),
+        make_field(entity.quarantine_status.clone(), confidence_threshold),
+    );
 
     let review_required = fields.values().any(|f| f.flagged);
 
@@ -232,16 +301,98 @@ struct RuleSpec {
     check: String,
     severity: String,
     regulation: String,
+    #[serde(default)]
     threshold: Option<f64>,
 }
 
-const DEMO_TODAY: &str = "2026-06-15";
+/// Calendar date compared by year, month, then day. Not a string ordering.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct CivilDate {
+    year: i32,
+    month: u8,
+    day: u8,
+}
 
-fn date_is_expired(date_str: &str) -> bool {
-    date_str.trim() < DEMO_TODAY
+fn is_leap(year: i32) -> bool {
+    (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+}
+
+fn days_in_month(year: i32, month: u32) -> u32 {
+    match month {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 if is_leap(year) => 29,
+        2 => 28,
+        _ => 0,
+    }
+}
+
+/// Parse `YYYY-M-D`. Month and day may be unpadded. Invalid calendar dates fail.
+fn parse_civil_date(date_str: &str) -> Option<CivilDate> {
+    let mut parts = date_str.trim().split('-');
+    let year: i32 = parts.next()?.parse().ok()?;
+    let month: u32 = parts.next()?.parse().ok()?;
+    let day: u32 = parts.next()?.parse().ok()?;
+    if parts.next().is_some() || !(1..=12).contains(&month) {
+        return None;
+    }
+    if day < 1 || day > days_in_month(year, month) {
+        return None;
+    }
+    Some(CivilDate {
+        year,
+        month: month as u8,
+        day: day as u8,
+    })
+}
+
+/// Howard Hinnant's `civil_from_days`, days since 1970-01-01.
+fn civil_from_unix_days(days: i64) -> CivilDate {
+    let z = days + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+    let doe = (z - era * 146_097) as u64;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let mut year = yoe as i64 + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = doy - (153 * mp + 2) / 5 + 1;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 };
+    if month <= 2 {
+        year += 1;
+    }
+    CivilDate {
+        year: year as i32,
+        month: month as u8,
+        day: day as u8,
+    }
+}
+
+fn utc_today() -> CivilDate {
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    civil_from_unix_days((secs / 86_400) as i64)
+}
+
+/// Expired when the certificate date is strictly before `evaluation`.
+/// Unparseable values are treated as expired.
+fn date_is_expired(date_str: &str, evaluation: CivilDate) -> bool {
+    match parse_civil_date(date_str) {
+        Some(expiry) => expiry < evaluation,
+        None => true,
+    }
 }
 
 pub fn check(doc: &FilledDocument, rules_json: &str) -> Result<Vec<ComplianceAlert>, String> {
+    check_on(doc, rules_json, utc_today())
+}
+
+fn check_on(
+    doc: &FilledDocument,
+    rules_json: &str,
+    evaluation: CivilDate,
+) -> Result<Vec<ComplianceAlert>, String> {
     let rules: Vec<RuleSpec> =
         serde_json::from_str(rules_json).map_err(|e| format!("rules JSON parse error: {e}"))?;
 
@@ -252,35 +403,30 @@ pub fn check(doc: &FilledDocument, rules_json: &str) -> Result<Vec<ComplianceAle
         let field_val = doc.fields.get(&field_key);
 
         let fires = match rule.check.as_str() {
-            "not_expired" => {
-                match field_val {
-                    None => true,
-                    Some(fv) if fv.value.is_empty() || fv.flagged => true,
-                    Some(fv) => date_is_expired(&fv.value),
-                }
-            }
-            "not_null" => {
-                match field_val {
-                    None => true,
-                    Some(fv) => fv.value.is_empty() || fv.flagged,
-                }
-            }
-            "not_true" => {
-                match field_val {
-                    None => false,
-                    Some(fv) => fv.value.trim().to_lowercase() == "true",
-                }
-            }
+            "not_expired" => match field_val {
+                None => true,
+                Some(fv) if fv.value.is_empty() || fv.flagged => true,
+                Some(fv) => date_is_expired(&fv.value, evaluation),
+            },
+            "not_null" => match field_val {
+                None => true,
+                Some(fv) => fv.value.is_empty() || fv.flagged,
+            },
+            "not_true" => match field_val {
+                None => false,
+                Some(fv) => fv.value.trim().to_lowercase() == "true",
+            },
             // Fires when the numeric field value is strictly above the threshold.
             // Missing or empty fields do not fire (use not_null for that separately).
-            "above_threshold" => {
-                match (rule.threshold, field_val) {
-                    (Some(threshold), Some(fv)) if !fv.value.is_empty() => {
-                        fv.value.trim().parse::<f64>().map(|v| v > threshold).unwrap_or(false)
-                    }
-                    _ => false,
-                }
-            }
+            "above_threshold" => match (rule.threshold, field_val) {
+                (Some(threshold), Some(fv)) if !fv.value.is_empty() => fv
+                    .value
+                    .trim()
+                    .parse::<f64>()
+                    .map(|v| v > threshold)
+                    .unwrap_or(false),
+                _ => false,
+            },
             other => {
                 return Err(format!("unknown check type: '{other}'"));
             }
@@ -390,11 +536,17 @@ mod tests {
         assert!((crew_field.confidence - 0.0).abs() < 1e-9);
     }
 
+    const EVAL_2026_11_01: CivilDate = CivilDate {
+        year: 2026,
+        month: 11,
+        day: 1,
+    };
+
     #[test]
     fn check_expired_bwm_fires_alert() {
         let entity = make_entity("V002", Some("2026-04-30"), Some(18));
         let doc = fill(&entity, "fal-form-1", None, 0.5).unwrap();
-        let alerts = check(&doc, RULES_JSON).unwrap();
+        let alerts = check_on(&doc, RULES_JSON, EVAL_2026_11_01).unwrap();
         assert!(alerts.iter().any(|a| a.rule_id == "BWM_D2_EXPIRED"));
     }
 
@@ -402,8 +554,50 @@ mod tests {
     fn check_valid_bwm_no_alert() {
         let entity = make_entity("V001", Some("2027-03-01"), Some(23));
         let doc = fill(&entity, "fal-form-1", None, 0.5).unwrap();
-        let alerts = check(&doc, RULES_JSON).unwrap();
+        let alerts = check_on(&doc, RULES_JSON, EVAL_2026_11_01).unwrap();
         assert!(!alerts.iter().any(|a| a.rule_id == "BWM_D2_EXPIRED"));
+    }
+
+    #[test]
+    fn check_expiry_after_former_demo_date_alerts_on_evaluation_date() {
+        const SG_PORT_RULES: &str =
+            include_str!("../../edgesentry-profile/fixtures/sg-port-compliance/rules.json");
+        let entity = make_entity("V-AUG", Some("2026-08-01"), Some(18));
+        let doc = fill(&entity, "fal-form-1", None, 0.5).unwrap();
+        let alerts = check_on(&doc, SG_PORT_RULES, EVAL_2026_11_01).unwrap();
+        assert!(
+            alerts.iter().any(|a| a.rule_id == "BWM_D2_EXPIRED"),
+            "2026-08-01 is before evaluation date 2026-11-01"
+        );
+
+        let earlier = make_entity("V-APR", Some("2026-04-30"), Some(18));
+        let earlier_doc = fill(&earlier, "fal-form-1", None, 0.5).unwrap();
+        let earlier_alerts = check_on(&earlier_doc, SG_PORT_RULES, EVAL_2026_11_01).unwrap();
+        assert!(earlier_alerts.iter().any(|a| a.rule_id == "BWM_D2_EXPIRED"));
+    }
+
+    #[test]
+    fn unpadded_and_invalid_certificate_dates() {
+        assert!(date_is_expired("2026-8-1", EVAL_2026_11_01));
+        assert!(!date_is_expired("2026-11-01", EVAL_2026_11_01));
+        assert!(date_is_expired("2026-02-29", EVAL_2026_11_01));
+        assert!(!date_is_expired(
+            "2024-02-29",
+            CivilDate {
+                year: 2024,
+                month: 2,
+                day: 29
+            }
+        ));
+        assert_eq!(
+            civil_from_unix_days(0),
+            CivilDate {
+                year: 1970,
+                month: 1,
+                day: 1
+            }
+        );
+        assert_eq!(civil_from_unix_days(20_758), EVAL_2026_11_01);
     }
 
     #[test]
@@ -496,7 +690,9 @@ mod tests {
         assert!(payload.review_required);
         assert!(payload.fields_flagged.contains(&"CREW_COUNT".to_string()));
         // Confidence for flagged field is 0.0
-        let crew_conf = payload.confidence_flags.iter()
+        let crew_conf = payload
+            .confidence_flags
+            .iter()
             .find(|(k, _)| k == "CREW_COUNT")
             .map(|(_, v)| *v);
         assert_eq!(crew_conf, Some(0.0));
@@ -534,7 +730,10 @@ mod tests {
     fn fill_bca_missing_eui_flags_review() {
         let entity = make_bca_entity("B002", None);
         let doc = fill_bca(&entity, 0.80).unwrap();
-        assert!(doc.review_required, "B002 should require review (EUI missing)");
+        assert!(
+            doc.review_required,
+            "B002 should require review (EUI missing)"
+        );
         let eui_field = doc.fields.get("EUI_KWH_M2").unwrap();
         assert!(eui_field.flagged);
         assert!((eui_field.confidence - 0.0).abs() < 1e-9);
@@ -565,12 +764,15 @@ mod tests {
 
     fn make_bca_doc_with_eui(eui: &str) -> FilledDocument {
         let mut fields = std::collections::HashMap::new();
-        fields.insert("EUI_KWH_M2".to_string(), FieldValue {
-            value: eui.to_string(),
-            confidence: 0.95,
-            source: FieldSource::Direct,
-            flagged: false,
-        });
+        fields.insert(
+            "EUI_KWH_M2".to_string(),
+            FieldValue {
+                value: eui.to_string(),
+                confidence: 0.95,
+                source: FieldSource::Direct,
+                flagged: false,
+            },
+        );
         FilledDocument {
             voyage_id: "MCH-OUTLET-001".to_string(),
             template: "sg-bca-greenmark".to_string(),
@@ -587,23 +789,29 @@ mod tests {
     fn above_threshold_fires_when_value_exceeds() {
         let doc = make_bca_doc_with_eui("122.5");
         let alerts = check(&doc, BCA_THRESHOLD_RULE).unwrap();
-        assert!(alerts.iter().any(|a| a.rule_id == "EUI_PLATINUM_EXCEEDED"),
-            "should fire when EUI 122.5 > 115");
+        assert!(
+            alerts.iter().any(|a| a.rule_id == "EUI_PLATINUM_EXCEEDED"),
+            "should fire when EUI 122.5 > 115"
+        );
     }
 
     #[test]
     fn above_threshold_does_not_fire_when_value_at_or_below() {
         let doc = make_bca_doc_with_eui("114.9");
         let alerts = check(&doc, BCA_THRESHOLD_RULE).unwrap();
-        assert!(!alerts.iter().any(|a| a.rule_id == "EUI_PLATINUM_EXCEEDED"),
-            "should not fire when EUI 114.9 ≤ 115");
+        assert!(
+            !alerts.iter().any(|a| a.rule_id == "EUI_PLATINUM_EXCEEDED"),
+            "should not fire when EUI 114.9 ≤ 115"
+        );
     }
 
     #[test]
     fn above_threshold_does_not_fire_on_missing_field() {
         let doc = make_bca_doc_with_eui("");
         let alerts = check(&doc, BCA_THRESHOLD_RULE).unwrap();
-        assert!(!alerts.iter().any(|a| a.rule_id == "EUI_PLATINUM_EXCEEDED"),
-            "missing value should not fire above_threshold");
+        assert!(
+            !alerts.iter().any(|a| a.rule_id == "EUI_PLATINUM_EXCEEDED"),
+            "missing value should not fire above_threshold"
+        );
     }
 }

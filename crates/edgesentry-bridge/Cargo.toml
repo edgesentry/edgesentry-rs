@@ -21,5 +21,9 @@ ed25519-dalek.workspace = true
 rand.workspace = true
 getrandom = "0.4"
 
+[dev-dependencies]
+edgesentry-audit = { path = "../edgesentry-audit" }
+ed25519-dalek.workspace = true
+
 [build-dependencies]
 cbindgen = "0.29"

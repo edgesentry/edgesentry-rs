@@ -49,6 +49,7 @@ cargo build -p eds --quiet 2>&1 | tail -1
 header "Setup — generate signing keypair"
 KEYPAIR=$("$BIN" audit keygen)
 KEY=$(echo "$KEYPAIR" | python3 -c "import sys,json; print(json.load(sys.stdin)['private_key_hex'])")
+PUB=$(echo "$KEYPAIR" | python3 -c "import sys,json; print(json.load(sys.stdin)['public_key_hex'])")
 echo "  private_key: ${KEY:0:16}…  (first 8 bytes shown)"
 
 # ── TC1: compliant voyage ─────────────────────────────────────────────────────
@@ -85,7 +86,7 @@ step "eds audit sign-document  →  record.json"
 
 step "eds audit verify-document  →  audit trace"
 "$BIN" audit verify-document --payload "$TMPDIR_LOCAL/filled1.jsonl" \
-  --chain "$TMPDIR_LOCAL/record.json"
+  --chain "$TMPDIR_LOCAL/record.json" --public-key-hex "$PUB"
 
 pause
 
@@ -114,7 +115,7 @@ step "eds audit sign-document  →  chain continues from TC1"
 
 step "eds audit verify-document  →  audit trace (sequence 2)"
 "$BIN" audit verify-document --payload "$TMPDIR_LOCAL/filled2.jsonl" \
-  --chain "$TMPDIR_LOCAL/record2.json"
+  --chain "$TMPDIR_LOCAL/record2.json" --public-key-hex "$PUB"
 
 pause
 
@@ -135,7 +136,7 @@ step "eds audit sign-document  →  chain continues from TC2"
 
 step "eds audit verify-document  →  audit trace (sequence 3, flagged fields visible)"
 "$BIN" audit verify-document --payload "$TMPDIR_LOCAL/filled3.jsonl" \
-  --chain "$TMPDIR_LOCAL/record3.json"
+  --chain "$TMPDIR_LOCAL/record3.json" --public-key-hex "$PUB"
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 header "Demo complete"

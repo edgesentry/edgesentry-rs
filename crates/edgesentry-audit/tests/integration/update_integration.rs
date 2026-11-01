@@ -8,20 +8,25 @@
 use ed25519_dalek::SigningKey;
 use edgesentry_audit::{
     build_signed_record,
-    identity::sign_payload_hash,
+    identity::sign_update,
     integrity::compute_payload_hash,
-    update::{SoftwareUpdate, UpdateVerificationLog, UpdateVerifyDecision, UpdateVerifier},
+    update::{SoftwareUpdate, UpdateVerificationLog, UpdateVerifier, UpdateVerifyDecision},
     AuditRecord, InMemoryAuditLedger, InMemoryOperationLog, InMemoryRawDataStore, IngestService,
     IntegrityPolicyGate,
 };
 
-fn signed_update(payload: &[u8], signing_key: &SigningKey, package_id: &str, version: &str) -> SoftwareUpdate {
+fn signed_update(
+    payload: &[u8],
+    signing_key: &SigningKey,
+    package_id: &str,
+    version: &str,
+) -> SoftwareUpdate {
     let payload_hash = compute_payload_hash(payload);
     SoftwareUpdate {
-        package_id:   package_id.to_string(),
-        version:      version.to_string(),
+        package_id: package_id.to_string(),
+        version: version.to_string(),
         payload_hash,
-        signature:    sign_payload_hash(signing_key, &payload_hash),
+        signature: sign_update(signing_key, package_id, version, &payload_hash),
     }
 }
 
@@ -33,8 +38,8 @@ fn signed_update(payload: &[u8], signing_key: &SigningKey, package_id: &str, ver
 #[test]
 fn verified_update_followed_by_audit_ingest() {
     let publisher_key = SigningKey::from_bytes(&[50u8; 32]);
-    let device_key    = SigningKey::from_bytes(&[51u8; 32]);
-    let device_id     = "lift-02";
+    let device_key = SigningKey::from_bytes(&[51u8; 32]);
+    let device_id = "lift-02";
 
     // ── Update verification (edge device side) ───────────────────────────────
     let fw_payload = b"firmware-v2.0.0-lift-02";
@@ -49,7 +54,10 @@ fn verified_update_followed_by_audit_ingest() {
         .expect("valid update should be accepted");
 
     assert_eq!(update_log.entries().len(), 1);
-    assert_eq!(update_log.entries()[0].decision, UpdateVerifyDecision::Accepted);
+    assert_eq!(
+        update_log.entries()[0].decision,
+        UpdateVerifyDecision::Accepted
+    );
 
     // ── Audit record ingest (cloud backend side) ─────────────────────────────
     let mut ingest = IngestService::new(
@@ -83,7 +91,7 @@ fn verified_update_followed_by_audit_ingest() {
 fn tampered_update_rejected_then_valid_update_accepted() {
     let publisher_key = SigningKey::from_bytes(&[52u8; 32]);
 
-    let real_payload    = b"firmware-v3.0.0-real";
+    let real_payload = b"firmware-v3.0.0-real";
     let tampered_payload = b"firmware-v3.0.0-hacked";
     let update = signed_update(real_payload, &publisher_key, "lift-fw", "3.0.0");
 
@@ -111,10 +119,10 @@ fn tampered_update_rejected_then_valid_update_accepted() {
 /// Untrusted publisher cannot push updates even with a valid payload.
 #[test]
 fn untrusted_publisher_cannot_install_update_and_ingest_is_unaffected() {
-    let trusted_key   = SigningKey::from_bytes(&[53u8; 32]);
-    let attacker_key  = SigningKey::from_bytes(&[54u8; 32]);
-    let device_key    = SigningKey::from_bytes(&[55u8; 32]);
-    let device_id     = "lift-03";
+    let trusted_key = SigningKey::from_bytes(&[53u8; 32]);
+    let attacker_key = SigningKey::from_bytes(&[54u8; 32]);
+    let device_key = SigningKey::from_bytes(&[55u8; 32]);
+    let device_id = "lift-03";
 
     let payload = b"malicious-firmware";
     let malicious_update = signed_update(payload, &attacker_key, "lift-fw", "3.0.0");
@@ -125,10 +133,18 @@ fn untrusted_publisher_cannot_install_update_and_ingest_is_unaffected() {
 
     let mut update_log = UpdateVerificationLog::default();
     verifier
-        .verify(&malicious_update, payload, "trusted-vendor", &mut update_log)
+        .verify(
+            &malicious_update,
+            payload,
+            "trusted-vendor",
+            &mut update_log,
+        )
         .expect_err("attacker-signed update must be rejected");
 
-    assert_eq!(update_log.entries()[0].decision, UpdateVerifyDecision::Rejected);
+    assert_eq!(
+        update_log.entries()[0].decision,
+        UpdateVerifyDecision::Rejected
+    );
 
     // The device's audit ingest pipeline is completely independent — still works
     let mut ingest = IngestService::new(

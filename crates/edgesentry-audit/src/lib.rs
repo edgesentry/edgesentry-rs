@@ -1,39 +1,49 @@
 mod agent;
-pub mod clearance;
 pub mod buffer;
+pub mod clearance;
 pub mod identity;
-pub mod integrity;
 pub mod ingest;
+pub mod integrity;
 mod record;
-pub mod update;
-#[cfg(any(feature = "transport-http", feature = "transport-mqtt", feature = "transport-mqtt-tls", feature = "transport-tls"))]
+#[cfg(any(
+    feature = "transport-http",
+    feature = "transport-mqtt",
+    feature = "transport-mqtt-tls",
+    feature = "transport-tls"
+))]
 pub mod transport;
+pub mod update;
 
 pub use agent::build_signed_record;
-pub use buffer::{BufferStore, BufferedEntry, FlushError, FlushReport, InMemoryBufferStore, OfflineBuffer};
 #[cfg(feature = "buffer-sqlite")]
 pub use buffer::sqlite::SqliteBufferStore;
-pub use identity::{sign_payload_hash, verify_payload_signature};
-pub use integrity::{compute_payload_hash, verify_chain, ChainError};
+pub use buffer::{
+    BufferStore, BufferedEntry, FlushError, FlushReport, InMemoryBufferStore, OfflineBuffer,
+};
+pub use clearance::{
+    build_clearance_payload_bytes, manifest_body_from_value, parse_clearance_manifest_json,
+    payload_hash_hex, ClearanceAuditPayload, ClearanceManifestBody,
+};
+pub use identity::{
+    sign_audit_context, sign_payload_hash, sign_update, verify_audit_record,
+    verify_payload_signature, verify_update_signature, AuditSigContext,
+};
 pub use ingest::{
     object_ref_key, validate_object_ref_for_device, AllowedSource, AuditLedger,
     InMemoryAuditLedger, InMemoryOperationLog, InMemoryRawDataStore, IngestDecision, IngestError,
     IngestService, IngestServiceError, IngestState, IntegrityPolicyGate, NetworkPolicy,
     NetworkPolicyError, ObjectRefError, OperationLogEntry, OperationLogStore, RawDataStore,
 };
-#[cfg(feature = "s3")]
-pub use ingest::{S3Backend, S3CompatibleRawDataStore, S3ObjectStoreConfig, S3StoreError};
-#[cfg(feature = "postgres")]
-pub use ingest::{PostgresAuditLedger, PostgresOperationLog, PostgresStoreError};
 #[cfg(feature = "async-ingest")]
 pub use ingest::{
     AsyncAuditLedger, AsyncInMemoryAuditLedger, AsyncInMemoryOperationLog,
     AsyncInMemoryRawDataStore, AsyncIngestService, AsyncOperationLogStore, AsyncRawDataStore,
 };
-pub use clearance::{
-    build_clearance_payload_bytes, manifest_body_from_value, parse_clearance_manifest_json,
-    payload_hash_hex, ClearanceAuditPayload, ClearanceManifestBody,
-};
+#[cfg(feature = "postgres")]
+pub use ingest::{PostgresAuditLedger, PostgresOperationLog, PostgresStoreError};
+#[cfg(feature = "s3")]
+pub use ingest::{S3Backend, S3CompatibleRawDataStore, S3ObjectStoreConfig, S3StoreError};
+pub use integrity::{compute_payload_hash, verify_chain, ChainError};
 pub use record::{AuditRecord, Hash32, Signature64};
 
 use std::{fs, path::Path};
@@ -97,21 +107,20 @@ pub fn verify_record(record: &AuditRecord, public_key_hex: &str) -> Result<bool,
     let public_key_bytes = parse_fixed_hex::<32>(public_key_hex)?;
     let key = VerifyingKey::from_bytes(&public_key_bytes)
         .map_err(|e| CliError::InvalidHex(e.to_string()))?;
-    Ok(verify_payload_signature(
-        &key,
-        &record.payload_hash,
-        &record.signature,
-    ))
+    Ok(verify_audit_record(&key, record))
 }
 
-pub fn verify_chain_file(path: &Path) -> Result<(), CliError> {
+pub fn verify_chain_file(path: &Path, public_key_hex: &str) -> Result<(), CliError> {
     let content = fs::read_to_string(path)?;
     let records: Vec<AuditRecord> = serde_json::from_str(&content)?;
-    verify_chain(&records).map_err(|e| CliError::Chain(e.to_string()))
+    verify_chain_records(&records, public_key_hex)
 }
 
-pub fn verify_chain_records(records: &[AuditRecord]) -> Result<(), CliError> {
-    verify_chain(records).map_err(|e| CliError::Chain(e.to_string()))
+pub fn verify_chain_records(records: &[AuditRecord], public_key_hex: &str) -> Result<(), CliError> {
+    let public_key_bytes = parse_fixed_hex::<32>(public_key_hex)?;
+    let key = VerifyingKey::from_bytes(&public_key_bytes)
+        .map_err(|e| CliError::InvalidHex(e.to_string()))?;
+    verify_chain(records, &key).map_err(|e| CliError::Chain(e.to_string()))
 }
 
 pub fn build_lift_inspection_demo_records_with_payloads(
@@ -135,10 +144,9 @@ pub fn build_lift_inspection_demo_records_with_payloads(
     for (index, step) in steps.iter().enumerate() {
         let sequence = (index as u64) + 1;
         let timestamp_ms = start_timestamp_ms + (index as u64) * 60_000;
-        let payload = format!(
-            "scenario=lift-inspection,device={device_id},sequence={sequence},{step}"
-        )
-        .into_bytes();
+        let payload =
+            format!("scenario=lift-inspection,device={device_id},sequence={sequence},{step}")
+                .into_bytes();
         let object_ref = format!("{object_prefix}/inspection-{sequence}.bin");
 
         let record = build_signed_record(
@@ -273,24 +281,29 @@ mod tests {
         .expect("demo records should be generated");
 
         assert_eq!(records.len(), 3);
-        verify_chain_records(&records).expect("demo chain should be valid");
+        let public_key_hex = inspect_key(private_key_hex)
+            .expect("inspect")
+            .public_key_hex;
+        verify_chain_records(&records, &public_key_hex).expect("demo chain should be valid");
     }
 
     #[test]
     fn parse_fixed_hex_rejects_invalid_hex_chars() {
         let invalid = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"; // 64 chars but not valid hex
         let err = parse_fixed_hex::<32>(invalid).unwrap_err();
-        assert!(matches!(err, CliError::InvalidHex(_)), "expected InvalidHex, got: {err:?}");
+        assert!(
+            matches!(err, CliError::InvalidHex(_)),
+            "expected InvalidHex, got: {err:?}"
+        );
     }
 
     #[test]
     fn verify_record_returns_false_for_wrong_public_key() {
         let private_key_hex = "0202020202020202020202020202020202020202020202020202020202020202";
-        let wrong_key_hex   = "0303030303030303030303030303030303030303030303030303030303030303";
+        let wrong_key_hex = "0303030303030303030303030303030303030303030303030303030303030303";
 
-        let wrong_signing_key = SigningKey::from_bytes(
-            &parse_fixed_hex::<32>(wrong_key_hex).unwrap()
-        );
+        let wrong_signing_key =
+            SigningKey::from_bytes(&parse_fixed_hex::<32>(wrong_key_hex).unwrap());
         let wrong_public_key_hex = hex::encode(wrong_signing_key.verifying_key().to_bytes());
 
         let record = sign_record(
@@ -312,7 +325,10 @@ mod tests {
     fn generate_keypair_produces_unique_pairs() {
         let kp1 = generate_keypair();
         let kp2 = generate_keypair();
-        assert_ne!(kp1.private_key_hex, kp2.private_key_hex, "each call must produce a unique key");
+        assert_ne!(
+            kp1.private_key_hex, kp2.private_key_hex,
+            "each call must produce a unique key"
+        );
         assert_ne!(kp1.public_key_hex, kp2.public_key_hex);
         assert_eq!(kp1.private_key_hex.len(), 64);
         assert_eq!(kp1.public_key_hex.len(), 64);
@@ -331,7 +347,10 @@ mod tests {
         // This is the well-known test vector used throughout the test suite.
         let private_key_hex = "0101010101010101010101010101010101010101010101010101010101010101";
         let kp = inspect_key(private_key_hex).expect("inspect_key should succeed");
-        assert_eq!(kp.public_key_hex, "8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c");
+        assert_eq!(
+            kp.public_key_hex,
+            "8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c"
+        );
     }
 
     #[test]
@@ -364,10 +383,17 @@ mod tests {
 
         records[0].payload_hash[0] ^= 0xFF;
 
-        let err = verify_chain_records(&records).expect_err("tampered chain must fail");
+        let public_key_hex = inspect_key(private_key_hex)
+            .expect("inspect")
+            .public_key_hex;
+        let err =
+            verify_chain_records(&records, &public_key_hex).expect_err("tampered chain must fail");
         match err {
             CliError::Chain(message) => {
-                assert!(message.contains("invalid previous hash"));
+                assert!(
+                    message.contains("invalid signature"),
+                    "tampered signed field must fail signature verification: {message}"
+                );
             }
             _ => panic!("unexpected error variant"),
         }
