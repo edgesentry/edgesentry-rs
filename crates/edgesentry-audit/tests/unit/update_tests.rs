@@ -1,16 +1,28 @@
 use ed25519_dalek::SigningKey;
 use edgesentry_audit::{
-    identity::sign_payload_hash,
+    identity::sign_update,
     integrity::compute_payload_hash,
-    update::{SoftwareUpdate, UpdateVerificationLog, UpdateVerifyDecision, UpdateVerifyError, UpdateVerifier},
+    update::{
+        SoftwareUpdate, UpdateVerificationLog, UpdateVerifier, UpdateVerifyDecision,
+        UpdateVerifyError,
+    },
 };
 
 fn make_update(payload: &[u8], signing_key: &SigningKey) -> SoftwareUpdate {
+    make_labeled_update(payload, signing_key, "firmware", "1.2.3")
+}
+
+fn make_labeled_update(
+    payload: &[u8],
+    signing_key: &SigningKey,
+    package_id: &str,
+    version: &str,
+) -> SoftwareUpdate {
     let payload_hash = compute_payload_hash(payload);
-    let signature = sign_payload_hash(signing_key, &payload_hash);
+    let signature = sign_update(signing_key, package_id, version, &payload_hash);
     SoftwareUpdate {
-        package_id:   "firmware".to_string(),
-        version:      "1.2.3".to_string(),
+        package_id: package_id.to_string(),
+        version: version.to_string(),
         payload_hash,
         signature,
     }
@@ -41,7 +53,9 @@ fn accepted_update_is_recorded_in_log() {
     verifier.register_publisher("publisher-a", signing_key.verifying_key());
 
     let mut log = UpdateVerificationLog::default();
-    verifier.verify(&update, payload, "publisher-a", &mut log).unwrap();
+    verifier
+        .verify(&update, payload, "publisher-a", &mut log)
+        .unwrap();
 
     assert_eq!(log.entries().len(), 1);
     assert_eq!(log.entries()[0].decision, UpdateVerifyDecision::Accepted);
@@ -59,11 +73,15 @@ fn unknown_publisher_is_rejected() {
 
     let verifier = UpdateVerifier::new(); // no publishers registered
     let mut log = UpdateVerificationLog::default();
-    let err = verifier.verify(&update, payload, "unknown-publisher", &mut log).unwrap_err();
+    let err = verifier
+        .verify(&update, payload, "unknown-publisher", &mut log)
+        .unwrap_err();
 
     assert_eq!(
         err,
-        UpdateVerifyError::UnknownPublisher { publisher_id: "unknown-publisher".to_string() }
+        UpdateVerifyError::UnknownPublisher {
+            publisher_id: "unknown-publisher".to_string()
+        }
     );
 }
 
@@ -113,11 +131,31 @@ fn tampered_payload_rejection_is_logged() {
     assert_eq!(log.entries()[0].decision, UpdateVerifyDecision::Rejected);
 }
 
+#[test]
+fn relabeled_package_id_and_version_are_rejected() {
+    let signing_key = SigningKey::from_bytes(&[7u8; 32]);
+    let payload = b"firmware-image";
+    let update = make_labeled_update(payload, &signing_key, "firmware", "1.0.0");
+
+    let mut verifier = UpdateVerifier::new();
+    verifier.register_publisher("pub", signing_key.verifying_key());
+    let mut log = UpdateVerificationLog::default();
+    assert!(verifier.verify(&update, payload, "pub", &mut log).is_ok());
+
+    let mut relabeled = update.clone();
+    relabeled.package_id = "bootloader".to_string();
+    relabeled.version = "9.9.9".to_string();
+    let err = verifier
+        .verify(&relabeled, payload, "pub", &mut log)
+        .unwrap_err();
+    assert!(matches!(err, UpdateVerifyError::InvalidSignature { .. }));
+}
+
 // ── invalid signature ────────────────────────────────────────────────────────
 
 #[test]
 fn wrong_publisher_key_is_rejected() {
-    let real_signing_key  = SigningKey::from_bytes(&[7u8; 32]);
+    let real_signing_key = SigningKey::from_bytes(&[7u8; 32]);
     let wrong_signing_key = SigningKey::from_bytes(&[8u8; 32]);
     let payload = b"firmware-image";
     let update = make_update(payload, &real_signing_key); // signed by real key
@@ -126,7 +164,9 @@ fn wrong_publisher_key_is_rejected() {
     verifier.register_publisher("pub", wrong_signing_key.verifying_key()); // registered wrong key
 
     let mut log = UpdateVerificationLog::default();
-    let err = verifier.verify(&update, payload, "pub", &mut log).unwrap_err();
+    let err = verifier
+        .verify(&update, payload, "pub", &mut log)
+        .unwrap_err();
 
     assert!(matches!(err, UpdateVerifyError::InvalidSignature { .. }));
 }
@@ -142,7 +182,9 @@ fn corrupted_signature_is_rejected() {
     verifier.register_publisher("pub", signing_key.verifying_key());
 
     let mut log = UpdateVerificationLog::default();
-    let err = verifier.verify(&update, payload, "pub", &mut log).unwrap_err();
+    let err = verifier
+        .verify(&update, payload, "pub", &mut log)
+        .unwrap_err();
 
     assert!(matches!(err, UpdateVerifyError::InvalidSignature { .. }));
 }
@@ -150,7 +192,7 @@ fn corrupted_signature_is_rejected() {
 #[test]
 fn invalid_signature_rejection_is_logged() {
     let signing_key = SigningKey::from_bytes(&[10u8; 32]);
-    let wrong_key   = SigningKey::from_bytes(&[11u8; 32]);
+    let wrong_key = SigningKey::from_bytes(&[11u8; 32]);
     let payload = b"firmware";
     let update = make_update(payload, &signing_key);
 
@@ -180,8 +222,12 @@ fn multiple_publishers_each_verified_independently() {
     verifier.register_publisher("vendor-b", key_b.verifying_key());
 
     let mut log = UpdateVerificationLog::default();
-    assert!(verifier.verify(&update_a, payload_a, "vendor-a", &mut log).is_ok());
-    assert!(verifier.verify(&update_b, payload_b, "vendor-b", &mut log).is_ok());
+    assert!(verifier
+        .verify(&update_a, payload_a, "vendor-a", &mut log)
+        .is_ok());
+    assert!(verifier
+        .verify(&update_b, payload_b, "vendor-b", &mut log)
+        .is_ok());
     assert_eq!(log.entries().len(), 2);
 }
 

@@ -136,13 +136,13 @@ int main(void) {
     }
 
     /* ── 5. Verify the chain ────────────────────────────────────────────── */
-    rc = eds_verify_chain(chain, 3);
+    rc = eds_verify_chain(chain, 3, public_key);
     assert(rc == EDS_OK && "chain must be valid");
     printf("\n[5] Chain verification: VALID (expected)\n");
 
     /* Tamper with the middle record's payload_hash and re-verify. */
     chain[1].payload_hash[0] ^= 0x01;
-    rc = eds_verify_chain(chain, 3);
+    rc = eds_verify_chain(chain, 3, public_key);
     assert(rc == EDS_ERR_CHAIN_INVALID && "tampered chain must be invalid");
     printf("[5] Tampered chain    : INVALID (expected, rc=%d)\n", rc);
 

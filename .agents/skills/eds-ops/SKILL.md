@@ -46,7 +46,7 @@ pg_restore -h <host> -U edgesentry -d edgesentry /backup/pg/base.tar.gz
 
 # Restart and verify chain
 systemctl start edgesentry-ingest
-eds audit verify-chain --chain <latest-export>.json
+eds audit verify-chain --records-file <latest-export>.json --public-key-hex <device-public-key>
 ```
 
 See [references/operations.md](references/operations.md) for RTO/RPO targets, alert routing, and OpenTelemetry configuration.

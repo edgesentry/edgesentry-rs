@@ -4,7 +4,7 @@ use ed25519_dalek::VerifyingKey;
 use thiserror::Error;
 use tracing::debug;
 
-use crate::identity::verify_payload_signature;
+use crate::identity::verify_audit_record;
 use crate::record::{AuditRecord, Hash32};
 
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -50,13 +50,21 @@ impl IngestState {
             .get(device_id)
             .ok_or_else(|| IngestError::UnknownDevice(device_id.clone()))?;
 
-        if !verify_payload_signature(key, &record.payload_hash, &record.signature) {
-            debug!(device_id, sequence = record.sequence, "signature verification failed");
+        if !verify_audit_record(key, record) {
+            debug!(
+                device_id,
+                sequence = record.sequence,
+                "signature verification failed"
+            );
             return Err(IngestError::InvalidSignature(device_id.clone()));
         }
 
         if self.seen.contains(&(device_id.clone(), record.sequence)) {
-            debug!(device_id, sequence = record.sequence, "duplicate record rejected");
+            debug!(
+                device_id,
+                sequence = record.sequence,
+                "duplicate record rejected"
+            );
             return Err(IngestError::Duplicate {
                 device_id: device_id.clone(),
                 sequence: record.sequence,
@@ -68,7 +76,12 @@ impl IngestState {
             .get(device_id)
             .map_or(1, |prev| prev.saturating_add(1));
         if record.sequence != expected_sequence {
-            debug!(device_id, expected = expected_sequence, actual = record.sequence, "sequence out of order");
+            debug!(
+                device_id,
+                expected = expected_sequence,
+                actual = record.sequence,
+                "sequence out of order"
+            );
             return Err(IngestError::InvalidSequence {
                 device_id: device_id.clone(),
                 expected: expected_sequence,
@@ -83,15 +96,24 @@ impl IngestState {
             .unwrap_or_else(AuditRecord::zero_hash);
 
         if record.prev_record_hash != expected_prev_hash {
-            debug!(device_id, sequence = record.sequence, "prev_record_hash mismatch — chain broken");
+            debug!(
+                device_id,
+                sequence = record.sequence,
+                "prev_record_hash mismatch — chain broken"
+            );
             return Err(IngestError::InvalidPrevHash(device_id.clone()));
         }
 
         self.seen.insert((device_id.clone(), record.sequence));
-        self.last_sequence.insert(device_id.clone(), record.sequence);
+        self.last_sequence
+            .insert(device_id.clone(), record.sequence);
         self.last_hash.insert(device_id.clone(), record.hash());
 
-        debug!(device_id, sequence = record.sequence, "record verified and accepted");
+        debug!(
+            device_id,
+            sequence = record.sequence,
+            "record verified and accepted"
+        );
         Ok(())
     }
 }

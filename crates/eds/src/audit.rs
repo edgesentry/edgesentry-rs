@@ -90,7 +90,10 @@ pub enum AuditCommand {
         timestamp_ms: u64,
         #[arg(long)]
         payload: String,
-        #[arg(long, default_value = "0000000000000000000000000000000000000000000000000000000000000000")]
+        #[arg(
+            long,
+            default_value = "0000000000000000000000000000000000000000000000000000000000000000"
+        )]
         prev_hash_hex: String,
         #[arg(long)]
         object_ref: String,
@@ -110,10 +113,13 @@ pub enum AuditCommand {
         #[arg(long)]
         public_key_hex: String,
     },
-    /// Verify an entire hash-chained records file
+    /// Verify an entire hash-chained records file, including every signature
     VerifyChain {
         #[arg(long)]
         records_file: PathBuf,
+        /// Ed25519 public key (hex). Every record signature must verify under this key.
+        #[arg(long)]
+        public_key_hex: String,
     },
     /// Generate a fresh Ed25519 keypair (prints JSON with private_key_hex and public_key_hex)
     Keygen {
@@ -208,6 +214,9 @@ pub enum AuditCommand {
         /// Optional profile directory for A.4.4 tooling documentation.
         #[arg(long)]
         profile_dir: Option<PathBuf>,
+        /// Ed25519 public key (hex). `chain_valid` requires every record signature to verify.
+        #[arg(long)]
+        public_key_hex: String,
         /// Output path for the JSON evidence bundle.
         #[arg(long)]
         out: PathBuf,
@@ -255,6 +264,9 @@ pub enum AuditCommand {
         /// AuditRecord JSON array to search (output of sign-document).
         #[arg(long)]
         chain: PathBuf,
+        /// Ed25519 public key (hex) of the signer. Required before VERIFIED.
+        #[arg(long)]
+        public_key_hex: String,
     },
     /// Sign an indago port cyber clearance evaluation manifest.
     ///
@@ -283,6 +295,9 @@ pub enum AuditCommand {
         manifest: PathBuf,
         #[arg(long)]
         chain: PathBuf,
+        /// Ed25519 public key (hex) of the signer. Required before VERIFIED.
+        #[arg(long)]
+        public_key_hex: String,
     },
     #[cfg(all(feature = "s3", feature = "postgres"))]
     /// Ingest records into PostgreSQL + MinIO (requires s3,postgres features)
@@ -298,7 +313,10 @@ pub enum AuditCommand {
             default_value = "0101010101010101010101010101010101010101010101010101010101010101"
         )]
         private_key_hex: String,
-        #[arg(long, default_value = "postgresql://trace:trace@localhost:5433/trace_audit")]
+        #[arg(
+            long,
+            default_value = "postgresql://trace:trace@localhost:5433/trace_audit"
+        )]
         pg_url: String,
         #[arg(long, default_value = "http://localhost:9000")]
         minio_endpoint: String,
@@ -343,7 +361,10 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
             write_record_json(out.as_deref(), &record)?;
         }
 
-        AuditCommand::VerifyRecord { record_file, public_key_hex } => {
+        AuditCommand::VerifyRecord {
+            record_file,
+            public_key_hex,
+        } => {
             let content = std::fs::read_to_string(record_file)?;
             let record: AuditRecord = serde_json::from_str(&content)?;
             if verify_record(&record, &public_key_hex)? {
@@ -354,8 +375,11 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        AuditCommand::VerifyChain { records_file } => {
-            verify_chain_file(&records_file)?;
+        AuditCommand::VerifyChain {
+            records_file,
+            public_key_hex,
+        } => {
+            verify_chain_file(&records_file, &public_key_hex)?;
             println!("CHAIN_VALID");
         }
 
@@ -398,7 +422,8 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
                 &object_prefix,
             )?;
             let records: Vec<AuditRecord> = pairs.iter().map(|(r, _)| r.clone()).collect();
-            verify_chain_records(&records)?;
+            let public_key_hex = inspect_key(&private_key_hex)?.public_key_hex;
+            verify_chain_records(&records, &public_key_hex)?;
             write_records_json(&out_file, &records)?;
             if let Some(pf) = payloads_file {
                 let hexes: Vec<String> = pairs.iter().map(|(_, p)| hex::encode(p)).collect();
@@ -409,7 +434,11 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
         }
 
         #[cfg(feature = "transport-http")]
-        AuditCommand::Serve { addr, allowed_sources, devices } => {
+        AuditCommand::Serve {
+            addr,
+            allowed_sources,
+            devices,
+        } => {
             use ed25519_dalek::VerifyingKey;
             use edgesentry_audit::{
                 AsyncInMemoryAuditLedger, AsyncInMemoryOperationLog, AsyncInMemoryRawDataStore,
@@ -424,8 +453,9 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
                         .allow_cidr(source)
                         .map_err(|e| format!("invalid CIDR '{source}': {e}"))?;
                 } else {
-                    let ip: std::net::IpAddr =
-                        source.parse().map_err(|e| format!("invalid IP '{source}': {e}"))?;
+                    let ip: std::net::IpAddr = source
+                        .parse()
+                        .map_err(|e| format!("invalid IP '{source}': {e}"))?;
                     network_policy.allow_ip(ip);
                 }
             }
@@ -458,13 +488,19 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
         }
 
         #[cfg(feature = "transport-tls")]
-        AuditCommand::ServeTls { addr, allowed_sources, devices, tls_cert, tls_key } => {
+        AuditCommand::ServeTls {
+            addr,
+            allowed_sources,
+            devices,
+            tls_cert,
+            tls_key,
+        } => {
             use ed25519_dalek::VerifyingKey;
+            use edgesentry_audit::transport::tls::{serve_tls, TlsConfig};
             use edgesentry_audit::{
                 AsyncInMemoryAuditLedger, AsyncInMemoryOperationLog, AsyncInMemoryRawDataStore,
                 AsyncIngestService, IntegrityPolicyGate, NetworkPolicy,
             };
-            use edgesentry_audit::transport::tls::{TlsConfig, serve_tls};
 
             let mut network_policy = NetworkPolicy::new();
             for source in allowed_sources.split(',') {
@@ -474,8 +510,9 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
                         .allow_cidr(source)
                         .map_err(|e| format!("invalid CIDR '{source}': {e}"))?;
                 } else {
-                    let ip: std::net::IpAddr =
-                        source.parse().map_err(|e| format!("invalid IP '{source}': {e}"))?;
+                    let ip: std::net::IpAddr = source
+                        .parse()
+                        .map_err(|e| format!("invalid IP '{source}': {e}"))?;
                     network_policy.allow_ip(ip);
                 }
             }
@@ -515,11 +552,11 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
             tls_ca_cert,
         } => {
             use ed25519_dalek::VerifyingKey;
+            use edgesentry_audit::transport::mqtt::MqttIngestConfig;
             use edgesentry_audit::{
                 AsyncInMemoryAuditLedger, AsyncInMemoryOperationLog, AsyncInMemoryRawDataStore,
                 AsyncIngestService, IntegrityPolicyGate,
             };
-            use edgesentry_audit::transport::mqtt::MqttIngestConfig;
 
             let mut policy = IntegrityPolicyGate::new();
             for spec in &devices {
@@ -549,7 +586,9 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
             }
 
             tokio::runtime::Runtime::new()?
-                .block_on(edgesentry_audit::transport::mqtt::serve_mqtt(config, service))
+                .block_on(edgesentry_audit::transport::mqtt::serve_mqtt(
+                    config, service,
+                ))
                 .map_err(|e| format!("mqtt server error: {e}"))?;
         }
 
@@ -672,7 +711,10 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
                 let existing: Vec<AuditRecord> =
                     serde_json::from_str(&std::fs::read_to_string(chain_path)?)?;
                 let seq = existing.last().map(|r| r.sequence + 1).unwrap_or(1);
-                let ph = existing.last().map(|r| r.hash()).unwrap_or(AuditRecord::zero_hash());
+                let ph = existing
+                    .last()
+                    .map(|r| r.hash())
+                    .unwrap_or(AuditRecord::zero_hash());
                 (seq, ph)
             } else {
                 (1u64, AuditRecord::zero_hash())
@@ -680,8 +722,7 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
 
             // Read FilledDocument JSONL (skip schema header via JsonlReader).
             let file = std::fs::File::open(&payload)?;
-            let mut reader = JsonlReader::open(file)
-                .map_err(|e| format!("JSONL open: {e}"))?;
+            let mut reader = JsonlReader::open(file).map_err(|e| format!("JSONL open: {e}"))?;
             let docs: Vec<FilledDocument> = reader
                 .records()
                 .collect::<Result<_, _>>()
@@ -712,7 +753,11 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
             }
 
             write_records_json(&out, &records)?;
-            println!("SIGNED: {} document record(s) written to {}", records.len(), out.display());
+            println!(
+                "SIGNED: {} document record(s) written to {}",
+                records.len(),
+                out.display()
+            );
         }
 
         AuditCommand::SignClearance {
@@ -724,7 +769,8 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
             out,
         } => {
             let key = resolve_private_key_hex(key, key_file, "--key")?;
-            let manifest_body = parse_clearance_manifest_json(&std::fs::read_to_string(&manifest)?)?;
+            let manifest_body =
+                parse_clearance_manifest_json(&std::fs::read_to_string(&manifest)?)?;
             let payload_bytes = build_clearance_payload_bytes(&manifest_body)?;
             let object_ref = format!(
                 "clearance:{}/{}",
@@ -735,7 +781,10 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
                 let existing: Vec<AuditRecord> =
                     serde_json::from_str(&std::fs::read_to_string(chain_path)?)?;
                 let seq = existing.last().map(|r| r.sequence + 1).unwrap_or(1);
-                let ph = existing.last().map(|r| r.hash()).unwrap_or(AuditRecord::zero_hash());
+                let ph = existing
+                    .last()
+                    .map(|r| r.hash())
+                    .unwrap_or(AuditRecord::zero_hash());
                 (seq, ph, existing)
             } else {
                 (1u64, AuditRecord::zero_hash(), Vec::new())
@@ -758,7 +807,8 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
 
             let mut records = prior_records;
             records.push(record);
-            verify_chain_records(&records)?;
+            let public_key_hex = inspect_key(&key)?.public_key_hex;
+            verify_chain_records(&records, &public_key_hex)?;
             write_records_json(&out, &records)?;
             println!(
                 "SIGNED: clearance {} → {} ({} record(s))",
@@ -768,7 +818,11 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
             );
         }
 
-        AuditCommand::VerifyClearance { manifest, chain } => {
+        AuditCommand::VerifyClearance {
+            manifest,
+            chain,
+            public_key_hex,
+        } => {
             let manifest_content = std::fs::read_to_string(&manifest)?;
             let manifest_body = parse_clearance_manifest_json(&manifest_content)?;
             let payload_bytes = build_clearance_payload_bytes(&manifest_body)?;
@@ -776,11 +830,15 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
 
             let records: Vec<AuditRecord> =
                 serde_json::from_str(&std::fs::read_to_string(&chain)?)?;
-            verify_chain_records(&records)?;
+            verify_chain_records(&records, &public_key_hex)?;
 
             let matched = records.iter().find(|r| r.payload_hash == payload_hash);
             match matched {
                 Some(record) => {
+                    if !verify_record(record, &public_key_hex)? {
+                        println!("INVALID");
+                        std::process::exit(2);
+                    }
                     println!("VERIFIED");
                     println!("  vessel_key:    {}", manifest_body.vessel_key);
                     println!("  port_call_id:  {}", manifest_body.port_call_id);
@@ -802,15 +860,32 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-            AuditCommand::ExportAims { chain, events, profile_dir, out, md } => {
-            run_export_aims(&chain, events.as_deref(), profile_dir.as_deref(), &out, md.as_deref())?;
+        AuditCommand::ExportAims {
+            chain,
+            events,
+            profile_dir,
+            public_key_hex,
+            out,
+            md,
+        } => {
+            run_export_aims(
+                &chain,
+                events.as_deref(),
+                profile_dir.as_deref(),
+                &public_key_hex,
+                &out,
+                md.as_deref(),
+            )?;
         }
 
-        AuditCommand::VerifyDocument { payload, chain } => {
+        AuditCommand::VerifyDocument {
+            payload,
+            chain,
+            public_key_hex,
+        } => {
             // Read FilledDocument JSONL (skip schema header via JsonlReader).
             let file = std::fs::File::open(&payload)?;
-            let mut reader = JsonlReader::open(file)
-                .map_err(|e| format!("JSONL open: {e}"))?;
+            let mut reader = JsonlReader::open(file).map_err(|e| format!("JSONL open: {e}"))?;
             let docs: Vec<FilledDocument> = reader
                 .records()
                 .collect::<Result<_, _>>()
@@ -829,6 +904,10 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
                 let matched = records.iter().find(|r| r.payload_hash == payload_hash);
                 match matched {
                     Some(record) => {
+                        if !verify_record(record, &public_key_hex)? {
+                            println!("INVALID");
+                            std::process::exit(2);
+                        }
                         found_any = true;
                         println!("VERIFIED");
                         println!("  voyage_id:       {}", audit_payload.voyage_id);
@@ -838,11 +917,18 @@ pub fn run(cmd: AuditCommand) -> Result<(), Box<dyn std::error::Error>> {
                         println!("  device_id:       {}", record.device_id);
                         println!("  review_required: {}", audit_payload.review_required);
                         if !audit_payload.fields_flagged.is_empty() {
-                            println!("  fields_flagged:  {}", audit_payload.fields_flagged.join(", "));
+                            println!(
+                                "  fields_flagged:  {}",
+                                audit_payload.fields_flagged.join(", ")
+                            );
                         }
                         println!("  field confidence:");
                         for (field, conf) in &audit_payload.confidence_flags {
-                            let flag = if audit_payload.fields_flagged.contains(field) { " [FLAGGED]" } else { "" };
+                            let flag = if audit_payload.fields_flagged.contains(field) {
+                                " [FLAGGED]"
+                            } else {
+                                ""
+                            };
                             println!("    {:<30} {:.2}{}", field, conf, flag);
                         }
                         println!("  payload_hash:    {}", hex::encode(record.payload_hash));
@@ -926,13 +1012,13 @@ fn run_export_aims(
     chain_path: &std::path::Path,
     events_path: Option<&std::path::Path>,
     profile_dir: Option<&std::path::Path>,
+    public_key_hex: &str,
     out_path: &std::path::Path,
     md_path: Option<&std::path::Path>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let records: Vec<AuditRecord> =
-        serde_json::from_str(&std::fs::read_to_string(chain_path)?)?;
+    let records: Vec<AuditRecord> = serde_json::from_str(&std::fs::read_to_string(chain_path)?)?;
 
-    let chain_valid_result = verify_chain_records(&records);
+    let chain_valid_result = verify_chain_records(&records, public_key_hex);
     let (chain_valid, chain_error) = match &chain_valid_result {
         Ok(()) => (true, None),
         Err(e) => (false, Some(e.to_string())),
@@ -975,20 +1061,18 @@ fn run_export_aims(
 
     let (risk_event_count, regulations, event_rule_ids) = if let Some(ep) = events_path {
         let file = std::fs::File::open(ep)?;
-        let mut reader = JsonlReader::open(file)
-            .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
+        let mut reader =
+            JsonlReader::open(file).map_err(|e| -> Box<dyn std::error::Error> { e.into() })?;
         let events: Vec<RiskEvent> = reader
             .records()
             .collect::<Result<_, _>>()
             .map_err(|e| -> Box<dyn std::error::Error> { format!("JSONL read: {e}").into() })?;
 
-        let mut regs: Vec<String> =
-            events.iter().map(|e| e.regulation.clone()).collect();
+        let mut regs: Vec<String> = events.iter().map(|e| e.regulation.clone()).collect();
         regs.sort();
         regs.dedup();
 
-        let mut rule_ids: Vec<String> =
-            events.iter().map(|e| e.rule_id.clone()).collect();
+        let mut rule_ids: Vec<String> = events.iter().map(|e| e.rule_id.clone()).collect();
         rule_ids.sort();
         rule_ids.dedup();
 
@@ -997,23 +1081,21 @@ fn run_export_aims(
         (0, vec![], vec![])
     };
 
-    let (profile_dir_str, rule_count, rule_ids_from_profile) =
-        if let Some(pd) = profile_dir {
-            match edgesentry_profile::load_profile(pd) {
-                Ok(rules) => {
-                    let mut ids: Vec<String> =
-                        rules.iter().map(|r| r.rule_id.clone()).collect();
-                    ids.sort();
-                    (Some(pd.display().to_string()), Some(ids.len()), ids)
-                }
-                Err(e) => {
-                    eprintln!("warning: could not load profile: {e}");
-                    (Some(pd.display().to_string()), None, vec![])
-                }
+    let (profile_dir_str, rule_count, rule_ids_from_profile) = if let Some(pd) = profile_dir {
+        match edgesentry_profile::load_profile(pd) {
+            Ok(rules) => {
+                let mut ids: Vec<String> = rules.iter().map(|r| r.rule_id.clone()).collect();
+                ids.sort();
+                (Some(pd.display().to_string()), Some(ids.len()), ids)
             }
-        } else {
-            (None, None, vec![])
-        };
+            Err(e) => {
+                eprintln!("warning: could not load profile: {e}");
+                (Some(pd.display().to_string()), None, vec![])
+            }
+        }
+    } else {
+        (None, None, vec![])
+    };
 
     let now_ms = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -1063,8 +1145,15 @@ fn run_export_aims(
 
     let json = serde_json::to_string_pretty(&pack)?;
     std::fs::write(out_path, &json)?;
-    println!("AIMS_EXPORT: {} record(s) → {}", pack.a4_2_resource_documentation.record_count, out_path.display());
-    println!("  chain_valid: {}", pack.a4_2_resource_documentation.chain_valid);
+    println!(
+        "AIMS_EXPORT: {} record(s) → {}",
+        pack.a4_2_resource_documentation.record_count,
+        out_path.display()
+    );
+    println!(
+        "  chain_valid: {}",
+        pack.a4_2_resource_documentation.chain_valid
+    );
     println!("  controls:    A.4.2 A.4.3 A.4.4 A.4.5 A.4.6");
 
     if let Some(mp) = md_path {
@@ -1089,7 +1178,10 @@ fn render_aims_markdown(pack: &AimsEvidencePack) -> String {
     let chain_status = if a42.chain_valid {
         "VALID".to_string()
     } else {
-        format!("INVALID — {}", a42.chain_error.as_deref().unwrap_or("unknown error"))
+        format!(
+            "INVALID — {}",
+            a42.chain_error.as_deref().unwrap_or("unknown error")
+        )
     };
 
     let mut lines = vec![
@@ -1097,7 +1189,10 @@ fn render_aims_markdown(pack: &AimsEvidencePack) -> String {
         "".to_string(),
         format!("> **Disclaimer:** {}", pack.disclaimer),
         "".to_string(),
-        format!("Generated: `{}` (eds v{})", pack.generated_at_ms, pack.eds_version),
+        format!(
+            "Generated: `{}` (eds v{})",
+            pack.generated_at_ms, pack.eds_version
+        ),
         "".to_string(),
         "---".to_string(),
         "".to_string(),
@@ -1120,7 +1215,10 @@ fn render_aims_markdown(pack: &AimsEvidencePack) -> String {
         lines.push(format!("**Risk events:** {}", a43.risk_event_count));
         lines.push("".to_string());
         if !a43.event_rule_ids.is_empty() {
-            lines.push(format!("**Rule IDs triggered:** {}", a43.event_rule_ids.join(", ")));
+            lines.push(format!(
+                "**Rule IDs triggered:** {}",
+                a43.event_rule_ids.join(", ")
+            ));
             lines.push("".to_string());
         }
         if !a43.regulations_referenced.is_empty() {

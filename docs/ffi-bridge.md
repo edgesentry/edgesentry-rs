@@ -31,7 +31,7 @@ Canonical hashing, signing, and verification must go through one of:
 | Path | Mechanism | Typical use |
 |------|-----------|-------------|
 | **Write (in-process)** | C ABI: `eds_sign_record`, `eds_record_hash`, … | Hot path from C/C++ or `ctypes` |
-| **Verify (out-of-process)** | `eds audit verify-chain --records-file <path>` | Independent re-check; verifier is a **separate binary** from the writer |
+| **Verify (out-of-process)** | `eds audit verify-chain --records-file <path> --public-key-hex <hex>` | Independent re-check; verifier is a **separate binary** from the writer |
 
 Keeping write and verify in different binaries is intentional: the same Rust
 implementation is exercised on two process boundaries, so chain validity is
@@ -177,7 +177,7 @@ typedef struct {
     uint64_t sequence;           /* monotonic record index (starts at 1) */
     uint64_t timestamp_ms;       /* Unix epoch in milliseconds           */
     uint8_t  payload_hash[32];   /* BLAKE3 hash of the raw payload        */
-    uint8_t  signature[64];      /* Ed25519 signature over payload_hash   */
+    uint8_t  signature[64];      /* Ed25519 signature over audit context  */
     uint8_t  prev_record_hash[32]; /* hash of preceding record (zero for first) */
     uint8_t  device_id[256];     /* null-terminated device identifier     */
     uint8_t  object_ref[512];    /* null-terminated storage reference     */
@@ -194,7 +194,8 @@ returns a heap pointer — no `_free` function is needed.
    private_key_out and public_key_out must each point to 32 bytes. */
 int32_t eds_keygen(uint8_t *private_key_out, uint8_t *public_key_out);
 
-/* Hash payload with BLAKE3, sign with Ed25519, fill *out.
+/* Hash payload with BLAKE3 and sign device_id, sequence, timestamp_ms,
+   prev_record_hash, object_ref, and payload_hash. Fill *out.
    Pass NULL for prev_record_hash to use the zero hash (first record). */
 int32_t eds_sign_record(const char    *device_id,
                         uint64_t       sequence,
@@ -214,18 +215,25 @@ int32_t eds_record_hash(const EdsAuditRecord *record, uint8_t *hash_out);
 int32_t eds_verify_record(const EdsAuditRecord *record,
                           const uint8_t *public_key);
 
-/* Verify the entire hash chain. Returns EDS_OK or EDS_ERR_CHAIN_INVALID. */
-int32_t eds_verify_chain(const EdsAuditRecord *records, size_t count);
+/* Verify hash links, sequence, and every signature under public_key.
+   public_key must point to 32 bytes when count is non-zero.
+   Returns EDS_OK or EDS_ERR_CHAIN_INVALID. */
+int32_t eds_verify_chain(const EdsAuditRecord *records,
+                         size_t count,
+                         const uint8_t *public_key);
 
 /* Verify a software update before installation (CLS-03 / STAR-2 R2.2).
    Checks BLAKE3(payload) == payload_hash, then verifies the Ed25519
-   publisher signature over payload_hash.
+   publisher signature over package_id, version, and payload_hash.
+   package_id and version are null-terminated UTF-8.
    payload_hash must point to 32 bytes; signature to 64 bytes;
    publisher_key to 32 bytes.
    Returns EDS_OK, EDS_ERR_HASH_MISMATCH, EDS_ERR_BAD_SIGNATURE, or
-   EDS_ERR_INVALID_KEY / EDS_ERR_NULL_PTR on bad inputs. */
+   EDS_ERR_INVALID_KEY / EDS_ERR_NULL_PTR / EDS_ERR_INVALID_UTF8 on bad inputs. */
 int32_t eds_verify_update(const uint8_t *payload,
                           size_t         payload_len,
+                          const char    *package_id,
+                          const char    *version,
                           const uint8_t *payload_hash,
                           const uint8_t *signature,
                           const uint8_t *publisher_key);
@@ -345,6 +353,7 @@ def load_bridge(release_dir: Path) -> ctypes.CDLL:
     lib.eds_verify_chain.argtypes = [
         ctypes.POINTER(EdsAuditRecord),
         ctypes.c_size_t,
+        ctypes.POINTER(ctypes.c_uint8),
     ]
     return lib
 
@@ -385,7 +394,7 @@ def main() -> int:
     check(lib, lib.eds_record_hash(ctypes.byref(rec), nxt), "eds_record_hash")
 
     records = (EdsAuditRecord * 1)(rec)
-    check(lib, lib.eds_verify_chain(records, 1), "eds_verify_chain")
+    check(lib, lib.eds_verify_chain(records, 1, pub), "eds_verify_chain")
     print("FFI chain OK; next prev_record_hash =", bytes(nxt).hex())
     return 0
 
@@ -400,7 +409,7 @@ records your app already wrote through the Rust types) and re-check
 out-of-process:
 
 ```bash
-eds audit verify-chain --records-file /path/to/records.json
+eds audit verify-chain --records-file /path/to/records.json --public-key-hex <hex>
 # prints CHAIN_VALID on success
 ```
 

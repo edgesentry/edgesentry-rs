@@ -35,18 +35,20 @@ KEY=$(python3 -c "import json; print(json.load(open('/tmp/keypair.json'))['priva
 ```bash
 ./target/release/eds audit verify-document \
   --payload <input.jsonl> \
-  --chain /tmp/chain.json
+  --chain /tmp/chain.json \
+  --public-key-hex "$PUB"
 ```
 
-Exits 0 if payload matches the AuditRecord.
+Exits 0 and prints `VERIFIED` only after the trusted public key verifies the matching record.
 
 ## Verify chain integrity
 
 ```bash
-./target/release/eds audit verify-chain --chain /tmp/chain.json
+PUB=$(python3 -c "import json; print(json.load(open('/tmp/keypair.json'))['public_key_hex'])")
+./target/release/eds audit verify-chain --records-file /tmp/chain.json --public-key-hex "$PUB"
 ```
 
-Exits 0 and prints `chain OK` if no records have been tampered with.
+Exits 0 and prints `CHAIN_VALID` when hash links, sequence, and every signature verify.
 
 ## Interpreting failures
 

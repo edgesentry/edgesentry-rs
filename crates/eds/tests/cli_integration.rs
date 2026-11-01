@@ -49,6 +49,8 @@ fn stderr(o: &Output) -> String {
 
 // A fixed private key (all 0x01 bytes — same as the demo default).
 const PRIV_HEX: &str = "0101010101010101010101010101010101010101010101010101010101010101";
+/// Public key of `PRIV_HEX` (`eds audit inspect-key`).
+const PUB_HEX: &str = "8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c";
 
 // ── keygen ───────────────────────────────────────────────────────────────────
 
@@ -322,6 +324,7 @@ fn verify_chain_exits_zero_for_valid_chain() {
     let verify = eds()
         .args(["audit", "verify-chain", "--records-file"])
         .arg(chain_file.path())
+        .args(["--public-key-hex", PUB_HEX])
         .output()
         .expect("eds verify-chain");
 
@@ -353,6 +356,7 @@ fn verify_chain_exits_nonzero_for_tampered_chain() {
     let verify = eds()
         .args(["audit", "verify-chain", "--records-file"])
         .arg(chain_file.path())
+        .args(["--public-key-hex", PUB_HEX])
         .output()
         .expect("eds verify-chain tampered");
 
@@ -362,10 +366,49 @@ fn verify_chain_exits_nonzero_for_tampered_chain() {
 #[test]
 fn verify_chain_exits_nonzero_for_missing_file() {
     let out = eds()
-        .args(["audit", "verify-chain", "--records-file", "/nonexistent/path/chain.json"])
+        .args(["audit", "verify-chain", "--records-file", "/nonexistent/path/chain.json", "--public-key-hex", PUB_HEX])
         .output()
         .expect("eds verify-chain missing");
     assert!(!out.status.success());
+}
+
+#[test]
+fn verify_chain_and_export_aims_reject_zero_signature() {
+    let chain = TmpFile::new("zero_sig_chain.json");
+    let bundle = TmpFile::new("zero_sig_aims.json");
+    let zeros32 = vec![0; 32];
+    let zeros64 = vec![0; 64];
+    let record = serde_json::json!([{
+        "device_id": "lift-01",
+        "sequence": 1,
+        "timestamp_ms": 1,
+        "payload_hash": zeros32,
+        "signature": zeros64,
+        "prev_record_hash": zeros32,
+        "object_ref": "lift-01/x.bin"
+    }]);
+    fs::write(chain.path(), serde_json::to_vec(&record).unwrap()).unwrap();
+
+    let verify = eds()
+        .args(["audit", "verify-chain", "--records-file"])
+        .arg(chain.path())
+        .args(["--public-key-hex", PUB_HEX])
+        .output()
+        .expect("verify-chain zero signature");
+    assert!(!verify.status.success(), "zero signature must not be CHAIN_VALID: {}", stdout(&verify));
+
+    let export = eds()
+        .args(["audit", "export-aims", "--chain"])
+        .arg(chain.path())
+        .args(["--public-key-hex", PUB_HEX, "--out"])
+        .arg(bundle.path())
+        .output()
+        .expect("export-aims zero signature");
+    assert!(export.status.success(), "{}", stderr(&export));
+    assert!(stdout(&export).contains("chain_valid: false"));
+    let json: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(bundle.path()).unwrap()).unwrap();
+    assert_eq!(json["a4_2_resource_documentation"]["chain_valid"], false);
 }
 
 // ── demo-lift-inspection ─────────────────────────────────────────────────────
@@ -894,6 +937,7 @@ fn verify_document_prints_verified_for_matching_payload() {
         .args(["audit", "verify-document", "--payload"])
         .arg(filled.path())
         .args(["--chain"]).arg(record.path())
+        .args(["--public-key-hex", PUB_HEX])
         .output()
         .expect("eds audit verify-document");
 
@@ -922,6 +966,7 @@ fn verify_document_exits_nonzero_when_payload_not_in_chain() {
         .args(["audit", "verify-document", "--payload"])
         .arg(filled_v002.path())  // different document
         .args(["--chain"]).arg(record.path())
+        .args(["--public-key-hex", PUB_HEX])
         .output()
         .expect("eds audit verify-document mismatch");
 
@@ -968,6 +1013,7 @@ fn sign_document_chains_sequence_and_prev_hash() {
         .args(["audit", "verify-document", "--payload"])
         .arg(filled_v002.path())
         .args(["--chain"]).arg(chain2.path())
+        .args(["--public-key-hex", PUB_HEX])
         .output().expect("verify V002");
     assert!(v.status.success(), "V002 must verify: {}", stderr(&v));
     assert!(stdout(&v).contains("V002"), "must show V002 voyage_id");
@@ -1191,7 +1237,7 @@ fn export_aims_exits_zero_and_writes_json_bundle() {
     let out = eds()
         .args(["audit", "export-aims", "--chain"])
         .arg(chain.path())
-        .args(["--out"])
+        .args(["--public-key-hex", PUB_HEX, "--out"])
         .arg(bundle.path())
         .args(["--md"])
         .arg(md.path())
@@ -1246,6 +1292,7 @@ fn sign_clearance_verify_chain_and_manifest() {
     let chain_check = eds()
         .args(["audit", "verify-chain", "--records-file"])
         .arg(chain.path())
+        .args(["--public-key-hex", PUB_HEX])
         .output()
         .expect("verify-chain");
     assert!(chain_check.status.success(), "verify-chain: {}", stderr(&chain_check));
@@ -1260,6 +1307,7 @@ fn sign_clearance_verify_chain_and_manifest() {
         .arg(&manifest_path)
         .args(["--chain"])
         .arg(chain.path())
+        .args(["--public-key-hex", PUB_HEX])
         .output()
         .expect("verify-clearance");
     assert!(verify.status.success(), "verify-clearance: {}", stderr(&verify));
@@ -1350,6 +1398,7 @@ fn run_sign_verify_clearance(manifest_path: &PathBuf) {
         .arg(manifest_path)
         .args(["--chain"])
         .arg(chain.path())
+        .args(["--public-key-hex", PUB_HEX])
         .output()
         .expect("verify-clearance");
     assert!(verify.status.success(), "verify-clearance: {}", stderr(&verify));

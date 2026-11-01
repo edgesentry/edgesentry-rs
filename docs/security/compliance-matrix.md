@@ -82,7 +82,7 @@ Singapore's national IoT standard SS 711:2025 defines four principles. See the [
 | JC-STAR | STAR-1 R1.1 |
 | Requirement | Data must be transmitted with authenticity guarantees |
 | Status | ✅ Implemented |
-| Implementation — record authenticity | Every `AuditRecord` carries an Ed25519 signature over its BLAKE3 payload hash — `build_signed_record` ([`src/agent.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/agent.rs)), `sign_payload_hash` ([`src/identity.rs:12`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/identity.rs#L12)) |
+| Implementation — record authenticity | Every `AuditRecord` carries an Ed25519 signature over `device_id`, `sequence`, `timestamp_ms`, `prev_record_hash`, `object_ref`, and the BLAKE3 payload hash — `build_signed_record` (`crates/edgesentry-audit/src/agent.rs`), `sign_audit_context` (`crates/edgesentry-audit/src/identity.rs`) |
 | Implementation — channel confidentiality (HTTP) | `transport-tls` feature: `serve_tls()` with rustls TLS 1.2/1.3, IP allowlist enforced before handshake, `eds serve-tls --tls-cert / --tls-key` CLI — closed [#176](https://github.com/edgesentry/edgesentry-rs/issues/176) ([`src/transport/tls.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/transport/tls.rs)) |
 | Implementation — channel confidentiality (MQTT) | `transport-mqtt-tls` feature: `MqttTlsConfig` with CA cert path, rustls `ClientConfig` via `rumqttc::TlsConfiguration::Rustls`, `eds serve-mqtt --tls-ca-cert` CLI — closed [#180](https://github.com/edgesentry/edgesentry-rs/issues/180) ([`src/transport/mqtt.rs`](https://github.com/edgesentry/edgesentry-rs/blob/main/crates/edgesentry-rs/src/transport/mqtt.rs)) |
 

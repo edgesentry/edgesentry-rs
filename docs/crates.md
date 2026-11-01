@@ -78,13 +78,13 @@ Trait-abstracted event store for `RiskEvent` records. Current backend: in-memory
 
 Any payload → BLAKE3-hashed, Ed25519-signed `AuditRecord` appended to an immutable chain.
 
-Each record hashes its payload and the previous record's hash. `eds audit verify-chain` detects any modification or insertion. Supports offline store-and-forward for intermittent connectivity.
+Each record hashes its payload and the previous record's hash. `eds audit verify-chain --public-key-hex` checks those links and every device signature. Supports offline store-and-forward for intermittent connectivity.
 
 Compliance targets: CLS Level 3 (SS 711:2025), JC-STAR, ETSI EN 303 645. See `docs/roadmap/strategy-compliance.md`.
 
 ## eds audit export-aims
 
-**Input:** AuditRecord JSON array (`--chain`) · optional `RiskEvent` JSONL (`--events`) · optional profile directory (`--profile-dir`)
+**Input:** AuditRecord JSON array (`--chain`) · Ed25519 public key (`--public-key-hex`) · optional `RiskEvent` JSONL (`--events`) · optional profile directory (`--profile-dir`)
 
 **Output:** JSON evidence bundle (`--out`) · optional Markdown summary (`--md`)
 

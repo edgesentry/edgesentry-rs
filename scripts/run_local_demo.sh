@@ -298,6 +298,7 @@ dim  "  Output:  audit.jsonl"
 echo ""
 
 DEMO_KEY="0101010101010101010101010101010101010101010101010101010101010101"
+DEMO_PUB="8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c"
 CHAIN_FILE="$OUT/chain.json"
 
 # Generate a properly chained audit record sequence using the built-in demo command.
@@ -320,6 +321,7 @@ echo ""
 if [[ -s "$CHAIN_FILE" ]]; then
   "$BIN" audit verify-chain \
     --records-file "$CHAIN_FILE" \
+    --public-key-hex "$DEMO_PUB" \
     && green "  ✓ Chain is valid — no tampering detected" \
     || { echo "  ✗ Chain verification failed"; exit 1; }
 else
@@ -371,6 +373,7 @@ echo ""
 # Generate a fresh keypair for the document audit chain
 DOC_KEYPAIR=$("$BIN" audit keygen)
 DOC_KEY=$(echo "$DOC_KEYPAIR" | python3 -c "import sys,json; print(json.load(sys.stdin)['private_key_hex'])")
+DOC_PUB=$(echo "$DOC_KEYPAIR" | python3 -c "import sys,json; print(json.load(sys.stdin)['public_key_hex'])")
 dim "  Keypair generated. private_key: ${DOC_KEY:0:16}…"
 echo ""
 
@@ -402,7 +405,7 @@ dim "    $(wc -c < "$HTML1") bytes rendered"
 dim "  eds audit sign-document → chain1.json (sequence 1)"
 "$BIN" audit sign-document --payload "$FILLED1" --key "$DOC_KEY" --out "$CHAIN1"
 green "  ✓ VERIFIED:"
-"$BIN" audit verify-document --payload "$FILLED1" --chain "$CHAIN1" | sed 's/^/    /'
+"$BIN" audit verify-document --payload "$FILLED1" --chain "$CHAIN1" --public-key-hex "$DOC_PUB" | sed 's/^/    /'
 
 pause "Stage 12 complete"
 
@@ -435,7 +438,7 @@ dim "  eds audit sign-document → chain2.json (sequence 2, chained from Stage 1
 "$BIN" audit sign-document --payload "$FILLED2" --key "$DOC_KEY" \
   --chain "$CHAIN1" --out "$CHAIN2"
 green "  ✓ VERIFIED:"
-"$BIN" audit verify-document --payload "$FILLED2" --chain "$CHAIN2" | sed 's/^/    /'
+"$BIN" audit verify-document --payload "$FILLED2" --chain "$CHAIN2" --public-key-hex "$DOC_PUB" | sed 's/^/    /'
 
 pause "Stage 13 complete"
 
@@ -457,7 +460,7 @@ dim "  eds audit sign-document → chain3.json (sequence 3, chained from Stage 1
 "$BIN" audit sign-document --payload "$FILLED3" --key "$DOC_KEY" \
   --chain "$CHAIN2" --out "$CHAIN3"
 green "  ✓ VERIFIED (flagged fields visible):"
-"$BIN" audit verify-document --payload "$FILLED3" --chain "$CHAIN3" | sed 's/^/    /'
+"$BIN" audit verify-document --payload "$FILLED3" --chain "$CHAIN3" --public-key-hex "$DOC_PUB" | sed 's/^/    /'
 
 pause "Stage 14 complete"
 

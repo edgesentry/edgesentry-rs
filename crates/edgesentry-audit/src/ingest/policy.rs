@@ -1,7 +1,7 @@
 use ed25519_dalek::VerifyingKey;
 
-use crate::record::AuditRecord;
 use super::verify::{IngestError, IngestState};
+use crate::record::AuditRecord;
 
 /// Enforces signature, sequence, and route identity integrity before persistence.
 ///
@@ -25,7 +25,8 @@ impl IntegrityPolicyGate {
     ///
     /// Checks (in order):
     /// 1. Route identity — `cert_identity` must match `record.device_id` when present.
-    /// 2. Signature — payload hash must be signed by the registered device key.
+    /// 2. Signature — device_id, sequence, timestamp, prev hash, object_ref, and
+    ///    payload hash must be signed by the registered device key.
     /// 3. Sequence — must be strictly monotonic and non-duplicate.
     /// 4. Previous-record hash — must match the last accepted record's hash.
     pub fn enforce(
@@ -45,4 +46,3 @@ impl IntegrityPolicyGate {
         self.state.verify_and_accept(record)
     }
 }
-

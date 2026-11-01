@@ -1,8 +1,8 @@
 use ed25519_dalek::{SigningKey, VerifyingKey};
 use edgesentry_audit::{
-    build_lift_inspection_demo_records, compute_payload_hash, sign_payload_hash, verify_chain,
-    verify_chain_file, verify_payload_signature, write_record_json, write_records_json, AuditRecord,
-    ChainError,
+    build_lift_inspection_demo_records, build_signed_record, compute_payload_hash,
+    sign_payload_hash, verify_chain, verify_chain_file, verify_payload_signature,
+    write_record_json, write_records_json, AuditRecord, ChainError,
 };
 use std::{fs, path::PathBuf};
 
@@ -36,7 +36,11 @@ fn sign_and_verify_payload_hash() {
     let payload_hash = compute_payload_hash(b"lift-vibration-data");
     let sig = sign_payload_hash(&signing_key, &payload_hash);
 
-    assert!(verify_payload_signature(&verifying_key, &payload_hash, &sig));
+    assert!(verify_payload_signature(
+        &verifying_key,
+        &payload_hash,
+        &sig
+    ));
 
     let mut tampered_hash = payload_hash;
     tampered_hash[0] ^= 0x01;
@@ -47,27 +51,45 @@ fn sign_and_verify_payload_hash() {
     ));
 }
 
+fn chain_key() -> SigningKey {
+    SigningKey::from_bytes(&[7u8; 32])
+}
+
+fn signed_chain_record(key: &SigningKey, sequence: u64, prev: [u8; 32]) -> AuditRecord {
+    build_signed_record(
+        "lift-01",
+        sequence,
+        1_710_000_000_000 + sequence,
+        format!("payload-{sequence}").as_bytes(),
+        prev,
+        format!("s3://bucket/lift-01/{sequence}.bin"),
+        key,
+    )
+}
+
 #[test]
 fn chain_verification_detects_broken_link() {
-    let mut first = dummy_record(1, AuditRecord::zero_hash());
+    let key = chain_key();
+    let vk = key.verifying_key();
+    let first = signed_chain_record(&key, 1, AuditRecord::zero_hash());
     let first_hash = first.hash();
-    let second = dummy_record(2, first_hash);
+    let second = signed_chain_record(&key, 2, first_hash);
+    assert!(verify_chain(&[first.clone(), second.clone()], &vk).is_ok());
 
-    assert!(verify_chain(&[first.clone(), second]).is_ok());
-
-    first.payload_hash[0] ^= 0xFF;
-    let second_after_tamper = dummy_record(2, first_hash);
-
-    let result = verify_chain(&[first, second_after_tamper]);
+    let mut broken = second;
+    broken.prev_record_hash[0] ^= 0xFF;
+    let result = verify_chain(&[first, broken], &vk);
     assert_eq!(result, Err(ChainError::InvalidPrevHash { index: 1 }));
 }
 
 #[test]
 fn chain_verification_detects_invalid_sequence() {
-    let first = dummy_record(1, AuditRecord::zero_hash());
-    let second = dummy_record(3, first.hash());
+    let key = chain_key();
+    let vk = key.verifying_key();
+    let first = signed_chain_record(&key, 1, AuditRecord::zero_hash());
+    let second = signed_chain_record(&key, 3, first.hash());
 
-    let result = verify_chain(&[first, second]);
+    let result = verify_chain(&[first, second], &vk);
     assert_eq!(
         result,
         Err(ChainError::InvalidSequence {
@@ -80,19 +102,39 @@ fn chain_verification_detects_invalid_sequence() {
 
 #[test]
 fn chain_verification_accepts_empty_slice() {
-    assert!(verify_chain(&[]).is_ok());
+    assert!(verify_chain(&[], &chain_key().verifying_key()).is_ok());
 }
 
 #[test]
 fn chain_verification_accepts_single_valid_record() {
-    let record = dummy_record(1, AuditRecord::zero_hash());
-    assert!(verify_chain(&[record]).is_ok());
+    let key = chain_key();
+    let record = signed_chain_record(&key, 1, AuditRecord::zero_hash());
+    assert!(verify_chain(&[record], &key.verifying_key()).is_ok());
+}
+
+#[test]
+fn chain_verification_rejects_zero_signature() {
+    let key = chain_key();
+    let mut record = signed_chain_record(&key, 1, AuditRecord::zero_hash());
+    record.signature = [0u8; 64];
+    let result = verify_chain(&[record], &key.verifying_key());
+    assert_eq!(result, Err(ChainError::InvalidSignature { index: 0 }));
+}
+
+#[test]
+fn chain_verification_rejects_rebound_context() {
+    let key = chain_key();
+    let mut record = signed_chain_record(&key, 1, AuditRecord::zero_hash());
+    record.timestamp_ms = 1;
+    record.object_ref = "s3://bucket/lift-01/other.bin".to_string();
+    let result = verify_chain(&[record], &key.verifying_key());
+    assert_eq!(result, Err(ChainError::InvalidSignature { index: 0 }));
 }
 
 #[test]
 fn chain_verification_rejects_first_record_with_nonzero_prev_hash() {
     let bad_first = dummy_record(1, [1u8; 32]);
-    let result = verify_chain(&[bad_first]);
+    let result = verify_chain(&[bad_first], &chain_key().verifying_key());
     assert_eq!(result, Err(ChainError::InvalidPrevHash { index: 0 }));
 }
 
@@ -125,9 +167,13 @@ impl Drop for TmpFile {
 fn write_records_json_roundtrips_through_verify_chain_file() {
     // Build a small valid chain via the public demo helper
     let keypair = edgesentry_audit::generate_keypair();
-    let records =
-        build_lift_inspection_demo_records("lift-01", &keypair.private_key_hex, 1_710_000_000_000, "s3://b")
-            .expect("demo records");
+    let records = build_lift_inspection_demo_records(
+        "lift-01",
+        &keypair.private_key_hex,
+        1_710_000_000_000,
+        "s3://b",
+    )
+    .expect("demo records");
 
     let path = tmp_path("write_records_json.json");
     let _guard = TmpFile(path.clone());
@@ -136,16 +182,20 @@ fn write_records_json_roundtrips_through_verify_chain_file() {
     write_records_json(&path, &records).expect("write_records_json");
     assert!(path.exists());
 
-    // verify_chain_file deserialises and verifies the chain
-    verify_chain_file(&path).expect("verify_chain_file");
+    // verify_chain_file deserialises and verifies the chain and signatures
+    verify_chain_file(&path, &keypair.public_key_hex).expect("verify_chain_file");
 }
 
 #[test]
 fn verify_chain_file_rejects_tampered_json() {
     let keypair = edgesentry_audit::generate_keypair();
-    let mut records =
-        build_lift_inspection_demo_records("lift-01", &keypair.private_key_hex, 1_710_000_000_000, "s3://b")
-            .expect("demo records");
+    let mut records = build_lift_inspection_demo_records(
+        "lift-01",
+        &keypair.private_key_hex,
+        1_710_000_000_000,
+        "s3://b",
+    )
+    .expect("demo records");
 
     // Tamper with the second record's payload hash to break the chain link
     records[1].payload_hash[0] ^= 0xFF;
@@ -154,7 +204,7 @@ fn verify_chain_file_rejects_tampered_json() {
     let _guard = TmpFile(path.clone());
 
     write_records_json(&path, &records).expect("write");
-    let result = verify_chain_file(&path);
+    let result = verify_chain_file(&path, &keypair.public_key_hex);
     assert!(result.is_err(), "tampered chain should be rejected");
 }
 
@@ -164,16 +214,20 @@ fn verify_chain_file_rejects_malformed_json() {
     let _guard = TmpFile(path.clone());
 
     fs::write(&path, b"not valid json at all").expect("write");
-    let result = verify_chain_file(&path);
+    let result = verify_chain_file(&path, "00");
     assert!(result.is_err(), "malformed JSON should be rejected");
 }
 
 #[test]
 fn write_record_json_to_file_roundtrips() {
     let keypair = edgesentry_audit::generate_keypair();
-    let records =
-        build_lift_inspection_demo_records("lift-01", &keypair.private_key_hex, 1_710_000_000_000, "s3://b")
-            .expect("demo records");
+    let records = build_lift_inspection_demo_records(
+        "lift-01",
+        &keypair.private_key_hex,
+        1_710_000_000_000,
+        "s3://b",
+    )
+    .expect("demo records");
     let record = &records[0];
 
     let path = tmp_path("write_record_json.json");
@@ -192,9 +246,13 @@ fn write_record_json_to_file_roundtrips() {
 fn write_record_json_stdout_path_is_none() {
     // Passing None should print to stdout without error (no file created)
     let keypair = edgesentry_audit::generate_keypair();
-    let records =
-        build_lift_inspection_demo_records("lift-01", &keypair.private_key_hex, 1_710_000_000_000, "s3://b")
-            .expect("demo records");
+    let records = build_lift_inspection_demo_records(
+        "lift-01",
+        &keypair.private_key_hex,
+        1_710_000_000_000,
+        "s3://b",
+    )
+    .expect("demo records");
     // Should not panic or error
     write_record_json(None, &records[0]).expect("write_record_json stdout");
 }

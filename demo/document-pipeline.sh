@@ -33,6 +33,7 @@ mkdir -p "$OUT"
 # Generate a demo Ed25519 keypair (deterministic seed for reproducibility)
 KEYPAIR=$("$EDS" audit keygen)
 PRIVATE_KEY=$(echo "$KEYPAIR" | python3 -c "import sys,json; print(json.load(sys.stdin)['private_key_hex'])")
+PUBLIC_KEY=$(echo "$KEYPAIR" | python3 -c "import sys,json; print(json.load(sys.stdin)['public_key_hex'])")
 
 run_tc() {
   local tc="$1" fixture="$2" label="$3"
@@ -127,4 +128,4 @@ echo "  All test cases complete. Output files:"
 ls -lh "${OUT}/"
 echo
 echo "  Verify TC1 AuditRecord chain integrity:"
-echo "    \$EDS audit verify-chain --chain ${OUT}/TC1_audit_chain.json"
+echo "    \$EDS audit verify-chain --records-file ${OUT}/TC1_audit_chain.json --public-key-hex ${PUBLIC_KEY}"

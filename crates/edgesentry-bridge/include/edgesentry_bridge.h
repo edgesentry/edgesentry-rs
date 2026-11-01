@@ -34,7 +34,7 @@
 #define EDS_ERR_STRING_TOO_LONG -4
 
 /**
- * Hash-chain verification failed (tampered, reordered, or truncated chain).
+ * Hash-chain or signature verification failed.
  */
 #define EDS_ERR_CHAIN_INVALID -5
 
@@ -73,7 +73,7 @@ typedef struct EdsAuditRecord {
      */
     uint8_t payload_hash[32];
     /**
-     * Ed25519 signature over `payload_hash` (64 bytes).
+     * Ed25519 signature over the canonical audit context (64 bytes).
      */
     uint8_t signature[64];
     /**
@@ -112,8 +112,10 @@ int32_t eds_keygen(uint8_t *private_key_out, uint8_t *public_key_out);
 /**
  * Create a signed audit record.
  *
- * Computes `BLAKE3(payload)`, signs the hash with the device private key, and
- * writes the resulting `EdsAuditRecord` to `out`.
+ * Computes `BLAKE3(payload)`, signs the canonical audit context
+ * (`device_id`, `sequence`, `timestamp_ms`, `prev_record_hash`, `object_ref`,
+ * `payload_hash`) with the device private key, and writes the resulting
+ * `EdsAuditRecord` to `out`.
  *
  * # Safety
  *
@@ -188,7 +190,8 @@ int32_t eds_verify_record(const struct EdsAuditRecord *record, const uint8_t *pu
  *
  * Performs two checks in order:
  * 1. `BLAKE3(payload) == payload_hash` — payload integrity.
- * 2. Ed25519 signature over `payload_hash` is valid for `publisher_key` — authenticity.
+ * 2. Ed25519 signature over `package_id`, `version`, and `payload_hash` is
+ *    valid for `publisher_key` — authenticity.
  *
  * This is a stateless one-shot function. The caller is responsible for
  * supplying the trusted `publisher_key` (e.g. baked into the firmware image
@@ -197,6 +200,7 @@ int32_t eds_verify_record(const struct EdsAuditRecord *record, const uint8_t *pu
  * # Safety
  *
  * - `payload` must be non-null and valid for `payload_len` bytes.
+ * - `package_id` and `version` must be non-null, null-terminated UTF-8 strings.
  * - `payload_hash` must be non-null and point to exactly 32 bytes.
  * - `signature` must be non-null and point to exactly 64 bytes.
  * - `publisher_key` must be non-null and point to exactly 32 bytes.
@@ -204,8 +208,10 @@ int32_t eds_verify_record(const struct EdsAuditRecord *record, const uint8_t *pu
  * # Parameters
  * - `payload`:       raw firmware / update bytes.
  * - `payload_len`:   length of `payload` in bytes.
+ * - `package_id`:    null-terminated package identifier covered by the signature.
+ * - `version`:       null-terminated version string covered by the signature.
  * - `payload_hash`:  expected BLAKE3 hash (32 bytes).
- * - `signature`:     Ed25519 signature over `payload_hash` (64 bytes).
+ * - `signature`:     Ed25519 signature over package id, version, and payload hash (64 bytes).
  * - `publisher_key`: trusted Ed25519 public key (32 bytes).
  *
  * # Returns
@@ -218,32 +224,39 @@ int32_t eds_verify_record(const struct EdsAuditRecord *record, const uint8_t *pu
  */
 int32_t eds_verify_update(const uint8_t *payload,
                           uintptr_t payload_len,
+                          const char *package_id,
+                          const char *version,
                           const uint8_t *payload_hash,
                           const uint8_t *signature,
                           const uint8_t *publisher_key);
 
 /**
- * Verify that an array of records forms a valid BLAKE3 hash chain.
+ * Verify that an array of records forms a valid BLAKE3 hash chain and that
+ * every signature verifies under `public_key`.
  *
- * Checks that each record's `prev_record_hash` matches the hash of the
- * preceding record and that sequence numbers are strictly monotonically
- * increasing.
+ * Checks predecessor hashes, monotonic sequences, and the Ed25519 signature
+ * on each record.
  *
  * # Safety
  *
  * - `records` must be non-null and point to `count` consecutive, valid
- *   `EdsAuditRecord` values.  Passing NULL with `count == 0` is safe and
- *   returns `EDS_OK`.
+ *   `EdsAuditRecord` values when `count` is non-zero. Passing NULL with
+ *   `count == 0` is safe and returns `EDS_OK`.
+ * - `public_key` must be non-null and point to exactly 32 bytes when `count`
+ *   is non-zero.
  *
  * # Parameters
- * - `records`: pointer to an array of `count` consecutive `EdsAuditRecord`s.
- * - `count`:   number of records in the array.
+ * - `records`:    pointer to an array of `count` consecutive `EdsAuditRecord`s.
+ * - `count`:      number of records in the array.
+ * - `public_key`: 32-byte Ed25519 public key that must verify every record.
  *
  * # Returns
  * `EDS_OK` if the chain is valid, `EDS_ERR_CHAIN_INVALID` if not, or a
  * negative error code.
  */
-int32_t eds_verify_chain(const struct EdsAuditRecord *records, uintptr_t count);
+int32_t eds_verify_chain(const struct EdsAuditRecord *records,
+                         uintptr_t count,
+                         const uint8_t *public_key);
 
 /**
  * Return a human-readable description of the last error on this thread.
