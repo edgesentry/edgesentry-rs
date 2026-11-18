@@ -37,3 +37,8 @@ reason = "rustls-webpki 0.102.8 pinned by rumqttc 0.25.1; no 0.102 patch. High C
 [[IgnoredVulns]]
 id = "RUSTSEC-2026-0382"
 reason = "rustls-webpki 0.102.8 pinned by rumqttc 0.25.1; fix is 0.103.16, already used by rustls 0.23. rumqttc does not call 0.102 path building. Same ignore as cargo audit."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0543"
+ignoreUntil = 2026-12-18
+reason = "Unmaintained-only advisory (not a vulnerability); no patched chrono release; pulled in via parquet. Revisit by 2026-12-18 (migrate to jiff/time or upstream fix)."
